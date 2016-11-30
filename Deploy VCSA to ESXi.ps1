@@ -1667,7 +1667,7 @@ foreach ($Deployment in $s_Deployments) {
 		$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
 	
 		# Connect to esxi host of the deployed vcsa.
-		$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
+		$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds -NotDefault
 
 		# if the vcsa is a PSC, join it to the windows domain.
 		if ($pscdeployments -contains $Deployment.DeployType) {
@@ -1773,7 +1773,7 @@ foreach ($Deployment in $s_Deployments) {
 			}
 			
 			# Connect to the vCenter
-			$vchandle = Connect-viserver $Deployment.Hostname -Credential $sso_creds
+			$vchandle = Connect-viserver $Deployment.Hostname -Credential $sso_creds -NotDefault
 			
 			# Create Datacenter
 			$Datacenters.Datacenter.ToUpper() | %{New-Datacenter -Location Datacenters -Name $_}
