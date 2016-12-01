@@ -42,11 +42,11 @@
    <An example of using the script>
 .REQUIREMENTS
 	Programs:
-		1. Win64 OpenSSL v1.1.0c Light - C:\OpenSSL-Win64 - http://slproweb.com/products/Win32OpenSSL.html
-		2. Ovftool 4.2.0
+		1. OpenSSL 1.0.2h x64 - C:\OpenSSL-Win64
+		2. Ovftool 4.0.1
 		3. Excel 2010+
 		4. Powershell 3+
-		5. PowerCli 6.5
+		5. PowerCli 5.8+
 		
 	Other:
 		1. The Certificate templates for VMWare must be created on the Windows CA before running the script.
@@ -316,6 +316,9 @@ function ConfigureIdentity ($domain,$vcsa_fqdn,$vcsa_root_password,$ad_domain,$a
 function ConfigureLicensing ($Licenses, $vchandle) {
 	echo $Licenses | Out-String
 	Foreach ($License in $Licenses) {
+		$LicMgr		= $null
+		$AddLic		= $null
+		$LicType	= $null
 		# Add License Key
 		$LicMgr  = Get-View -Server $vchandle ServiceInstance
 		$AddLic  = Get-View -Server $vchandle $LicMgr.Content.LicenseManager
@@ -1641,10 +1644,10 @@ foreach ($Deployment in $s_Deployments) {
 	
 		# Wait until the vcsa is available.
 		If ($Deployment.OVA -ilike "*6.5*") {
-			Available("https://$($Deployment.Hostname):5480")
+			Available "https://$($Deployment.Hostname):5480"
 			}
 		else {
-			Available("https://$($Deployment.Hostname)")
+			Available "https://$($Deployment.Hostname)"
 		}
 	
 		Write-Host "`r`n The VCSA $($Deployment.Hostname) has been deployed and is available.`r`n" -foregroundcolor cyan
@@ -1693,12 +1696,7 @@ foreach ($Deployment in $s_Deployments) {
 			Start-Sleep -s 60
 			
 			# Wait until the vcsa is available.
-			If ($Deployment.OVA -ilike "*6.5*") {
-				Available("https://$($Deployment.Hostname):5480")
-				}
-			else {
-				Available("https://$($Deployment.Hostname)")
-			}
+			Available "https://$($Deployment.Hostname)"
 			
 			# Write separator line to transcript.
 			Separatorline
@@ -1765,13 +1763,8 @@ foreach ($Deployment in $s_Deployments) {
 			#
 			
 			# Wait until the vcsa is available.
-			If ($Deployment.OVA -ilike "*6.5*") {
-				Available("https://$($Deployment.Hostname):5480")
-			}
-			else {
-				Available("https://$($Deployment.Hostname)")
-			}
-			
+			Available "https://$($Deployment.Hostname)"
+
 			# Connect to the vCenter
 			$vchandle = Connect-viserver $Deployment.Hostname -Credential $sso_creds -NotDefault
 			
@@ -1871,10 +1864,29 @@ foreach ($Deployment in $s_Deployments) {
 			if ($s_Licenses | ?{$_.vCenter -eq $Deployment.Hostname}) { ConfigureLicensing $($s_Licenses | ?{$_.vCenter -eq $Deployment.Hostname}) $vchandle}
 			
 			# Disconnect from the vCenter.
-			Disconnect-viserver -server $vchandle -Confirm:$false	
+			Disconnect-viserver -server $vchandle -Confirm:$false
+			
 		}
 	
+		#ExecuteScript "reboot" $Deployment.vmName "root" $Deployment.VCSARootPass
+	
 		# Disconnect from the vcsa deployed esxi server.
+		Disconnect-viserver -Server $esxihandle -Confirm:$false
+	}
+}
+
+foreach ($Deployment in $s_Deployments) {
+	if ($Deployment.Action -ine "null") {
+	
+		# Create esxi credentials.
+		$esxi_secpasswd		= ConvertTo-SecureString $Deployment.esxiRootPass -AsPlainText -Force
+		$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
+	
+		# Connect to esxi host of the deployed vcsa.
+		$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
+
+		ExecuteScript "reboot" $Deployment.vmName "root" $Deployment.VCSARootPass
+		
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
 	}
 }
