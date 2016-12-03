@@ -117,7 +117,7 @@ Main program starts at line 1000
 # Clear the screen.
 cls
 
-<# Functions Lines 156 - 1159
+<# Functions Lines 159 - 1212
 List:							Used:	function Dependency:
 1.  Available					  Y
 2. 	ConfigureAutoDeploy			  Y		ExecuteScript
@@ -132,6 +132,7 @@ List:							Used:	function Dependency:
 11. CreatePermissions			  Y		Separatorline
 12. ExecuteScript				  Y		Separatorline
 13. CopyFiletoServer			  Y		Separatorline
+
 14. Separatorline				  Y
 15. ChainCAs					  Y
 16. CheckOpenSSL				  Y
