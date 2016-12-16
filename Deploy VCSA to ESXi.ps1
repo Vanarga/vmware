@@ -76,7 +76,7 @@
 	http://www.lucd.info/2012/01/15/change-theroot-password-in-hosts-and-host-profiles/
 	http://www.vtagion.com/adding-license-keys-vcenter-powercli/
 	https://virtualhobbit.com/2015/07/17/building-an-advanced-lab-using-vmware-vrealize-automation-part-6-deploy-and-configure-the-vcenter-server-appliance/
-	http://stackoverflow.com/questions/8761888/powershell-capturing-standard-out-and-error-with-start-process
+	https://blogs.vmware.com/vsphere/2016/11/getting-started-new-image-builder-gui-vsphere-6-5.html
 	
 	
 .ACKNOWLEDGEMENTS
@@ -93,7 +93,7 @@
 	9.  Sam McGeown				- www.definit.co.uk
 	10. Wojciech Marusiak		- wojcieh.net
 	11. blog.cloudinfra.info
-	12. Féidhlim O'Leary		- haveyoutriedreinstalling.com
+	12. F�idhlim O'Leary		- haveyoutriedreinstalling.com
 	13. Alan Renouf				- www.virtu-al.net
 	14. Jeramiah Dooley			- Netapp
 	15. Aaron Patten			- Netapp
@@ -103,7 +103,7 @@
 	19.	Luc Deneks				- communities.vmware.com/people/LucD and www.lucd.info
 	20. Brian Graf				- www.vtagion.com
 	21. Mark Brookfield			- vitualhobbit.com
-	22. Andy Arismendi			- stackoverflow.com
+	22. Eric Gray				- blogs.vmware.com
 	
 	
 Functions start at line 139
@@ -117,7 +117,7 @@ Main program starts at line 1000
 # Clear the screen.
 cls
 
-<# Functions Lines 159 - 1212
+<# Functions Lines 156 - 1159
 List:							Used:	function Dependency:
 1.  Available					  Y
 2. 	ConfigureAutoDeploy			  Y		ExecuteScript
@@ -132,7 +132,6 @@ List:							Used:	function Dependency:
 11. CreatePermissions			  Y		Separatorline
 12. ExecuteScript				  Y		Separatorline
 13. CopyFiletoServer			  Y		Separatorline
-
 14. Separatorline				  Y
 15. ChainCAs					  Y
 16. CheckOpenSSL				  Y
@@ -147,12 +146,11 @@ List:							Used:	function Dependency:
 25. OnlineMintResume			  N
 26.	Set-VMHostProfileExtended	  Y
 27. TransferCertToNode			  Y		ExecuteScript, CopyFiletoServer
-28. Use-Openssl					  Y
-29. UserPEMFiles				  Y		CreatePEMFiles
-30. VMCAMint					  N
-31. CDDir						  Y
-32. CreateVCSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
-33. CreatePscSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
+28. UserPEMFiles				  Y		CreatePEMFiles
+29. VMCAMint					  N
+30. CDDir						  Y
+31. CreateVCSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
+32. CreatePscSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
 
 
 #>
@@ -179,28 +177,53 @@ function Available ($url) {
 }
 
 # Configure the Autodeploy Service - set certificate, set auto start, register vCenter, and start service.
-function ConfigureAutoDeploy ($IP, $hostname, $username, $password, $domain, $vihandle) {
+function ConfigureAutoDeploy ($IP,$hostname,$username,$password,$domain,$vihandle,$vcversion) {
 	$commandlist = $null
 	$commandlist = @()
 	
+    # Apply certificate to Autodeploy and Register Autodeploy to vCenter.
+	$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+	$commandlist += "export VMWARE_LOG_DIR=/var/log"
+	$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+	$commandlist += "export VMWARE_DATA_DIR=/storage"
 	$commandlist += "/usr/bin/autodeploy-register -R -a $($IP) -u administrator@$($domain) -w `'$password`' -p 80"
-	$commandlist += "/sbin/chkconfig vmware-rbd-watchdog on"
-	$commandlist += "/etc/init.d/vmware-rbd-watchdog start"
-	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
-	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
-	$commandlist += 'export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages'
-	$commandlist += 'export VMWARE_LOG_DIR=/var/log'
-	$commandlist += 'export VMWARE_CFG_DIR=/etc/vmware'
-	$commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.rbd -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s localhost -u administrator@$($domain) -p `'$password`'"
-	
-	#Service update
+
+	ExecuteScript $commandlist $hostname $username $password $vihandle
+
+	If ($vcversion -eq 6.5) {
+		# Set Autodeploy (rbd) startype to Automatic and restart service.
+		$commandlist = $null
+		$commandlist = @()
+		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+		$commandlist += "export VMWARE_LOG_DIR=/var/log"
+		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+		$commandlist += "export VMWARE_DATA_DIR=/storage"
+		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update rbd --starttype AUTOMATIC"
+ 		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart rbd"
+        
+		# imagebuilder set startype to Automatic and restart service.
+		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update imagebuilder --starttype AUTOMATIC"
+ 		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart imagebuilder"
+	}
+	Else {
+           # Set Autodeploy to Autostart (rbd) and start service, vmware 6.0.
+		   $commandlist = $null
+		   $commandlist = @()
+   		   $commandlist += "/sbin/chkconfig vmware-rbd-watchdog on"
+		   $commandlist += "/etc/init.d/vmware-rbd-watchdog start"
+	}
+
+	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 }
 
 function ConfigureAutoDeployRules ($rules, $path, $vihandle) {
+
+	Import-Module VMware.DeployAutomation
+
 	echo $rules | Out-String
 
-	#Turn off signature check - needed to avoid errors from unsigned packages/profiles.
+	# Turn off signature check - needed to avoid errors from unsigned packages/profiles.
 	$DeployNoSignatureCheck = $true
 
 	foreach ($rule in $rules) {
@@ -223,12 +246,13 @@ function ConfigureAutoDeployRules ($rules, $path, $vihandle) {
 		$prof = Get-VMHostProfile -Name $rule.ProfileName -Server $vihandle
 		Set-VMHostProfileExtended -Profile $prof -AdminPassword $rule.ProfileRootPassword $vihandle
 	
-		#Add offline bundles to depot
+		# Add offline bundles to depot
 		$Depotpath = $path + "\" + $rule.SoftwareDepot
 		Add-EsxSoftwareDepot $Depotpath
 
-		#Create a new deploy rule.
+		# Create a new deploy rule.
 		$img = Get-EsxImageProfile | ?{$rule.SoftwareDepot.substring(0,$rule.SoftwareDepot.Indexof(".zip"))}
+		if ($img.count -gt 1) {$img = $img[1]}
 		$img | Out-String
 		$pro = Get-VMHostProfile -Server $vihandle | ?{$_.Name -ieq $rule.ProfileName}
 		$pro | Out-String
@@ -237,7 +261,7 @@ function ConfigureAutoDeployRules ($rules, $path, $vihandle) {
 
 		New-DeployRule -Name $rule.RuleName -Item $img, $pro, $clu -Pattern $rule.Pattern
 		
-		#Activate the deploy rule.
+		# Activate the deploy rule.
 		Add-DeployRule -DeployRule $rule.RuleName
 
 	}
@@ -245,7 +269,7 @@ function ConfigureAutoDeployRules ($rules, $path, $vihandle) {
 }
 
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
-function ConfigureIdentity ($domain, $vcsa_fqdn, $vcsa_root_password, $ad_domain, $ad_group, $vihandle) {
+function ConfigureIdentity ($domain,$vcsa_fqdn,$vcsa_root_password,$ad_domain,$ad_group,$vihandle) {
 			$sub_domain		= $domain.split(".")[0]
 			$domain_ext		= $domain.split(".")[1]
 			$commandlist 	= $null
@@ -318,6 +342,7 @@ function ConfigureIdentity ($domain, $vcsa_fqdn, $vcsa_root_password, $ad_domain
 }
 
 function ConfigureLicensing ($Licenses, $vihandle) {
+# http://vniklas.djungeln.se/2012/03/29/a-powercli-function-to-manage-vmware-vsphere-licenses/
 	echo $Licenses | Out-String
 	Foreach ($License in $Licenses) {
 		$LicMgr		= $null
@@ -363,14 +388,23 @@ function ConfigureLicensing ($Licenses, $vihandle) {
 }
 
 # Configure Network Dumpster to Auto Start and start service.
-function ConfigureNetdumpster ($hostname, $username, $password, $vihandle) {
+function ConfigureNetdumpster ($hostname,$username,$password,$vihandle,$vcversion) {
 	$commandlist = $null
 	$commandlist = @()
 
-	$commandlist += "/sbin/chkconfig vmware-netdumper on"
-	$commandlist += "/etc/init.d/vmware-netdumper start"
-	
-	#Service update
+	If ($vcversion -eq 6.5) {
+		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+		$commandlist += "export VMWARE_LOG_DIR=/var/log"
+		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+		$commandlist += "export VMWARE_DATA_DIR=/storage"
+		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update netdumper --starttype AUTOMATIC"
+		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --start netdumper"
+	}
+	Else {
+		   $commandlist += "/sbin/chkconfig vmware-netdumper on"
+		   $commandlist += "/etc/init.d/vmware-netdumper start"
+	}
+	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 }
 
@@ -424,7 +458,7 @@ function ConfigureTFTP ($hostname,$username,$password,$vihandle) {
 	# Set Firewall Exception until reboot.
 	$commandlist += "iptables -A port_filter -p udp -m udp --dport 69 -j ACCEPT"
 	
-	#Service update
+	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 }
 				
@@ -484,7 +518,7 @@ function Deploy ($parameterlist, $ovftoolpath) {
 	return & $ovftool $argumentlist	
 }
 
-#Create Folders
+# Create Folders
 function CreateFolders ($folders, $vihandle) {
 	Separatorline
 	
@@ -502,7 +536,7 @@ foreach ($folder in $folders) {
 	Separatorline
 }
 
-#Create Roles
+# Create Roles
 function CreateRoles ($Roles, $vihandle) {
 	Separatorline
 
@@ -518,7 +552,7 @@ function CreateRoles ($Roles, $vihandle) {
 	Separatorline
 }
 
-#Set Permissions
+# Set Permissions
 function CreatePermissions ($vPermissions, $vihandle) {
 	Separatorline
 
@@ -538,13 +572,13 @@ function ExecuteScript ($script, $hostname, $username, $password, $vihandle) {
 
 	Separatorline
 	
-	echo $script | Out-String
+	$script | %{echo $_} | Out-String
 	
 	Separatorline
 	
-	Invoke-VMScript -ScriptText $(if ($script.count -gt 1) {$script -join(";")} else {$script}) -vm $hostname -GuestUser $username -GuestPassword $password -Server $vihandle | Select -ExpandProperty ScriptOutput
-	
-	Separatorline
+	$output = Invoke-VMScript -ScriptText $(if ($script.count -gt 1) {$script -join(";")} else {$script}) -vm $hostname -GuestUser $username -GuestPassword $password -Server $vihandle
+
+	return $output
 }
 
 # Copy a file to a VM.
@@ -563,10 +597,54 @@ function CopyFiletoServer ($locations, $hostname, $username, $password, $vihandl
 	Separatorline
 }
 
+function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
+			$pscdeployments	= @("tiny","small","large","infrastructure")
+
+			echo "== Joining $($Deployment.vmName) to the windows domain ==" | Out-String
+
+			Separatorline
+		
+			$commandlist = $null
+			$commandlist = @()
+			$commandlist += 'export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages'
+			$commandlist += 'export VMWARE_LOG_DIR=/var/log'
+			$commandlist += 'export VMWARE_DATA_DIR=/storage'
+			$commandlist += 'export VMWARE_CFG_DIR=/etc/vmware'
+			$commandlist += '/usr/bin/service-control --start --all --ignore'
+			$commandlist += "/opt/likewise/bin/domainjoin-cli join $($ADInfo.ADDomain) $($ADInfo.ADJoinUser) $($ADInfo.ADJoinPass)"
+	
+			# Excute the commands in $commandlist on the vcsa.
+			ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $vihandle
+
+			# ExecuteScript "reboot" $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
+			Restart-VMGuest -VM $Deployment.vmName -Server $vihandle -Confirm:$false
+
+			# Write separator line to transcript.
+			Separatorline
+			
+			# Wait 60 seconds before checking availability to make sure the vcsa is booting up and not in the process of shutting down.
+			Start-Sleep -s 60
+			
+			# Wait until the vcsa is available.
+			Available "https://$($Deployment.Hostname)"
+			
+			# Write separator line to transcript.
+			Separatorline
+
+			# if the vcsa is the first PSC in the vsphere domain, set the default identity source to the windows domain,
+			# add the windows AD group to the admin groups of the PSC.
+			if ($Deployment.Action -ieq "first" -and $pscdeployments -contains $Deployment.DeployType) {
+				ConfigureIdentity $Deployment.SSODomainName $Deployment.Hostname $Deployment.VCSARootPass $ADInfo.ADDomain $ADInfo.ADvCenterAdmins $vihandle
+			}
+
+		Separatorline
+}
+
+
 # Print a dated line to standard output.
 function Separatorline {
 	$date = Get-Date
-	Write-Host "`n---------------------------- $date ----------------------------`r`n" -foregroundcolor white
+	echo "`n---------------------------- $date ----------------------------`r`n" | Out-String
 }
 
 #
@@ -615,8 +693,8 @@ function CreatePEMFiles ($SVCDir, $CertFile, $CerFile, $Cert_Dir, $InstanceCertD
 function CreateCSR ($SVCDir, $CSRName, $CFGName, $PrivFile, $Flag, $Cert_Dir, $Certinfo) {
 # Create RSA private key and CSR for vSphere 6.0 SSL templates
 	if (!(Test-Path $Cert_Dir\$SVCDir)) {New-Item $Cert_Dir\$SVCDir -Type Directory}
-	#vSphere 5 and 6 CSR Options are different. Set according to flag type
-	#VUM 6.0 needs vSphere 5 template type
+	# vSphere 5 and 6 CSR Options are different. Set according to flag type
+	# VUM 6.0 needs vSphere 5 template type
 	if ($Flag -eq 5) {$CSROption1 = "dataEncipherment"}
 	if ($Flag -eq 6) {$CSROption1 = "nonRepudiation"}
 	$DEFFQDN = $Certinfo.CompanyName
@@ -659,8 +737,8 @@ function CreateCSR ($SVCDir, $CSRName, $CFGName, $PrivFile, $Flag, $Cert_Dir, $C
 function CreateSolutionCSR ($SVCDir, $CSRName, $CFGName, $PrivFile, $Flag, $SolutionUser, $Cert_Dir, $Certinfo) {
 # Create RSA private key and CSR for vSphere 6.0 SSL templates
 	if (!(Test-Path $Cert_Dir\$SVCDir)) {New-Item $Cert_Dir\$SVCDir -Type Directory}
-	#vSphere 5 and 6 CSR Options are different. Set according to flag type
-	#VUM 6.0 needs vSphere 5 template type
+	# vSphere 5 and 6 CSR Options are different. Set according to flag type
+	# VUM 6.0 needs vSphere 5 template type
 	$CommonName = $CSRName.Split(".")[0] + " " + $Certinfo.CompanyName
 	if ($Flag -eq 5) {$CSROption1 = "dataEncipherment"}
 	if ($Flag -eq 6) {$CSROption1 = "nonRepudiation"}
@@ -816,7 +894,7 @@ function MoveUserCerts {
 }
 
 function OnlineMint ($SVCDir, $CSRFile, $CertFile, $Template, $Cert_Dir, $ISSUING_CA) { 
-#Mint certificates from online Microsoft CA
+# Mint certificates from online Microsoft CA
     # initialize objects to use for external processes
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.CreateNoWindow = $true
@@ -910,6 +988,26 @@ function OnlineMintResume ($SVCDir, $CertFile) {
     $Script:CertsWaitingForApproval = $false
 }
 
+function Use-Openssl ($OpenSSLArgs) {
+	$OpensslInfo = $null
+	$o			 = $null
+	$OpensslInfo = New-Object System.Diagnostics.ProcessStartInfo
+	$OpensslInfo.FileName = $openssl
+	$OpensslInfo.RedirectStandardError = $true
+	$OpensslInfo.RedirectStandardOutput = $true
+	$OpensslInfo.UseShellExecute = $false
+	$OpensslInfo.Arguments = $OpenSSLArgs
+	$o = New-Object System.Diagnostics.Process
+	$o.StartInfo = $OpensslInfo
+	$o.Start() | Out-Null
+	$o.WaitForExit()
+	$stdout = $o.StandardOutput.ReadToEnd()
+	$stderr = $o.StandardError.ReadToEnd()
+	Write-Host "stdout: $stdout"
+	Write-Host "stderr: $stderr"
+	Write-Host "exit code: " + $o.ExitCode
+}
+
 function Set-VMHostProfileExtended {
 <#
 .SYNOPSIS  Update the root password in a Host Profile
@@ -973,7 +1071,7 @@ function Set-VMHostProfileExtended {
   }
 }
 
-function TransferCertToNode ($Cert_Dir, $servertype, $hostname, $username, $password, $vihandle) {
+function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password,$vihandle) {
 # http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vsphere.security.doc/GUID-BD70615E-BCAA-4906-8E13-67D0DBF715E4.html
 # Copy SSL certificates to a VCSA and replace the existing ones.
 
@@ -986,6 +1084,16 @@ function TransferCertToNode ($Cert_Dir, $servertype, $hostname, $username, $pass
 	$pscdeployments	= @("tiny","small","large","infrastructure")
 	
 	ExecuteScript $script $hostname $username $password $vihandle
+
+	$commandlist = $null
+	$commandlist = @()
+	$commandlist += "echo `'$password`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+
+	echo $commandlist | Out-String
+
+	$viversion = $(ExecuteScript $commandlist $hostname $username $password $vihandle).Scriptoutput.Split("`n")[5]
+
+	echo $viversion
 
 	$filelocations = $null
 	$filelocations = @()
@@ -1004,10 +1112,11 @@ function TransferCertToNode ($Cert_Dir, $servertype, $hostname, $username, $pass
 		$filelocations += "$Cert_Dir\interm264.cer"
 		$filelocations += "$SslPath/interm264.cer"}
 	
-	$filelocations += "$certpath\vmdir\vmdircert.pem"
-	$filelocations += "/usr/lib/vmware-vmdir/share/config/vmdircert.pem"
-	$filelocations += "$certpath\vmdir\vmdirkey.pem"
-	$filelocations += "/usr/lib/vmware-vmdir/share/config/vmdirkey.pem"
+	If ($viversion -inotlike "*6.5*") {
+		$filelocations += "$certpath\vmdir\vmdircert.pem"
+		$filelocations += "/usr/lib/vmware-vmdir/share/config/vmdircert.pem"
+		$filelocations += "$certpath\vmdir\vmdirkey.pem"
+		$filelocations += "/usr/lib/vmware-vmdir/share/config/vmdirkey.pem"}
 
 	$filelocations += "$certpath\solution\machine.cer"
 	$filelocations += "$SolutionPath/machine.cer"
@@ -1046,7 +1155,7 @@ function TransferCertToNode ($Cert_Dir, $servertype, $hostname, $username, $pass
 		$commandlist += "echo `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm64.cer"
 		$commandlist += "echo `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm264.cer"}
 
-    #Replace the Machine Cert.
+    # Replace the Machine Cert.
 	$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store MACHINE_SSL_CERT --alias __MACHINE_CERT"
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store MACHINE_SSL_CERT --alias __MACHINE_CERT --cert $SslPath/new_machine.cer --key $SslPath/ssl_key.priv"
 
@@ -1059,12 +1168,13 @@ function TransferCertToNode ($Cert_Dir, $servertype, $hostname, $username, $pass
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store machine --alias machine --cert $SolutionPath/machine.cer --key $SolutionPath/machine.priv"
 	$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vsphere-webclient --alias vsphere-webclient"
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vsphere-webclient --alias vsphere-webclient --cert $SolutionPath/vsphere-webclient.cer --key $SolutionPath/vsphere-webclient.priv"
-	#Skip if server is an External PSC.
+	# Skip if server is an External PSC.
 	if ($servertype -ine "Infrastructure"){
 		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd --alias vpxd"
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd --alias vpxd --cert $SolutionPath/vpxd.cer --key $SolutionPath/vpxd.priv"
 		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd-extension --alias vpxd-extension"	
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd-extension --alias vpxd-extension --cert $SolutionPath/vpxd-extension.cer --key $SolutionPath/vpxd-extension.priv"
+
 	}
 
 	ExecuteScript $commandlist $hostname $username $password $vihandle
@@ -1077,7 +1187,7 @@ function TransferCertToNode ($Cert_Dir, $servertype, $hostname, $username, $pass
 	$UniqueID = Invoke-VMScript -ScriptText $commandlist[0] -vm $hostname -GuestUser $username -GuestPassword $password -Server $vihandle
 	$CertList = Invoke-VMScript -ScriptText $commandlist[1] -vm $hostname -GuestUser $username -GuestPassword $password -Server $vihandle
 	
-	#Retrieve unique key list relevant to the server.
+	# Retrieve unique key list relevant to the server.
 	$SolutionUsers = ($Certlist.ScriptOutput.split(".").Split("`n")|%{if($_[0] -eq " "){$_}} | ?{$_.ToString() -ilike "*$($UniqueID.ScriptOutput.split("`n")[0])*"}).Trim(" ")
 
 	$commandlist = $null
@@ -1093,31 +1203,28 @@ function TransferCertToNode ($Cert_Dir, $servertype, $hostname, $username, $pass
 	$commandlist += "export VMWARE_LOG_DIR=/var/log"	
 	$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
 	$commandlist += "export VMWARE_DATA_DIR=/storage"
-	$commandlist += "service-control --start --all"
+	$commandlist += "service-control --start --all --ignore"
 	
-	#Service update
+	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
-}
 
-function Use-Openssl ($OpenSSLArgs) {
-# Execute Openssl keeping return values separate as to not cause issues.
-	$OpensslInfo = $null
-	$o			 = $null
-	$OpensslInfo = New-Object System.Diagnostics.ProcessStartInfo
-	$OpensslInfo.FileName = $openssl
-	$OpensslInfo.RedirectStandardError = $true
-	$OpensslInfo.RedirectStandardOutput = $true
-	$OpensslInfo.UseShellExecute = $false
-	$OpensslInfo.Arguments = $OpenSSLArgs
-	$o = New-Object System.Diagnostics.Process
-	$o.StartInfo = $OpensslInfo
-	$o.Start() | Out-Null
-	$o.WaitForExit()
-	$stdout = $o.StandardOutput.ReadToEnd()
-	$stderr = $o.StandardError.ReadToEnd()
-	Write-Host "stdout: $stdout"
-	Write-Host "stderr: $stderr"
-	Write-Host "exit code: " + $o.ExitCode
+    # Refresh Update Manager Certificates.
+	if ($servertype -ine "Infrastructure") {
+    	$commandlist = $null
+		$commandlist = @()
+		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+		$commandlist += "export VMWARE_LOG_DIR=/var/log"	
+		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+		$commandlist += "export VMWARE_DATA_DIR=/storage"
+		$commandlist += "export VMWARE_RUNTIME_DATA_DIR=/var"
+		#$commandlist += "service-control --stop vmware-updatemgr"
+    	$commandlist += "/usr/lib/vmware-updatemgr/bin/updatemgr-util refresh-certs"
+    	$commandlist += "/usr/lib/vmware-updatemgr/bin/updatemgr-util register-vc"		
+		#$commandlist += "service-control --start vmware-updatemgr"
+
+    	# Service update
+		ExecuteScript $commandlist $hostname $username $password $vihandle
+	}
 }
 
 function UserPEMFiles {
@@ -1224,7 +1331,7 @@ Start-Transcript -path $OutputPath -append
 
 Separatorline
 
-#Check to see if Powershell is at least version 3.0
+# Check to see if Powershell is at least version 3.0
 $PSpath = "HKLM:\SOFTWARE\Microsoft\PowerShell\3"
 if (!(Test-Path $PSpath)) {
 	Write-Host "PowerShell 3.0 or higher required. Please install"; exit 
@@ -1265,7 +1372,7 @@ Remove-Item $sslexe
 
 $openssl = ($InstalledApps | ?{$_.DisplayName -ilike "*openssl*"}).InstallLocation + "bin\openssl.exe"
 
-#Check for openssl
+# Check for openssl
 CheckOpenSSL $openssl
 
 Separatorline
@@ -1610,6 +1717,28 @@ $workbook.Close($false)
 
 # ---------------------  END Load Parameters from Excel ------------------------------
 
+# https://blogs.technet.microsoft.com/bshukla/2010/04/12/ignoring-ssl-trust-in-powershell-system-net-webclient/
+$netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
+
+if($netAssembly)
+{
+    $bindingFlags = [Reflection.BindingFlags] "Static,GetProperty,NonPublic"
+    $settingsType = $netAssembly.GetType("System.Net.Configuration.SettingsSectionInternal")
+
+    $instance = $settingsType.InvokeMember("Section", $bindingFlags, $null, $null, @())
+
+    if($instance)
+    {
+        $bindingFlags = "NonPublic","Instance"
+        $useUnsafeHeaderParsingField = $settingsType.GetField("useUnsafeHeaderParsing", $bindingFlags)
+
+        if($useUnsafeHeaderParsingField)
+        {
+          $useUnsafeHeaderParsingField.SetValue($instance, $true)
+        }
+    }
+}
+
 # Global variables
 [regex]$regex				= '\d{2,4}'
 $pscdeployments				= @("tiny","small","large","infrastructure")
@@ -1632,9 +1761,8 @@ if (!(Test-Path $Cert_Dir)) { New-Item $Cert_Dir -Type Directory | Out-Null }
 
 # Deploy the VCSA servers.
 
-foreach ($Deployment in $s_Deployments) {
+foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 	# Skip deployment if set to null.
-	if ($Deployment.Action -ine "null") {
 
 		Write-Host "`r`n Deploying $($Deployment.Hostname) now.`r`n" -foregroundcolor cyan
 	
@@ -1644,128 +1772,68 @@ foreach ($Deployment in $s_Deployments) {
 		# Write separator line to transcript.
 		Separatorline
 	
-		# Wait until the vcsa is available.
-		If ($Deployment.OVA -ilike "*6.5*") {
-			Available "https://$($Deployment.Hostname):5480"
-			}
-		else {
-			Available "https://$($Deployment.Hostname)"
+		# Create esxi credentials.
+		$esxi_secpasswd		= $null
+		$esxi_creds			= $null
+		$esxi_secpasswd		= ConvertTo-SecureString $Deployment.esxiRootPass -AsPlainText -Force
+		$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
+	
+		# Connect to esxi host of the deployed vcsa.
+		$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
+		
+		Separatorline
+
+		$commandlist = $null
+		$commandlist = @()
+		$commandlist += 'test -e "/var/log/firstboot/succeeded"'
+		$commandlist += 'echo $?'
+		
+		while ((ExecuteScript $commandlist $Deployment.vmName "root" $($Deployment.VCSARootPass) $esxihandle).ScriptOutput[0] -eq "1") {
+			echo "== waiting 30 seconds while firstboot for $($Deployment.vmName) finishes ==" | Out-String
+			Start-Sleep -s 30
 		}
 	
-		Write-Host "`r`n The VCSA $($Deployment.Hostname) has been deployed and is available.`r`n" -foregroundcolor cyan
-	
+		echo "`r`n The VCSA $($Deployment.Hostname) has been deployed and is available.`r`n" | Out-String
+
+		# Disconnect from the vcsa deployed esxi server.
+		Disconnect-viserver -Server $esxihandle -Confirm:$false
+
 		# Write separator line to transcript.
-		Separatorline
-	}
+		Separatorline	
 }
 
-# Wait 90 seconds before continuing to give the vcsa enough time for all services to start.
-Start-Sleep -s 90
-
-foreach ($Deployment in $s_Deployments) {
+foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 	
-	# Skip deployment if set to null.
-	if ($Deployment.Action -ine "null") {
+		echo "== Starting configuration of $($Deployment.vmName) ==" | Out-String
+
+		Separatorline
 	
 		# Create esxi credentials.
+        $esxi_secpasswd		= $null
+		$esxi_creds			= $null
 		$esxi_secpasswd		= ConvertTo-SecureString $Deployment.esxiRootPass -AsPlainText -Force
 		$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
 	
 		# Connect to esxi host of the deployed vcsa.
 		$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
 
+		Separatorline
+		
 		# if the vcsa is a PSC, join it to the windows domain.
 		if ($pscdeployments -contains $Deployment.DeployType) {
-		
-			$commandlist = $null
-			$commandlist = @()
-			$commandlist += 'export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages'
-			$commandlist += 'export VMWARE_LOG_DIR=/var/log'
-			$commandlist += 'export VMWARE_DATA_DIR=/storage'
-			$commandlist += 'export VMWARE_CFG_DIR=/etc/vmware'
-			$commandlist += '/usr/bin/service-control --start --all'
-			$commandlist += "/opt/likewise/bin/domainjoin-cli join $($s_adinfo.ADDomain) $($s_adinfo.ADJoinUser) $($s_adinfo.ADJoinPass)"
-	
-			# Excute the commands in $commandlist on the vcsa.
-			ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
-
-			ExecuteScript "reboot" $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
-
-			# Write separator line to transcript.
-			Separatorline
-			
-			# Wait 60 seconds before checking availability to make sure the vcsa is booting up and not in the process of shutting down.
-			Start-Sleep -s 60
-			
-			# Wait until the vcsa is available.
-			Available "https://$($Deployment.Hostname)"
-			
-			# Write separator line to transcript.
-			Separatorline
+			JoinADDomain $Deployment $s_adinfo $esxihandle
 		}
-		
-		# if the vcsa is the first PSC in the vsphere domain, set the default identity source to the windows domain,
-		# add the windows AD group to the admin groups of the PSC.
-		if ($Deployment.Action -ieq "first" -and $pscdeployments -contains $Deployment.DeployType) {
-			ConfigureIdentity $Deployment.SSODomainName $Deployment.Hostname $Deployment.VCSARootPass $s_adinfo.ADDomain $s_adinfo.ADvCenterAdmins $esxihandle
-		}
-
-		# Change the Placeholder (FQDN) from the certs tab to the FQDN of the vcsa.
-		$s_certinfo.CompanyName = $Deployment.Hostname
-		
-		# $InstanceCertDir is the script location plus cert folder and hostname eg. C:\Script\Certs\vm-host1.companyname.com\
-		$InstanceCertDir = $Cert_Dir + "\" + $Deployment.Hostname
-		
-		# Check for or download root certificates.
-		DownloadRoots $Cert_Dir	$s_certinfo.RootCA $rootcer $s_certinfo.SubCA1 $intermcer $s_certinfo.SubCA2 $interm2cer $s_certinfo.CADownload
-		
-		# Check for or create certificate chain.
-		ChainCAs $Cert_Dir $rootcer $intermcer $interm2cer
-		
-		# Create the Machine cert.
-		CreateCSR machine machine_ssl.csr machine_ssl.cfg ssl_key.priv 6 $InstanceCertDir $s_certinfo
-		OnlineMint machine machine_ssl.csr new_machine.crt $s_certinfo.V6Template $InstanceCertDir $s_certinfo.IssuingCA
-		CreatePEMFiles machine new_machine.crt new_machine.cer $Cert_Dir $InstanceCertDir
-		
-		# Change back to the script root folder.
-		CDDir $PSScriptRoot
-
-		# Create the VMDir cert.
-		CreateCSR VMDir VMDir.csr VMDir.cfg VMDir.priv 6 $InstanceCertDir $s_certinfo
-		OnlineMint VMDir VMDir.csr VMDir.crt $s_certinfo.V6Template $InstanceCertDir $s_certinfo.IssuingCA
-		CreatePEMFiles VMDir VMDir.crt VMdir.cer $Cert_Dir $InstanceCertDir
-		
-		# Rename the VMDir cert for use on a VMSA.
-		VMDirRename $InstanceCertDir
-		
-		# Change back to the script root folder.		
-		CDDir $PSScriptRoot
-
-		# Create the Solution User Certs - 2 for External PSC, 4 for all other deployments.
-		if ($Deployment.DeployType -ieq "infrastructure" ) {
-			CreatePscSolutionCert $Cert_Dir $InstanceCertDir $s_certinfo 
-		}
-		else {CreateVCSolutionCert $Cert_Dir $InstanceCertDir $s_certinfo}
-		
-		# Copy Cert files to vcsa Node and deploy them.
-		TransferCerttoNode $Cert_Dir $Deployment.DeployType $Deployment.Hostname "root" $Deployment.VCSARootPass
-		
-		# Write separator line to transcript.
-		Separatorline
 		
 		# if the vcsa is not a stand alone PSC, configure the vCenter.
 		if ($Deployment.DeployType -ine "infrastructure" ) {
 
+			echo "== vCenter $($Deployment.vmName) configuration ==" | Out-String
+
+			Separatorline
+
 			$Datacenters	= $s_sites | ?{$_.vCenter -ieq "all" -or $_.vCenter -ilike $Deployment.Hostname}
 			$sso_secpasswd	= ConvertTo-SecureString $($Deployment.SSOAdminPass) -AsPlainText -Force
 			$sso_creds		= New-Object System.Management.Automation.PSCredential ("Administrator@$($Deployment.SSODomainName)", $sso_secpasswd)
-			
-			#
-			# vCenter Configs
-			#
-			
-			# Wait until the vcsa is available.
-			Available "https://$($Deployment.Hostname)"
 
 			# Connect to the vCenter
 			$vchandle = Connect-viserver $Deployment.Hostname -Credential $sso_creds
@@ -1810,10 +1878,10 @@ foreach ($Deployment in $s_Deployments) {
 					# Create new vdswitch.
 					New-VDSwitch -Server $vchandle -Name $vdswitch.vDSwitchName -Location $SwitchLocation -Mtu $mtu -NumUplinkPorts 2
 					
-					#Enable NIOC
+					# Enable NIOC
 					(get-vdswitch -Server $vchandle -Name $vdswitch.vDSwitchName | get-view).EnableNetworkResourceManagement($true)
 				
-					#Create Portgroups
+					# Create Portgroups
 					foreach ($vlan in $($s_vlans.vlan | ?{$_.StartsWith($vdswitch.vDSwitchName.split(" ")[0])})) {
 					
 						$vlan = $vlan -replace "oct1", $oct1
@@ -1822,7 +1890,7 @@ foreach ($Deployment in $s_Deployments) {
 						
 						New-VDPortgroup -Server $vchandle -VDSwitch $vdswitch.vDSwitchName -Name $vlan -Notes $vlan.split("-")[0] -VlanId $regex.matches($vlan)[0].value
 						
-						#Set Portgroup Team policies
+						# Set Portgroup Team policies
 						if ($vlan -ilike "*vmotion-1*") {
 							Get-vdportgroup -Server $vchandle | ?{$_.Name.split('%')[0] -ilike $vlan.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink1" -StandbyUplinkPort "dvUplink2"
 						}
@@ -1840,7 +1908,10 @@ foreach ($Deployment in $s_Deployments) {
 					}
 				}
 			}
-			
+
+			# Add Licenses to vCenter.
+			if ($s_Licenses | ?{$_.vCenter -eq $Deployment.Hostname}) { ConfigureLicensing $($s_Licenses | ?{$_.vCenter -eq $Deployment.Hostname}) $vchandle}
+
 			# Select permissions for all vCenters or the current vCenter.
 			# Create the permissions.
 			CreatePermissions $($s_Permissions | ?{$_.vCenter -ieq "all" -or $_.vCenter -ilike $Deployment.Hostname}) $vchandle
@@ -1850,42 +1921,126 @@ foreach ($Deployment in $s_Deployments) {
 				echo $serv | Out-String
 				if ($serv.Node -eq $Deployment.Hostname) {
 					switch ($serv.Service) {
-						AutoDeploy	{ ConfigureAutoDeploy $Deployment.IP $Deployment.Hostname "root" $Deployment.VCSARootPass $($Deployment.SSODomainName) $esxihandle
+						AutoDeploy	{ ConfigureAutoDeploy $Deployment.IP $Deployment.Hostname "root" $Deployment.VCSARootPass $($Deployment.SSODomainName) $esxihandle $vchandle.version
 									  If ($s_arules | ?{$_.vCenter -eq $Deployment.Hostname}) { ConfigureAutoDeployRules $($s_arules | ?{$_.vCenter -eq $Deployment.Hostname}) $PSScriptRoot $vchandle}
 						}
-						Netdumpster	{ ConfigureNetdumpster $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
+						Netdumpster	{ ConfigureNetdumpster $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle $vchandle.version}
 						TFTP		{ ConfigureTFTP $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 					}
 				}
 			}
-			
-			if ($s_Licenses | ?{$_.vCenter -eq $Deployment.Hostname}) { ConfigureLicensing $($s_Licenses | ?{$_.vCenter -eq $Deployment.Hostname}) $vchandle}
-			
+
 			# Disconnect from the vCenter.
 			Disconnect-viserver -server $vchandle -Confirm:$false
-			
+
+			Separatorline
 		}
-	
+
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
-	}
 }
 
-foreach ($Deployment in $s_Deployments) {
-	if ($Deployment.Action -ine "null") {
-	
+foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
+
 		# Create esxi credentials.
+        $esxi_secpasswd		= $null
+		$esxi_creds			= $null
 		$esxi_secpasswd		= ConvertTo-SecureString $Deployment.esxiRootPass -AsPlainText -Force
 		$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
 	
 		# Connect to esxi host of the deployed vcsa.
 		$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
 
-		ExecuteScript "reboot" $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
+		# Change the Placeholder (FQDN) from the certs tab to the FQDN of the vcsa.
+		$s_certinfo.CompanyName = $Deployment.Hostname
 		
+		# $InstanceCertDir is the script location plus cert folder and hostname eg. C:\Script\Certs\vm-host1.companyname.com\
+		$InstanceCertDir = $Cert_Dir + "\" + $Deployment.Hostname
+		
+		# Check for or download root certificates.
+		DownloadRoots $Cert_Dir	$s_certinfo.RootCA $rootcer $s_certinfo.SubCA1 $intermcer $s_certinfo.SubCA2 $interm2cer $s_certinfo.CADownload
+		
+		# Check for or create certificate chain.
+		ChainCAs $Cert_Dir $rootcer $intermcer $interm2cer
+		
+		# Create the Machine cert.
+		CreateCSR machine machine_ssl.csr machine_ssl.cfg ssl_key.priv 6 $InstanceCertDir $s_certinfo
+		OnlineMint machine machine_ssl.csr new_machine.crt $s_certinfo.V6Template $InstanceCertDir $s_certinfo.IssuingCA
+		CreatePEMFiles machine new_machine.crt new_machine.cer $Cert_Dir $InstanceCertDir
+		
+		# Change back to the script root folder.
+		CDDir $PSScriptRoot
+
+		# Create the VMDir cert.
+		CreateCSR VMDir VMDir.csr VMDir.cfg VMDir.priv 6 $InstanceCertDir $s_certinfo
+		OnlineMint VMDir VMDir.csr VMDir.crt $s_certinfo.V6Template $InstanceCertDir $s_certinfo.IssuingCA
+		CreatePEMFiles VMDir VMDir.crt VMdir.cer $Cert_Dir $InstanceCertDir
+		
+		# Rename the VMDir cert for use on a VMSA.
+		VMDirRename $InstanceCertDir
+		
+		# Change back to the script root folder.		
+		CDDir $PSScriptRoot
+
+		# Create the Solution User Certs - 2 for External PSC, 4 for all other deployments.
+		if ($Deployment.DeployType -ieq "infrastructure" ) {
+			CreatePscSolutionCert $Cert_Dir $InstanceCertDir $s_certinfo
+			Separatorline
+            # Copy Cert files to vcsa Node and deploy them.
+		    TransferCerttoNode $Cert_Dir $Deployment.DeployType $Deployment.Hostname "root" $Deployment.VCSARootPass
+		}
+		else {CreateVCSolutionCert $Cert_Dir $InstanceCertDir $s_certinfo
+			  Separatorline
+              # Copy Cert files to vcsa Node and deploy them.
+		      TransferCerttoNode $Cert_Dir $Deployment.DeployType $Deployment.Hostname "root" $Deployment.VCSARootPass
+
+              $newservices = $s_arules | ?{$_.vCenter -eq $Deployment.Hostname}
+              If ($newservices) {
+                  Foreach ($newservice in $newservices) {
+                      switch ($newservice) {
+                            AutoDeploy  {$commandlist = $null
+                                         $commandlist = @()
+                                         $commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+                                         $commandlist += "export VMWARE_LOG_DIR=/var/log"
+                                         $commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+                                         $commandlist += "export VMWARE_DATA_DIR=/storage"
+										 $commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
+										 $commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
+                                         $commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.rbd -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($Deployment.hostname) -u administrator@$($Deployment.SSODomainName) -p `'$Deployment.VCSARootPass`'"
+                                        
+                                         ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
+                            Netdumpster {$commandlist = $null
+                                         $commandlist = @()
+                                         $commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+                                         $commandlist += "export VMWARE_LOG_DIR=/var/log"
+                                         $commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+                                         $commandlist += "export VMWARE_DATA_DIR=/storage"
+										 $commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
+										 $commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
+                                         $commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.imagebuilder -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($Deployment.hostname) -u administrator@$($Deployment.SSODomainName) -p `'$Deployment.VCSARootPass`'"
+                                        
+                                         ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
+                      }
+                  }
+              }
+        }
+		
+		# Write separator line to transcript.
+		Separatorline
+		
+		write-host "=============== Restarting $($Deployment.vmName) ===============" | Out-String
+		Restart-VMGuest -VM $Deployment.vmName -Server $esxihandle -Confirm:$false
+
+		# Wait until the vcsa is available.
+		Available "https://$($Deployment.Hostname)"
+	
+		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
-	}
 }
+
+Separatorline
+
+echo "<=============== Deployment Complete ===============>" | Out-String
 
 # Stop the transcript.
 Stop-Transcript
