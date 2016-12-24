@@ -1164,8 +1164,8 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 
 	$commandlist = $null
 	$commandlist = @()
-	$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store machine --alias machine" 
-	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store machine --alias machine --cert $SolutionPath/machine.cer --key $SolutionPath/machine.priv"
+	#$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store machine --alias machine" 
+	#$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store machine --alias machine --cert $SolutionPath/machine.cer --key $SolutionPath/machine.priv"
 	$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vsphere-webclient --alias vsphere-webclient"
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vsphere-webclient --alias vsphere-webclient --cert $SolutionPath/vsphere-webclient.cer --key $SolutionPath/vsphere-webclient.priv"
 	# Skip if server is an External PSC.
@@ -1193,7 +1193,7 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 	$commandlist = $null
 	$commandlist = @()
 
-	$commandlist += "echo `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli service update --name $($SolutionUsers[0]) --cert $SolutionPath/machine.cer"
+	#$commandlist += "echo `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli service update --name $($SolutionUsers[0]) --cert $SolutionPath/machine.cer"
 	$commandlist += "echo `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli service update --name $($SolutionUsers[1]) --cert $SolutionPath/vsphere-webclient.cer"
 	if ($servertype -ine "Infrastructure") {
 		$commandlist += "echo `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli service update --name $($SolutionUsers[2]) --cert $SolutionPath/vpxd.cer"
@@ -1355,27 +1355,6 @@ else
 	
 # Get list of installed Applications
 $InstalledApps = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*, HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |?{$_.DisplayName} | Sort
-	
-# Download OpenSSL if it's not already installed
-if (!($InstalledApps | ?{$_.DisplayName -ilike "*openssl*"})) {
-Write-Host -Foreground "DarkBlue" -Background "White" "Downloading OpenSSL $OpenSSLVersion ..."
-$null = New-Item -Type Directory $openssldir -erroraction silentlycontinue
-$sslurl = "http://slproweb.com/download/$OpenSSLVersion"
-$sslexe = "$env:temp\openssl.exe"
-$wc.DownloadFile($sslurl,$sslexe)
-$env:path = $env:path + ";$openssldir"
-    if (!(test-Path($sslexe))) { Write-Host -Foreground "red" -Background "white" "Could not download or find OpenSSL. Please install the latest OpenSSL 0.9.8 manually or update download name."; exit}
-Write-Host -Foreground "DarkBlue" -Background "White" "Installing OpenSSL..."
-    cmd /c $sslexe /silent /verysilent /sp- /suppressmsgboxes
-Remove-Item $sslexe
-}
-
-$openssl = ($InstalledApps | ?{$_.DisplayName -ilike "*openssl*"}).InstallLocation + "bin\openssl.exe"
-
-# Check for openssl
-CheckOpenSSL $openssl
-
-Separatorline
 
 # ---------------------  Load Parameters from Excel ------------------------------
 
@@ -1389,30 +1368,34 @@ $objExcel = New-Object -ComObject Excel.Application
 $objExcel.Visible = $false
 
 # Open the Excel file and save it in $WorkBook
-$workBook = $objExcel.Workbooks.Open($ExcelFilePath)
+$workBook 	= $objExcel.Workbooks.Open($ExcelFilePath)
 
 # get ad info
 $workSheet	= $WorkBook.sheets.item("adinfo")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data		= $Worksheet.Range("B2","B$rows").Value().split("`n")
+$lastrow	= $worksheet.Range("A:A").count
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("B:B"),"<>")
 
-$s_adinfo = New-Object System.Object
-$s_adinfo | Add-Member -type NoteProperty -name ADDomain -value $data[0]
-$s_adinfo | Add-Member -type NoteProperty -name ADJoinUser -value $data[1]
-$s_adinfo | Add-Member -type NoteProperty -name ADJoinPass -value $data[2]		
-$s_adinfo | Add-Member -type NoteProperty -name ADvCenterAdmins -value $data[3]
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data	  = $Worksheet.Range("B2","B$rows").Value().split("`n")
+	$s_adinfo = New-Object System.Object
+	$s_adinfo | Add-Member -type NoteProperty -name ADDomain -value $data[0]
+	$s_adinfo | Add-Member -type NoteProperty -name ADJoinUser -value $data[1]
+	$s_adinfo | Add-Member -type NoteProperty -name ADJoinPass -value $data[2]		
+	$s_adinfo | Add-Member -type NoteProperty -name ADvCenterAdmins -value $data[3]
 
-echo $s_adinfo | Out-String
+	echo $s_adinfo | Out-String
+}
 
 Separatorline
 
 # get autodeploy rules
 $workSheet	= $WorkBook.sheets.item("autodeploy")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data 		= $Worksheet.Range("A2","J$rows").Value()
-$s_arules = @()
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data	  = $Worksheet.Range("A2","J$rows").Value()
+	$s_arules = @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_arule = New-Object System.Object
 		$s_arule | Add-Member -type NoteProperty -name vCenter -value $data[$i,1]
 		$s_arule | Add-Member -type NoteProperty -name RuleName -value $data[$i,2]			
@@ -1425,67 +1408,72 @@ for ($i=1;$i -lt $rows;$i++){
 		$s_arule | Add-Member -type NoteProperty -name Pattern -value $data[$i,9]
 		$s_arule | Add-Member -type NoteProperty -name Activate -value $data[$i,10]
 		$s_arules += $s_arule
+	}
+	echo $s_arules | Out-String
 }
-
-echo $s_arules | Out-String
 
 Separatorline
 
 # get certificate info
 $workSheet	= $WorkBook.sheets.item("certs")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data		= $Worksheet.Range("B2","B$rows").Value().split("`n")
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("B:B"),"<>")
 
-$s_Certinfo = New-Object System.Object
-$s_Certinfo | Add-Member -type NoteProperty -name sslVersion -value $data[0]
-$s_Certinfo | Add-Member -type NoteProperty -name RootCA -value $data[1]
-$s_Certinfo | Add-Member -type NoteProperty -name SubCA1 -value $data[2]		
-$s_Certinfo | Add-Member -type NoteProperty -name SubCA2 -value $data[3]
-$s_Certinfo | Add-Member -type NoteProperty -name CompanyName -value $data[4]
-$s_Certinfo | Add-Member -type NoteProperty -name OrgName -value $data[5]
-$s_Certinfo | Add-Member -type NoteProperty -name OrgUnit -value $data[6]
-$s_Certinfo | Add-Member -type NoteProperty -name State -value $data[7]
-$s_Certinfo | Add-Member -type NoteProperty -name Locality -value $data[8]
-$s_Certinfo | Add-Member -type NoteProperty -name Country -value $data[9]
-$s_Certinfo | Add-Member -type NoteProperty -name Email -value $data[10]
-$s_Certinfo | Add-Member -type NoteProperty -name CADownload -value $data[11]
-$s_Certinfo | Add-Member -type NoteProperty -name IssuingCA -value $data[12]
-$s_Certinfo | Add-Member -type NoteProperty -name VUMTemplate -value $data[13]
-$s_Certinfo | Add-Member -type NoteProperty -name V6Template -value $data[14]
-$s_Certinfo | Add-Member -type NoteProperty -name SubTemplate -value $data[15]
-$s_Certinfo | Add-Member -type NoteProperty -name RootRenewal -value $data[16]
-$s_Certinfo | Add-Member -type NoteProperty -name SubRenewal1 -value $data[17]
-$s_Certinfo | Add-Member -type NoteProperty -name SubRenewal2 -value $data[18]
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data		= $Worksheet.Range("B2","B$rows").Value().split("`n")
+	$s_Certinfo = New-Object System.Object
+	$s_Certinfo | Add-Member -type NoteProperty -name sslVersion -value $data[0]
+	$s_Certinfo | Add-Member -type NoteProperty -name openssldir -value $data[1]
+	$s_Certinfo | Add-Member -type NoteProperty -name RootCA -value $data[2]
+	$s_Certinfo | Add-Member -type NoteProperty -name SubCA1 -value $data[3]		
+	$s_Certinfo | Add-Member -type NoteProperty -name SubCA2 -value $data[4]
+	$s_Certinfo | Add-Member -type NoteProperty -name CompanyName -value $data[5]
+	$s_Certinfo | Add-Member -type NoteProperty -name OrgName -value $data[6]
+	$s_Certinfo | Add-Member -type NoteProperty -name OrgUnit -value $data[7]
+	$s_Certinfo | Add-Member -type NoteProperty -name State -value $data[8]
+	$s_Certinfo | Add-Member -type NoteProperty -name Locality -value $data[9]
+	$s_Certinfo | Add-Member -type NoteProperty -name Country -value $data[10]
+	$s_Certinfo | Add-Member -type NoteProperty -name Email -value $data[11]
+	$s_Certinfo | Add-Member -type NoteProperty -name CADownload -value $data[12]
+	$s_Certinfo | Add-Member -type NoteProperty -name IssuingCA -value $data[13]
+	$s_Certinfo | Add-Member -type NoteProperty -name VUMTemplate -value $data[14]
+	$s_Certinfo | Add-Member -type NoteProperty -name V6Template -value $data[15]
+	$s_Certinfo | Add-Member -type NoteProperty -name SubTemplate -value $data[16]
+	$s_Certinfo | Add-Member -type NoteProperty -name RootRenewal -value $data[17]
+	$s_Certinfo | Add-Member -type NoteProperty -name SubRenewal1 -value $data[18]
+	$s_Certinfo | Add-Member -type NoteProperty -name SubRenewal2 -value $data[19]
 
-echo $s_certinfo | Out-String
+	echo $s_Certinfo | Out-String
+}
 
 Separatorline
 
 # get clusters
 $workSheet	= $WorkBook.sheets.item("clusters")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data 		= $Worksheet.Range("A2","C$rows").Value()
-$s_clusters = @()
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data 		= $Worksheet.Range("A2","C$rows").Value()
+	$s_clusters = @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_cluster = New-Object System.Object
 		$s_cluster | Add-Member -type NoteProperty -name ClusterName -value $data[$i,1]
 		$s_cluster | Add-Member -type NoteProperty -name Datacenter -value $data[$i,2]
 		$s_cluster | Add-Member -type NoteProperty -name vCenter -value $data[$i,3]
 		$s_clusters += $s_cluster
+	}
+	echo $s_clusters | Out-String
 }
-
-echo $s_clusters | Out-String
 
 Separatorline
 
 # get folders
 $workSheet	= $WorkBook.sheets.item("folders")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data		= $Worksheet.Range("A2","E$rows").Value()
-$s_folders	= @()
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data		= $Worksheet.Range("A2","E$rows").Value()
+	$s_folders	= @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_folder = New-Object System.Object
 		$s_folder | Add-Member -type NoteProperty -name Name -value $data[$i,1]
 		$s_folder | Add-Member -type NoteProperty -name Location -value $data[$i,2]
@@ -1493,19 +1481,20 @@ for ($i=1;$i -lt $rows;$i++){
 		$s_folder | Add-Member -type NoteProperty -name Datacenter -value $data[$i,4]
 		$s_folder | Add-Member -type NoteProperty -name vCenter -value $data[$i,5]
 		$s_folders += $s_folder
-}
-
+	}
 echo $s_folders | Out-String
+}
 
 Separatorline
 
 # get Permissions
-$workSheet		= $WorkBook.sheets.item("permissions")
-$rows			= $WorkSheet.UsedRange.Rows.Count
-$data			= $Worksheet.Range("A2","E$rows").Value()
-$s_Permissions	= @()
+$workSheet	= $WorkBook.sheets.item("permissions")
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data			= $Worksheet.Range("A2","E$rows").Value()
+	$s_Permissions	= @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_Permission = New-Object System.Object
 		$s_Permission | Add-Member -type NoteProperty -name Entity -value $data[$i,1]
 		$s_Permission | Add-Member -type NoteProperty -name Principal -value $data[$i,2]	
@@ -1513,19 +1502,20 @@ for ($i=1;$i -lt $rows;$i++){
 		$s_Permission | Add-Member -type NoteProperty -name Role -value $data[$i,4]
 		$s_Permission | Add-Member -type NoteProperty -name vCenter -value $data[$i,5]
 		$s_Permissions += $s_Permission
-}
-
+	}
 echo $s_Permissions | Out-String
+}
 
 Separatorline
 
 # get OS Customizations
-$workSheet			= $WorkBook.sheets.item("OS")
-$rows				= $WorkSheet.UsedRange.Rows.Count
-$data				= $Worksheet.Range("A2","AA$rows").Value()
-$s_Customizations	= @()
+$workSheet	= $WorkBook.sheets.item("OS")
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data				= $Worksheet.Range("A2","AA$rows").Value()
+	$s_Customizations	= @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_Customization = New-Object System.Object
 		$s_Customization = ""
 		if ($data[$i,1]) {$s_Customization = $s_Customization.insert($s_Customization.length," -OSType `"$($data[$i,1])`"")}
@@ -1555,9 +1545,9 @@ for ($i=1;$i -lt $rows;$i++){
 		if ($data[$i,25]) {$s_Customization = $s_Customization.insert($s_Customization.length," -LicenseMode $($data[$i,25])")}
 		if ($data[$i,26]) {$s_Customization = $s_Customization.insert($s_Customization.length," -LicenseMaxConnections $($data[$i,26])")}
 		$s_Customizations += $s_Customization.insert(0,"New-OSCustomizationSpec")
+	}
+	echo $s_Customizations | Out-String
 }
-
-echo $s_Customizations | Out-String
 
 Separatorline
 
@@ -1565,141 +1555,149 @@ Separatorline
 $s_Deployments	= @()
 $dataqueue		= New-Object System.Collections.Queue
 $workSheet		= $WorkBook.sheets.item("vcsa")
-$rows			= $WorkSheet.UsedRange.Rows.Count
-$Worksheet.Range("B1","B$rows").Value() | %{$dataqueue.Enqueue($_)}
+$rows			= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i += 24){
-	$s_Deployment = New-Object System.Object
-	$s_Deployment | Add-Member -type NoteProperty -name Action -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name vmName -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name Hostname -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name VCSARootPass -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name NetMode -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name NetFamily -value $dataqueue.Dequeue()	
-	$s_Deployment | Add-Member -type NoteProperty -name NetPrefix -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name IP -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name Gateway -value $dataqueue.Dequeue()	
-	$s_Deployment | Add-Member -type NoteProperty -name DNS -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name NTP -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name EnableSSH -value $dataqueue.Dequeue()	
-	$s_Deployment | Add-Member -type NoteProperty -name DiskMode -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name DeployType -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name esxiHost -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name esxiNet -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name esxiDatastore -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name esxiRootUser -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name esxiRootPass -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name Parent -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name SSODomainName -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name SSOSiteName -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name SSOAdminPass -value $dataqueue.Dequeue()
-	$s_Deployment | Add-Member -type NoteProperty -name OVA -value "$PSScriptRoot\$($dataqueue.Dequeue())"
-	$s_Deployments += $s_Deployment
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data			= $Worksheet.Range("A2","X$rows").Value()
+	$s_Deployments	= @()
+	for ($i=1;$i -lt $rows;$i++){
+		$s_Deployment = New-Object System.Object
+		$s_Deployment | Add-Member -type NoteProperty -name Action -value $data[$i,1]
+		$s_Deployment | Add-Member -type NoteProperty -name vmName -value $data[$i,2]
+		$s_Deployment | Add-Member -type NoteProperty -name Hostname -value $data[$i,3]
+		$s_Deployment | Add-Member -type NoteProperty -name VCSARootPass -value $data[$i,4]
+		$s_Deployment | Add-Member -type NoteProperty -name NetMode -value $data[$i,5]
+		$s_Deployment | Add-Member -type NoteProperty -name NetFamily -value $data[$i,6]	
+		$s_Deployment | Add-Member -type NoteProperty -name NetPrefix -value $data[$i,7]
+		$s_Deployment | Add-Member -type NoteProperty -name IP -value $data[$i,8]
+		$s_Deployment | Add-Member -type NoteProperty -name Gateway -value $data[$i,9]	
+		$s_Deployment | Add-Member -type NoteProperty -name DNS -value $data[$i,10]
+		$s_Deployment | Add-Member -type NoteProperty -name NTP -value $data[$i,11]
+		$s_Deployment | Add-Member -type NoteProperty -name EnableSSH -value $data[$i,12]	
+		$s_Deployment | Add-Member -type NoteProperty -name DiskMode -value $data[$i,13]
+		$s_Deployment | Add-Member -type NoteProperty -name DeployType -value $data[$i,14]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiHost -value $data[$i,15]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiNet -value $data[$i,16]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiDatastore -value $data[$i,17]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiRootUser -value $data[$i,18]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiRootPass -value $data[$i,19]
+		$s_Deployment | Add-Member -type NoteProperty -name Parent -value $data[$i,20]
+		$s_Deployment | Add-Member -type NoteProperty -name SSODomainName -value $data[$i,21]
+		$s_Deployment | Add-Member -type NoteProperty -name SSOSiteName -value $data[$i,22]
+		$s_Deployment | Add-Member -type NoteProperty -name SSOAdminPass -value $data[$i,23]
+		$s_Deployment | Add-Member -type NoteProperty -name OVA -value "$PSScriptRoot\$($data[$i,24])"
+		$s_Deployments += $s_Deployment
+	}
+	echo $s_Deployments | Out-String
 }
-
-echo $s_Deployments | Out-String
 
 Separatorline
 
 # get Licenses
 $workSheet	= $WorkBook.sheets.item("licenses")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data		= $Worksheet.Range("A2","D$rows").Value()
-$s_Licenses	= @()
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data		= $Worksheet.Range("A2","D$rows").Value()
+	$s_Licenses	= @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_License = New-Object System.Object
 		$s_License | Add-Member -type NoteProperty -name vCenter -value $data[$i,1]
 		$s_License | Add-Member -type NoteProperty -name LicKey -value $data[$i,2]
 		$s_License | Add-Member -type NoteProperty -name ApplyTo -value $data[$i,3]
 		$s_License | Add-Member -type NoteProperty -name ApplyType -value $data[$i,4]
 		$s_Licenses += $s_License
+	}
+	echo $s_Licenses | Out-String
 }
-
-echo $s_Licenses | Out-String
 
 Separatorline
 
 # get Roles
 $workSheet	= $WorkBook.sheets.item("roles")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data		= $Worksheet.Range("A2","C$rows").Value()
-$s_Roles	= @()
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data		= $Worksheet.Range("A2","C$rows").Value()
+	$s_Roles	= @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_Role = New-Object System.Object
 		$s_Role | Add-Member -type NoteProperty -name Name -value $data[$i,1]
 		$s_Role | Add-Member -type NoteProperty -name Privilege -value $data[$i,2]
 		$s_Role | Add-Member -type NoteProperty -name vCenter -value $data[$i,3]
 		$s_Roles += $s_Role
+	}
+	echo $s_Roles | Out-String
 }
-
-echo $s_Roles | Out-String
 
 Separatorline
 
 # get Services
 $workSheet	= $WorkBook.sheets.item("services")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data		= $Worksheet.Range("A2","B$rows").Value()
-$s_Services	= @()
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data		= $Worksheet.Range("A2","B$rows").Value()
+	$s_Services	= @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_Service = New-Object System.Object
 		$s_Service | Add-Member -type NoteProperty -name Node -value $data[$i,1]
 		$s_Service | Add-Member -type NoteProperty -name Service -value $data[$i,2]
 		$s_Services += $s_Service
+	}
+	echo $s_Services | Out-String
 }
-
-echo $s_Services | Out-String
 
 Separatorline
 
 # get sites
 $workSheet	= $WorkBook.sheets.item("sites")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data 		= $Worksheet.Range("A2","E$rows").Value()
-$s_sites	= @()
-	
-for ($i=1;$i -lt $rows;$i++){
-	$s_site = New-Object System.Object
-	$s_site | Add-Member -type NoteProperty -name Datacenter -value $data[$i,1]
-	$s_site | Add-Member -type NoteProperty -name oct1 -value $data[$i,2]
-	$s_site | Add-Member -type NoteProperty -name oct2 -value $data[$i,3]
-	$s_site | Add-Member -type NoteProperty -name oct3 -value $data[$i,4]
-	$s_site | Add-Member -type NoteProperty -name vCenter -value $data[$i,5]
-	$s_sites += $s_site
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
+
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data 		= $Worksheet.Range("A2","E$rows").Value()
+	$s_sites	= @()
+	for ($i=1;$i -lt $rows;$i++){
+		$s_site = New-Object System.Object
+		$s_site | Add-Member -type NoteProperty -name Datacenter -value $data[$i,1]
+		$s_site | Add-Member -type NoteProperty -name oct1 -value $data[$i,2]
+		$s_site | Add-Member -type NoteProperty -name oct2 -value $data[$i,3]
+		$s_site | Add-Member -type NoteProperty -name oct3 -value $data[$i,4]
+		$s_site | Add-Member -type NoteProperty -name vCenter -value $data[$i,5]
+		$s_sites += $s_site
 	}
-	
-echo $s_sites | Out-String
+	echo $s_sites | Out-String
+}
 
 Separatorline
 
 # get vdswitches
-$workSheet		= $WorkBook.sheets.item("vdswitches")
-$rows			= $WorkSheet.UsedRange.Rows.Count
-$data 			= $Worksheet.Range("A2","D$rows").Value()
-$s_vdswitches	= @()
+$workSheet	= $WorkBook.sheets.item("vdswitches")
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
-	$s_vdswitch = New-Object System.Object
-	$s_vdswitch | Add-Member -type NoteProperty -name vDSwitchName -value $($data[$i,1].ToString() + " " + $data[$i,2].ToString())
-	$s_vdswitch | Add-Member -type NoteProperty -name Location -value $data[$i,3]
-	$s_vdswitch | Add-Member -type NoteProperty -name vCenter -value $data[$i,4]
-	$s_vdswitches += $s_vdswitch
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data 			= $Worksheet.Range("A2","D$rows").Value()
+	$s_vdswitches	= @()
+	for ($i=1;$i -lt $rows;$i++){
+		$s_vdswitch = New-Object System.Object
+		$s_vdswitch | Add-Member -type NoteProperty -name vDSwitchName -value $($data[$i,1].ToString() + " " + $data[$i,2].ToString())
+		$s_vdswitch | Add-Member -type NoteProperty -name Location -value $data[$i,3]
+		$s_vdswitch | Add-Member -type NoteProperty -name vCenter -value $data[$i,4]
+		$s_vdswitches += $s_vdswitch
 	}
+	echo $s_vdswitches | Out-String
+}
 
-echo $s_vdswitches | Out-String
-	
 Separatorline
 
 # get vlans
 $workSheet	= $WorkBook.sheets.item("vlans")
-$rows		= $WorkSheet.UsedRange.Rows.Count
-$data		= $Worksheet.Range("A2","E$rows").Value()
-$s_vlans 	= @()
+$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
-for ($i=1;$i -lt $rows;$i++){
+If ( $rows -gt 1 -and $rows -lt $lastrow) {
+	$data		= $Worksheet.Range("A2","E$rows").Value()
+	$s_vlans 	= @()
+	for ($i=1;$i -lt $rows;$i++){
 		$s_vlan = New-Object System.Object
 		$s_vlan | Add-Member -type NoteProperty -name vlan -value $($data[$i,1].padright(8," ") +`
 																	$data[$i,2].padright(8," ") + "- " +`
@@ -1707,15 +1705,38 @@ for ($i=1;$i -lt $rows;$i++){
 																	$data[$i,4])
 		$s_vlan | Add-Member -type NoteProperty -name vCenter -value $data[$i,5]
 		$s_vlans += $s_vlan
+	}
+	echo $s_vlans | Out-String
 }
-
-echo $s_vlans | Out-String
 
 Separatorline
 
-$workbook.Close($false)
+$workbook.close($false)
 
 # ---------------------  END Load Parameters from Excel ------------------------------
+
+# Download OpenSSL if it's not already installed
+if (!($InstalledApps | ?{$_.DisplayName -ilike "*openssl*"})) {
+Write-Host -Foreground "DarkBlue" -Background "White" "Downloading OpenSSL $OpenSSLVersion ..."
+$null = New-Item -Type Directory $s_Certinfo.openssldir -erroraction silentlycontinue
+$sslurl = "http://slproweb.com/download/$($s_Certinfo.sslVersion)"
+$sslexe = "$env:temp\openssl.exe"
+$wc 							= New-Object System.Net.WebClient
+$wc.UseDefaultCredentials 		= $true
+$wc.DownloadFile($sslurl,$sslexe)
+$env:path = $env:path + ";$($s_Certinfo.openssldir)"
+    if (!(test-Path($sslexe))) { Write-Host -Foreground "red" -Background "white" "Could not download or find OpenSSL. Please install the latest OpenSSL 0.9.8 manually or update download name."; exit}
+Write-Host -Foreground "DarkBlue" -Background "White" "Installing OpenSSL..."
+    cmd /c $sslexe /silent /verysilent /sp- /suppressmsgboxes
+Remove-Item $sslexe
+}
+
+$openssl = ($InstalledApps | ?{$_.DisplayName -ilike "*openssl*"}).InstallLocation + "bin\openssl.exe"
+
+# Check for openssl
+CheckOpenSSL $openssl
+
+Separatorline
 
 # https://blogs.technet.microsoft.com/bshukla/2010/04/12/ignoring-ssl-trust-in-powershell-system-net-webclient/
 $netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
@@ -1750,8 +1771,6 @@ $env:RANDFILE 					= "$PSScriptRoot\Certs\.rnd"
 $rootcer						= "$PSScriptRoot\Certs\root64.cer"
 $intermcer 						= "$PSScriptRoot\Certs\interm64.cer" 
 $interm2cer 					= "$PSScriptRoot\Certs\interm264.cer" 
-$wc 							= New-Object System.Net.WebClient
-$wc.UseDefaultCredentials 		= $true
 $Script:CertsWaitingForApproval = $false
 New-Alias -Name OpenSSL $openssl
 
@@ -1802,6 +1821,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 		Separatorline	
 }
 
+# Configure the vcsa.
 foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 	
 		echo "== Starting configuration of $($Deployment.vmName) ==" | Out-String
@@ -1820,7 +1840,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 		Separatorline
 		
 		# if the vcsa is a PSC, join it to the windows domain.
-		if ($pscdeployments -contains $Deployment.DeployType) {
+		if ($s_adinfo -and $pscdeployments -contains $Deployment.DeployType) {
 			JoinADDomain $Deployment $s_adinfo $esxihandle
 		}
 		
@@ -1839,18 +1859,24 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 			$vchandle = Connect-viserver $Deployment.Hostname -Credential $sso_creds
 			
 			# Create Datacenter
-			$Datacenters.Datacenter.ToUpper() | %{New-Datacenter -Location Datacenters -Name $_}
+			If ($Datacenters) {
+				$Datacenters.Datacenter.ToUpper() | %{New-Datacenter -Location Datacenters -Name $_}
+			}
 				
 			# Create Folders, Roles, and Permissions.
 			$folders = $s_folders | ?{$_.vCenter -ieq "all" -or $_.vCenter -ilike $Deployment.Hostname}
-			echo "Folders:" $folders
-			CreateFolders $folders $vchandle
+			if ($folders) {
+				echo "Folders:" $folders
+				CreateFolders $folders $vchandle
+			}
 
 			# if this is the first vCenter, create custom Roles.
 			if ($Deployment.Action -ieq "first" ) {
 				$roles = $s_roles | ?{$_.vCenter -ieq "all" -or $_.vCenter -ilike $Deployment.Hostname}
-				echo  "Roles:" $roles
-				CreateRoles $roles $vchandle	
+				if ($roles) {
+					echo  "Roles:" $roles
+					CreateRoles $roles $vchandle
+				}	
 			}
 			
 			# Create OS Customizations for the vCenter.
@@ -1941,7 +1967,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 }
 
 foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
-
+	If ($s_Certinfo) {
 		# Create esxi credentials.
         $esxi_secpasswd		= $null
 		$esxi_creds			= $null
@@ -2036,6 +2062,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 	
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
+	}
 }
 
 Separatorline
