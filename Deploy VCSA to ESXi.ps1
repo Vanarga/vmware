@@ -1174,7 +1174,6 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd --alias vpxd --cert $SolutionPath/vpxd.cer --key $SolutionPath/vpxd.priv"
 		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd-extension --alias vpxd-extension"	
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd-extension --alias vpxd-extension --cert $SolutionPath/vpxd-extension.cer --key $SolutionPath/vpxd-extension.priv"
-
 	}
 
 	ExecuteScript $commandlist $hostname $username $password $vihandle
@@ -1208,6 +1207,18 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 
+    # Update VAMI Certs on External PSC.
+    if ($servertype -ieq "Infrastructure") {
+        If ($viversion -inotlike "*6.5*") {
+            $commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/lighttpd-vecs-integration.sh"}
+        Else {
+            $commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/setup-webserver.sh"
+        }
+    }
+
+    # Service update
+	ExecuteScript $commandlist $hostname $username $password $vihandle
+	
     # Refresh Update Manager Certificates.
 	if ($servertype -ine "Infrastructure") {
     	$commandlist = $null
