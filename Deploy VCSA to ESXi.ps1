@@ -1209,15 +1209,15 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 
     # Update VAMI Certs on External PSC.
     if ($servertype -ieq "Infrastructure") {
+		$commandlist = $null
+		$commandlist = @()
         If ($viversion -inotlike "*6.5*") {
             $commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/lighttpd-vecs-integration.sh"}
         Else {
-            $commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/setup-webserver.sh"
-        }
+            $commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/setup-webserver.sh"}
+		# Service update
+		ExecuteScript $commandlist $hostname $username $password $vihandle
     }
-
-    # Service update
-	ExecuteScript $commandlist $hostname $username $password $vihandle
 	
     # Refresh Update Manager Certificates.
 	if ($servertype -ine "Infrastructure") {
