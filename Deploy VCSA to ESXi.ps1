@@ -77,6 +77,7 @@
 	http://www.vtagion.com/adding-license-keys-vcenter-powercli/
 	https://virtualhobbit.com/2015/07/17/building-an-advanced-lab-using-vmware-vrealize-automation-part-6-deploy-and-configure-the-vcenter-server-appliance/
 	https://blogs.vmware.com/vsphere/2016/11/getting-started-new-image-builder-gui-vsphere-6-5.html
+	http://thecloudxpert.net/vmware/vmware-psc-an-identity-source-for-vrealize-automation-6-x/
 	
 	
 .ACKNOWLEDGEMENTS
@@ -104,10 +105,7 @@
 	20. Brian Graf				- www.vtagion.com
 	21. Mark Brookfield			- vitualhobbit.com
 	22. Eric Gray				- blogs.vmware.com
-	
-	
-Functions start at line 139
-Main program starts at line 1000
+	23. Christopher Lewis		- thecloudxpert.net
 	
 .AUTHOR
 	Michael van Blijdesteijn - Highbridge Capital Management LLC.
@@ -117,7 +115,7 @@ Main program starts at line 1000
 # Clear the screen.
 cls
 
-<# Functions Lines 156 - 1159
+<# Functions Lines 158 - 1370
 List:							Used:	function Dependency:
 1.  Available					  Y
 2. 	ConfigureAutoDeploy			  Y		ExecuteScript
@@ -132,26 +130,28 @@ List:							Used:	function Dependency:
 11. CreatePermissions			  Y		Separatorline
 12. ExecuteScript				  Y		Separatorline
 13. CopyFiletoServer			  Y		Separatorline
-14. Separatorline				  Y
-15. ChainCAs					  Y
-16. CheckOpenSSL				  Y
-17. CreatePEMFiles				  Y
-18. CreateCSR					  Y
-19. CreateSolutionCSR			  Y
-20. CreateVMCACSR				  Y
-21. DisplayVMDir				  Y
-22. DownloadRoots				  Y
-23. MoveUserCerts				  Y
-24. OnlineMint					  Y
-25. OnlineMintResume			  N
-26.	Set-VMHostProfileExtended	  Y
-27. TransferCertToNode			  Y		ExecuteScript, CopyFiletoServer
-28. UserPEMFiles				  Y		CreatePEMFiles
-29. VMCAMint					  N
-30. CDDir						  Y
-31. CreateVCSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
-32. CreatePscSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
-
+14.	JoinADDomain				  Y		Available, ExecuteScript, Separatorline
+15. Separatorline				  Y
+16. ChainCAs					  Y
+17. CheckOpenSSL				  Y
+18. CreatePEMFiles				  Y
+19. CreateCSR					  Y
+20. CreateSolutionCSR			  Y
+21. CreateVMCACSR				  Y
+22. DisplayVMDir				  Y
+23. DownloadRoots				  Y
+24. MoveUserCerts				  Y
+25. OnlineMint					  Y
+26. OnlineMintResume			  N
+27.	Use-Openssl					  Y
+28.	Set-VMHostProfileExtended	  Y
+29. TransferCertToNode			  Y		ExecuteScript, CopyFiletoServer
+20. UserPEMFiles				  Y		CreatePEMFiles
+31.	VMDirRename					  Y
+32. VMCAMint					  N
+33. CDDir						  Y
+34. CreateVCSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
+35. CreatePscSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
 
 #>
 
