@@ -78,6 +78,8 @@
 	https://virtualhobbit.com/2015/07/17/building-an-advanced-lab-using-vmware-vrealize-automation-part-6-deploy-and-configure-the-vcenter-server-appliance/
 	https://blogs.vmware.com/vsphere/2016/11/getting-started-new-image-builder-gui-vsphere-6-5.html
 	http://thecloudxpert.net/vmware/vmware-psc-an-identity-source-for-vrealize-automation-6-x/
+	https://kb.vmware.com/selfservice/search.do?cmd=displayKC&docType=kc&docTypeID=DT_KB_1_1&externalId=2121701
+	https://kb.vmware.com/selfservice/search.do?cmd=displayKC&docType=kc&docTypeID=DT_KB_1_1&externalId=2121689
 	
 	
 .ACKNOWLEDGEMENTS
@@ -115,7 +117,7 @@
 # Clear the screen.
 cls
 
-<# Functions Lines 158 - 1370
+<# Functions Lines 160 - 1375
 List:							Used:	function Dependency:
 1.  Available					  Y
 2. 	ConfigureAutoDeploy			  Y		ExecuteScript
@@ -464,7 +466,7 @@ function ConfigureTFTP ($hostname,$username,$password,$vihandle) {
 				
 # Deploy a VCSA.
 function Deploy ($parameterlist, $ovftoolpath) {
-	$pscs			= @("tiny","small","large","infrastructure")
+	$pscs			= @("tiny","small","medium","large","infrastructure")
 
 	$argumentlist	= @()
 	$ovftool		= "$ovftoolpath\ovftool.exe"
@@ -598,7 +600,7 @@ function CopyFiletoServer ($locations, $hostname, $username, $password, $vihandl
 }
 
 function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
-			$pscdeployments	= @("tiny","small","large","infrastructure")
+			$pscdeployments	= @("tiny","small","medium","large","infrastructure")
 
 			echo "== Joining $($Deployment.vmName) to the windows domain ==" | Out-String
 
@@ -1081,7 +1083,7 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 	$SslPath		= "/root/ssl"
 	$SolutionPath	= "/root/solutioncerts"
 	$script 		= "mkdir $SslPath;mkdir $SolutionPath"
-	$pscdeployments	= @("tiny","small","large","infrastructure")
+	$pscdeployments	= @("tiny","small","medium","large","infrastructure")
 	
 	ExecuteScript $script $hostname $username $password $vihandle
 
@@ -1135,7 +1137,7 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 		$filelocations += "$SolutionPath/vpxd-extension.cer"
 		$filelocations += "$certpath\solution\vpxd-extension.priv"
 		$filelocations += "$SolutionPath/vpxd-extension.priv"}
-	
+
 	CopyFiletoServer $filelocations $hostname $username $password $vihandle
 	
 	$commandlist = $null
@@ -1155,11 +1157,14 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 		$commandlist += "echo `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm64.cer"
 		$commandlist += "echo `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm264.cer"}
 
+	# Retrive the Old Machine Cert and save its thumbprint to a file.
+	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store MACHINE_SSL_CERT --alias __MACHINE_CERT --output $SslPath/old_machine.crt"
+	$commandlist += "openssl x509 -in $SslPath/old_machine.crt -noout -sha1 -fingerprint > $SslPath/thumbprint.txt"
+
     # Replace the Machine Cert.
 	$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store MACHINE_SSL_CERT --alias __MACHINE_CERT"
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store MACHINE_SSL_CERT --alias __MACHINE_CERT --cert $SslPath/new_machine.cer --key $SslPath/ssl_key.priv"
 
-	
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 
 	$commandlist = $null
@@ -1208,16 +1213,16 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 
     # Update VAMI Certs on External PSC.
-    if ($servertype -ieq "Infrastructure") {
-		$commandlist = $null
-		$commandlist = @()
-        If ($viversion -inotlike "*6.5*") {
-            $commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/lighttpd-vecs-integration.sh"}
-        Else {
-            $commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/setup-webserver.sh"}
-		# Service update
-		ExecuteScript $commandlist $hostname $username $password $vihandle
-    }
+	$commandlist = $null
+	$commandlist = @()
+    If ($viversion -inotlike "*6.5*") {
+    	$commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/lighttpd-vecs-integration.sh"}
+    Else {
+    	$commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/setup-webserver.sh"}
+
+	# Service update
+	ExecuteScript $commandlist $hostname $username $password $vihandle
+
 	
     # Refresh Update Manager Certificates.
 	if ($servertype -ine "Infrastructure") {
@@ -1773,7 +1778,7 @@ if($netAssembly)
 
 # Global variables
 [regex]$regex				= '\d{2,4}'
-$pscdeployments				= @("tiny","small","large","infrastructure")
+$pscdeployments				= @("tiny","small","medium","large","infrastructure")
 $mtu						= "9000"
 
 # Certificate variables	
@@ -1791,6 +1796,7 @@ if (!(Test-Path $Cert_Dir)) { New-Item $Cert_Dir -Type Directory | Out-Null }
 
 # Deploy the VCSA servers.
 
+#foreach ($Deployment in $s_Deployments | ?{$_.Action -ieq "snull"}) {
 foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 	# Skip deployment if set to null.
 
@@ -1834,6 +1840,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 
 # Configure the vcsa.
 foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
+#foreach ($Deployment in $s_Deployments | ?{$_.Action -ieq "snull"}) {
 	
 		echo "== Starting configuration of $($Deployment.vmName) ==" | Out-String
 
@@ -1851,9 +1858,9 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 		Separatorline
 		
 		# if the vcsa is a PSC, join it to the windows domain.
-		if ($s_adinfo -and $pscdeployments -contains $Deployment.DeployType) {
+		#if ($s_adinfo -and $pscdeployments -contains $Deployment.DeployType) {
 			JoinADDomain $Deployment $s_adinfo $esxihandle
-		}
+		#}
 		
 		# if the vcsa is not a stand alone PSC, configure the vCenter.
 		if ($Deployment.DeployType -ine "infrastructure" ) {
@@ -1977,6 +1984,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
 }
 
+#foreach ($Deployment in $s_Deployments | ?{$_.Action -ieq "snull"}) {
 foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 	If ($s_Certinfo) {
 		# Create esxi credentials.
@@ -2043,7 +2051,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
                                          $commandlist += "export VMWARE_DATA_DIR=/storage"
 										 $commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
 										 $commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
-                                         $commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.rbd -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($Deployment.hostname) -u administrator@$($Deployment.SSODomainName) -p `'$Deployment.VCSARootPass`'"
+                                         $commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.rbd -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($Deployment.hostname) -u administrator@$($Deployment.SSODomainName) -p `'$($Deployment.VCSARootPass)`'"
                                         
                                          ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
                             Netdumpster {$commandlist = $null
@@ -2054,14 +2062,91 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
                                          $commandlist += "export VMWARE_DATA_DIR=/storage"
 										 $commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
 										 $commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
-                                         $commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.imagebuilder -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($Deployment.hostname) -u administrator@$($Deployment.SSODomainName) -p `'$Deployment.VCSARootPass`'"
+                                         $commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.imagebuilder -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($Deployment.hostname) -u administrator@$($Deployment.SSODomainName) -p `'$($Deployment.VCSARootPass)`'"
                                         
                                          ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
                       }
                   }
               }
         }
-		
+
+		# Register new certificates with VMWare Lookup Service - KB2121701 and KB2121689.
+		if ($pscdeployments -contains $Deployment.DeployType) {
+			# Copy the new machine.crt to the vcsa.
+			$filelocations = $null
+            $filelocations = @()
+	        $filelocations += "$Cert_Dir\$($Deployment.Hostname)\machine\new_machine.crt"
+	        $filelocations += "/root/ssl/new_$($Deployment.Hostname)_machine.crt"
+
+            echo $filelocations | Out-String
+
+	        CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
+
+			# Change the shell to Bash to enable scp and retrieve the original machine certificate thumbprint.
+            $commandlist = $null
+            $commandlist = @()
+            $commandlist += "chsh -s /bin/bash"
+            $commandlist += "cat /root/ssl/thumbprint.txt"
+
+            echo $commandlist | Out-String
+
+			# Assign the original machine certificate thumbprint to $thumbprint and remove the carriage return.
+            $thumbprint = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle).Scriptoutput.Split("=",2)[1] 
+			$thumbprint = $thumbprint -replace "`t|`n|`r",""
+
+			# Register the new machine thumbprint with the lookup service.
+            $commandlist = $null
+            $commandlist = @()
+            $commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+            $commandlist += "export VMWARE_LOG_DIR=/var/log"
+            $commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+            $commandlist += "export VMWARE_DATA_DIR=/storage"
+			$commandlist += "export VMWARE_JAVA_HOME=/usr/java/jre-vmware"
+            $commandlist += "python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://$($Deployment.Hostname)/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_$($Deployment.Hostname)_machine.crt --user administrator@$($Deployment.SSODomainName) --password `'$($Deployment.VCSARootPass)`'"
+
+            echo $commandlist | Out-String
+        
+            ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
+        else {
+			  # If the VCSA vCenter does not have an embedded PSC Register its Machine Certificate with the External PSC.
+			  # Get the External PSC Information.
+			  $SSOParent = $s_Deployments | ?{$Deployment.Parent -ieq $_.Hostname}
+
+              echo $SSOParent | Out-String
+
+			  # Copy the new machine.crt to the vcsa.
+              $filelocations = $null
+              $filelocations = @()
+	          $filelocations += "$Cert_Dir\$($Deployment.Hostname)\machine\new_machine.crt"
+	          $filelocations += "/root/ssl/new_$($Deployment.Hostname)_machine.crt"
+
+              echo $filelocations | Out-String
+
+	          CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihan
+
+			  # Change the shell to Bash to enable scp and retrieve the original machine certificate thumbprint.
+              $commandlist = $null
+              $commandlist = @()
+              $commandlist += "chsh -s /bin/bash"
+              $commandlist += "cat /root/ssl/thumbprint.txt"
+
+              echo $commandlist | Out-String
+
+			  # Assign the original machine certificate thumbprint to $thumbprint and remove the carriage return.
+              $thumbprint = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle).Scriptoutput.Split("=",2)[1]
+			  $thumbprint = $thumbprint -replace "`t|`n|`r",""
+
+			  # SCP the new vCenter machine certificate to the external PSC and register it with the VMWare Lookup Service via SSH.
+              $commandlist = $null
+              $commandlist = @()
+              $commandlist += "sshpass -p `'$($SSOParent.VCSARootPass)`' scp -oStrictHostKeyChecking=no /root/ssl/new_$($Deployment.Hostname)_machine.crt root@$($SSOParent.Hostname):/root/ssl/new_$($Deployment.Hostname)_machine.crt"
+              $commandlist += "sshpass -p `'$($SSOParent.VCSARootPass)`' ssh -oStrictHostKeyChecking=no root@$($SSOParent.Hostname) `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://$($SSOParent.Hostname)/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_$($Deployment.Hostname)_machine.crt --user administrator@$($SSOParent.SSODomainName) --password `'$($SSOParent.VCSARootPass)`'`""
+
+              echo $commandlist | Out-String
+
+              ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
+        }
+
 		# Write separator line to transcript.
 		Separatorline
 		
