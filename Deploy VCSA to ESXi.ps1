@@ -117,7 +117,7 @@
 # Clear the screen.
 cls
 
-<# Functions Lines 160 - 1375
+<# Functions Lines 160 - 1384
 List:							Used:	function Dependency:
 1.  Available					  Y
 2. 	ConfigureAutoDeploy			  Y		ExecuteScript
@@ -543,6 +543,9 @@ function CreateRoles ($Roles, $vihandle) {
 	Separatorline
 
 	$Names = $Roles | Select Name -Unique
+
+	echo $Names | Out-String
+
 	foreach ($Name in $Names) {
 		$vPrivilege = $Roles | ?{$_.Name -ilike $Name.Name} | Select Privilege
 		
@@ -1073,17 +1076,22 @@ function Set-VMHostProfileExtended {
   }
 }
 
-function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password,$vihandle) {
+function TransferCertToNode ($Cert_Dir,$VCSA,$vihandle,$VCSAParent) {
 # http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vsphere.security.doc/GUID-BD70615E-BCAA-4906-8E13-67D0DBF715E4.html
 # Copy SSL certificates to a VCSA and replace the existing ones.
 
 	$date 			= get-date
+
+    $hostname       = $VCSA.Hostname
+    $username       = "root"
+    $password       = $VCSA.VCSARootPass
+	$servertype		= $VCSA.DeployType
+	$pscdeployments	= @("tiny","small","medium","large","infrastructure")
 	
 	$certpath 		= "$Cert_Dir\$hostname"
 	$SslPath		= "/root/ssl"
 	$SolutionPath	= "/root/solutioncerts"
 	$script 		= "mkdir $SslPath;mkdir $SolutionPath"
-	$pscdeployments	= @("tiny","small","medium","large","infrastructure")
 	
 	ExecuteScript $script $hostname $username $password $vihandle
 
@@ -1099,6 +1107,8 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 
 	$filelocations = $null
 	$filelocations = @()
+    $filelocations += "$certpath\machine\new_machine.crt"
+	$filelocations += "$SslPath/new_machine.crt"
 	$filelocations += "$certpath\machine\new_machine.cer"
 	$filelocations += "$SslPath/new_machine.cer"
 	$filelocations += "$certpath\machine\ssl_key.priv"
@@ -1128,7 +1138,7 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 	$filelocations += "$SolutionPath/vsphere-webclient.cer"
 	$filelocations += "$certpath\solution\vsphere-webclient.priv"
 	$filelocations += "$SolutionPath/vsphere-webclient.priv"
-	if ($servertype -ine "Infrastructure"){
+	if ($servertype -ine "Infrastructure") {
 		$filelocations += "$certpath\solution\vpxd.cer"
 		$filelocations += "$SolutionPath/vpxd.cer"
 		$filelocations += "$certpath\solution\vpxd.priv"
@@ -1223,7 +1233,6 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
 	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 
-	
     # Refresh Update Manager Certificates.
 	if ($servertype -ine "Infrastructure") {
     	$commandlist = $null
@@ -1241,6 +1250,45 @@ function TransferCertToNode ($Cert_Dir,$servertype,$hostname,$username,$password
     	# Service update
 		ExecuteScript $commandlist $hostname $username $password $vihandle
 	}
+
+ 	# Assign the original machine certificate thumbprint to $thumbprint and remove the carriage return.
+    # Change the shell to Bash to enable scp and retrieve the original machine certificate thumbprint.
+    $commandlist = $null
+    $commandlist = @()
+    $commandlist += "chsh -s /bin/bash"
+    $commandlist += "cat /root/ssl/thumbprint.txt"
+    $thumbprint = $(ExecuteScript $commandlist $hostname $username $password $vihandle).Scriptoutput.Split("=",2)[1] 
+	$thumbprint = $thumbprint -replace "`t|`n|`r",""
+
+    # Register new certificates with VMWare Lookup Service - KB2121701 and KB2121689.
+	if ($pscdeployments -contains $VCSA.DeployType) {
+        # Register the new machine thumbprint with the lookup service.
+        $commandlist = $null
+        $commandlist = @()
+        $commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+        $commandlist += "export VMWARE_LOG_DIR=/var/log"
+        $commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+        $commandlist += "export VMWARE_DATA_DIR=/storage"
+		$commandlist += "export VMWARE_JAVA_HOME=/usr/java/jre-vmware"
+        $commandlist += "python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://$hostname/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_machine.crt --user administrator@$($VCSA.SSODomainName) --password `'$password`'"
+
+        echo $commandlist | Out-String
+        
+        ExecuteScript $commandlist $hostname $username $password $vihandle}
+    else {
+		  # If the VCSA vCenter does not have an embedded PSC Register its Machine Certificate with the External PSC.
+          echo $VCSAParent | Out-String
+          
+          # SCP the new vCenter machine certificate to the external PSC and register it with the VMWare Lookup Service via SSH.
+              $commandlist = $null
+              $commandlist = @()
+              $commandlist += "sshpass -p `'$($VCSAParent.VCSARootPass)`' scp -oStrictHostKeyChecking=no /root/ssl/new_machine.crt root@$($VCSAParent.Hostname):/root/ssl/new_$($hostname)_machine.crt"
+              $commandlist += "sshpass -p `'$($VCSAParent.VCSARootPass)`' ssh -oStrictHostKeyChecking=no root@$($VCSAParent.Hostname) `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://$($VCSAParent.Hostname)/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_$($hostname)_machine.crt --user administrator@$($VCSAParent.SSODomainName) --password `'$($VCSAParent.VCSARootPass)`'`""
+
+              echo $commandlist | Out-String
+
+              ExecuteScript $commandlist $hostname $username $password $vihandle
+    }
 }
 
 function UserPEMFiles {
@@ -1574,34 +1622,36 @@ $workSheet		= $WorkBook.sheets.item("vcsa")
 $rows			= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
 If ( $rows -gt 1 -and $rows -lt $lastrow) {
-	$data			= $Worksheet.Range("A2","X$rows").Value()
+	$data			= $Worksheet.Range("A2","z$rows").Value()
 	$s_Deployments	= @()
-	for ($i=1;$i -lt $rows;$i++){
+	for ($i=1;$i -lt $rows;$i++) {
 		$s_Deployment = New-Object System.Object
 		$s_Deployment | Add-Member -type NoteProperty -name Action -value $data[$i,1]
-		$s_Deployment | Add-Member -type NoteProperty -name vmName -value $data[$i,2]
-		$s_Deployment | Add-Member -type NoteProperty -name Hostname -value $data[$i,3]
-		$s_Deployment | Add-Member -type NoteProperty -name VCSARootPass -value $data[$i,4]
-		$s_Deployment | Add-Member -type NoteProperty -name NetMode -value $data[$i,5]
-		$s_Deployment | Add-Member -type NoteProperty -name NetFamily -value $data[$i,6]	
-		$s_Deployment | Add-Member -type NoteProperty -name NetPrefix -value $data[$i,7]
-		$s_Deployment | Add-Member -type NoteProperty -name IP -value $data[$i,8]
-		$s_Deployment | Add-Member -type NoteProperty -name Gateway -value $data[$i,9]	
-		$s_Deployment | Add-Member -type NoteProperty -name DNS -value $data[$i,10]
-		$s_Deployment | Add-Member -type NoteProperty -name NTP -value $data[$i,11]
-		$s_Deployment | Add-Member -type NoteProperty -name EnableSSH -value $data[$i,12]	
-		$s_Deployment | Add-Member -type NoteProperty -name DiskMode -value $data[$i,13]
-		$s_Deployment | Add-Member -type NoteProperty -name DeployType -value $data[$i,14]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiHost -value $data[$i,15]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiNet -value $data[$i,16]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiDatastore -value $data[$i,17]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiRootUser -value $data[$i,18]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiRootPass -value $data[$i,19]
-		$s_Deployment | Add-Member -type NoteProperty -name Parent -value $data[$i,20]
-		$s_Deployment | Add-Member -type NoteProperty -name SSODomainName -value $data[$i,21]
-		$s_Deployment | Add-Member -type NoteProperty -name SSOSiteName -value $data[$i,22]
-		$s_Deployment | Add-Member -type NoteProperty -name SSOAdminPass -value $data[$i,23]
-		$s_Deployment | Add-Member -type NoteProperty -name OVA -value "$PSScriptRoot\$($data[$i,24])"
+		$s_Deployment | Add-Member -type NoteProperty -name Config -value $([System.Convert]::ToBoolean($($data[$i,2])))
+		$s_Deployment | Add-Member -type NoteProperty -name Certs -value $([System.Convert]::ToBoolean($($data[$i,3])))
+		$s_Deployment | Add-Member -type NoteProperty -name vmName -value $data[$i,4]
+		$s_Deployment | Add-Member -type NoteProperty -name Hostname -value $data[$i,5]
+		$s_Deployment | Add-Member -type NoteProperty -name VCSARootPass -value $data[$i,6]
+		$s_Deployment | Add-Member -type NoteProperty -name NetMode -value $data[$i,7]
+		$s_Deployment | Add-Member -type NoteProperty -name NetFamily -value $data[$i,8]	
+		$s_Deployment | Add-Member -type NoteProperty -name NetPrefix -value $data[$i,9]
+		$s_Deployment | Add-Member -type NoteProperty -name IP -value $data[$i,10]
+		$s_Deployment | Add-Member -type NoteProperty -name Gateway -value $data[$i,11]	
+		$s_Deployment | Add-Member -type NoteProperty -name DNS -value $data[$i,12]
+		$s_Deployment | Add-Member -type NoteProperty -name NTP -value $data[$i,13]
+		$s_Deployment | Add-Member -type NoteProperty -name EnableSSH -value $data[$i,14]	
+		$s_Deployment | Add-Member -type NoteProperty -name DiskMode -value $data[$i,15]
+		$s_Deployment | Add-Member -type NoteProperty -name DeployType -value $data[$i,16]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiHost -value $data[$i,17]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiNet -value $data[$i,18]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiDatastore -value $data[$i,19]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiRootUser -value $data[$i,20]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiRootPass -value $data[$i,21]
+		$s_Deployment | Add-Member -type NoteProperty -name Parent -value $data[$i,22]
+		$s_Deployment | Add-Member -type NoteProperty -name SSODomainName -value $data[$i,23]
+		$s_Deployment | Add-Member -type NoteProperty -name SSOSiteName -value $data[$i,24]
+		$s_Deployment | Add-Member -type NoteProperty -name SSOAdminPass -value $data[$i,25]
+		$s_Deployment | Add-Member -type NoteProperty -name OVA -value "$PSScriptRoot\$($data[$i,26])"
 		$s_Deployments += $s_Deployment
 	}
 	echo $s_Deployments | Out-String
@@ -1795,8 +1845,6 @@ $Cert_Dir = $PSScriptRoot + "\Certs"
 if (!(Test-Path $Cert_Dir)) { New-Item $Cert_Dir -Type Directory | Out-Null }
 
 # Deploy the VCSA servers.
-
-#foreach ($Deployment in $s_Deployments | ?{$_.Action -ieq "snull"}) {
 foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 	# Skip deployment if set to null.
 
@@ -1839,8 +1887,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 }
 
 # Configure the vcsa.
-foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
-#foreach ($Deployment in $s_Deployments | ?{$_.Action -ieq "snull"}) {
+foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 	
 		echo "== Starting configuration of $($Deployment.vmName) ==" | Out-String
 
@@ -1889,13 +1936,12 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 			}
 
 			# if this is the first vCenter, create custom Roles.
-			if ($Deployment.Action -ieq "first" ) {
-				$roles = $s_roles | ?{$_.vCenter -ieq "all" -or $_.vCenter -ilike $Deployment.Hostname}
-				if ($roles) {
-					echo  "Roles:" $roles
-					CreateRoles $roles $vchandle
-				}	
-			}
+			$existingroles = Get-VIRole -Server $vchandle
+			$roles = $s_roles | ?{$_.vCenter -ieq "all" -or $_.vCenter -ilike $Deployment.Hostname} | ?{$ExistingRoles -inotcontains $_.Name}
+			if ($roles) {
+				echo  "Roles:" $roles
+				CreateRoles $roles $vchandle
+			}	
 			
 			# Create OS Customizations for the vCenter.
 			$s_Customizations | ?{$_ -ilike "*$($Deployment.Hostname)*"} | %{Invoke-Expression $_; echo $_}
@@ -1984,8 +2030,8 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
 }
 
-#foreach ($Deployment in $s_Deployments | ?{$_.Action -ieq "snull"}) {
-foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
+# Replace Certificates.
+foreach ($Deployment in $s_Deployments | ?{$_.Certs}) {
 	If ($s_Certinfo) {
 		# Create esxi credentials.
         $esxi_secpasswd		= $null
@@ -2027,17 +2073,20 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
 		# Change back to the script root folder.		
 		CDDir $PSScriptRoot
 
+        $SSOParent = $null
+        $SSOParent = $s_Deployments | ?{$Deployment.Parent -ieq $_.Hostname}
+
 		# Create the Solution User Certs - 2 for External PSC, 4 for all other deployments.
 		if ($Deployment.DeployType -ieq "infrastructure" ) {
 			CreatePscSolutionCert $Cert_Dir $InstanceCertDir $s_certinfo
 			Separatorline
             # Copy Cert files to vcsa Node and deploy them.
-		    TransferCerttoNode $Cert_Dir $Deployment.DeployType $Deployment.Hostname "root" $Deployment.VCSARootPass
+            TransferCerttoNode $Cert_Dir $Deployment $esxihandle $SSOParent
 		}
 		else {CreateVCSolutionCert $Cert_Dir $InstanceCertDir $s_certinfo
 			  Separatorline
               # Copy Cert files to vcsa Node and deploy them.
-		      TransferCerttoNode $Cert_Dir $Deployment.DeployType $Deployment.Hostname "root" $Deployment.VCSARootPass
+              TransferCerttoNode $Cert_Dir $Deployment $esxihandle $SSOParent
 
               $newservices = $s_arules | ?{$_.vCenter -eq $Deployment.Hostname}
               If ($newservices) {
@@ -2068,83 +2117,6 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -ine "null"}) {
                       }
                   }
               }
-        }
-
-		# Register new certificates with VMWare Lookup Service - KB2121701 and KB2121689.
-		if ($pscdeployments -contains $Deployment.DeployType) {
-			# Copy the new machine.crt to the vcsa.
-			$filelocations = $null
-            $filelocations = @()
-	        $filelocations += "$Cert_Dir\$($Deployment.Hostname)\machine\new_machine.crt"
-	        $filelocations += "/root/ssl/new_$($Deployment.Hostname)_machine.crt"
-
-            echo $filelocations | Out-String
-
-	        CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
-
-			# Change the shell to Bash to enable scp and retrieve the original machine certificate thumbprint.
-            $commandlist = $null
-            $commandlist = @()
-            $commandlist += "chsh -s /bin/bash"
-            $commandlist += "cat /root/ssl/thumbprint.txt"
-
-            echo $commandlist | Out-String
-
-			# Assign the original machine certificate thumbprint to $thumbprint and remove the carriage return.
-            $thumbprint = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle).Scriptoutput.Split("=",2)[1] 
-			$thumbprint = $thumbprint -replace "`t|`n|`r",""
-
-			# Register the new machine thumbprint with the lookup service.
-            $commandlist = $null
-            $commandlist = @()
-            $commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-            $commandlist += "export VMWARE_LOG_DIR=/var/log"
-            $commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
-            $commandlist += "export VMWARE_DATA_DIR=/storage"
-			$commandlist += "export VMWARE_JAVA_HOME=/usr/java/jre-vmware"
-            $commandlist += "python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://$($Deployment.Hostname)/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_$($Deployment.Hostname)_machine.crt --user administrator@$($Deployment.SSODomainName) --password `'$($Deployment.VCSARootPass)`'"
-
-            echo $commandlist | Out-String
-        
-            ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
-        else {
-			  # If the VCSA vCenter does not have an embedded PSC Register its Machine Certificate with the External PSC.
-			  # Get the External PSC Information.
-			  $SSOParent = $s_Deployments | ?{$Deployment.Parent -ieq $_.Hostname}
-
-              echo $SSOParent | Out-String
-
-			  # Copy the new machine.crt to the vcsa.
-              $filelocations = $null
-              $filelocations = @()
-	          $filelocations += "$Cert_Dir\$($Deployment.Hostname)\machine\new_machine.crt"
-	          $filelocations += "/root/ssl/new_$($Deployment.Hostname)_machine.crt"
-
-              echo $filelocations | Out-String
-
-	          CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihan
-
-			  # Change the shell to Bash to enable scp and retrieve the original machine certificate thumbprint.
-              $commandlist = $null
-              $commandlist = @()
-              $commandlist += "chsh -s /bin/bash"
-              $commandlist += "cat /root/ssl/thumbprint.txt"
-
-              echo $commandlist | Out-String
-
-			  # Assign the original machine certificate thumbprint to $thumbprint and remove the carriage return.
-              $thumbprint = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle).Scriptoutput.Split("=",2)[1]
-			  $thumbprint = $thumbprint -replace "`t|`n|`r",""
-
-			  # SCP the new vCenter machine certificate to the external PSC and register it with the VMWare Lookup Service via SSH.
-              $commandlist = $null
-              $commandlist = @()
-              $commandlist += "sshpass -p `'$($SSOParent.VCSARootPass)`' scp -oStrictHostKeyChecking=no /root/ssl/new_$($Deployment.Hostname)_machine.crt root@$($SSOParent.Hostname):/root/ssl/new_$($Deployment.Hostname)_machine.crt"
-              $commandlist += "sshpass -p `'$($SSOParent.VCSARootPass)`' ssh -oStrictHostKeyChecking=no root@$($SSOParent.Hostname) `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://$($SSOParent.Hostname)/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_$($Deployment.Hostname)_machine.crt --user administrator@$($SSOParent.SSODomainName) --password `'$($SSOParent.VCSARootPass)`'`""
-
-              echo $commandlist | Out-String
-
-              ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
         }
 
 		# Write separator line to transcript.
