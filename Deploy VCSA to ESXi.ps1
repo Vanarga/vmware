@@ -1202,7 +1202,7 @@ function TransferCertToNode ($Cert_Dir,$VCSA,$vihandle,$VCSAParent) {
 		# Replace EAM Solution User Cert.
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
-		$commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.vim.eam -c /root/certificate/vpxd-extension.crt -k /root/certificate/vpxd-extension.key -s $hostname -u administrator@$($VCSA.SSODomainName) -p `'$password`'"
+		$commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.vim.eam -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $hostname -u administrator@$($VCSA.SSODomainName) -p `'$password`'"
 		$commandlist += '/usr/bin/service-control --stop vmware-eam'
 		$commandlist += '/usr/bin/service-control --start vmware-eam'		
 	}
