@@ -1192,19 +1192,7 @@ function TransferCertToNode ($Cert_Dir,$VCSA,$vihandle,$VCSAParent) {
 		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd --alias vpxd"
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd --alias vpxd --cert $SolutionPath/vpxd.cer --key $SolutionPath/vpxd.priv"
 		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd-extension --alias vpxd-extension"	
-		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd-extension --alias vpxd-extension --cert $SolutionPath/vpxd-extension.cer --key $SolutionPath/vpxd-extension.priv"
-
-		# Set path for python.
-		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-		$commandlist += "export VMWARE_LOG_DIR=/var/log"
-		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
-		$commandlist += "export VMWARE_DATA_DIR=/storage"
-		# Replace EAM Solution User Cert.
-		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
-		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
-		$commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.vim.eam -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $hostname -u administrator@$($VCSA.SSODomainName) -p `'$password`'"
-		$commandlist += '/usr/bin/service-control --stop vmware-eam'
-		$commandlist += '/usr/bin/service-control --start vmware-eam'		
+		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd-extension --alias vpxd-extension --cert $SolutionPath/vpxd-extension.cer --key $SolutionPath/vpxd-extension.priv"	
 	}
 
 	ExecuteScript $commandlist $hostname $username $password $vihandle
@@ -1239,6 +1227,25 @@ function TransferCertToNode ($Cert_Dir,$VCSA,$vihandle,$VCSAParent) {
 	
 	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
+
+	if ($servertype -ine "Infrastructure"){
+		$commandlist = $null
+		$commandlist = @()
+		# Set path for python.
+		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+		$commandlist += "export VMWARE_LOG_DIR=/var/log"
+		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+		$commandlist += "export VMWARE_DATA_DIR=/storage"
+		# Replace EAM Solution User Cert.
+		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
+		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
+		$commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.vim.eam -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $hostname -u administrator@$($VCSA.SSODomainName) -p `'$password`'"
+		$commandlist += '/usr/bin/service-control --stop vmware-eam'
+		$commandlist += '/usr/bin/service-control --start vmware-eam'
+
+		# Service update
+		ExecuteScript $commandlist $hostname $username $password $vihandle
+	}
 
     # Update VAMI Certs on External PSC.
 	$commandlist = $null
