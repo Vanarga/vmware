@@ -2317,7 +2317,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 		# Check to see if there are subdomains in the FQDN of the Node and update /etc/hosts if there are.
 		$subdomain = $Deployment.Hostname.split(".").count
 
-		if ($subdomain -gt 3) {
+		if ($subdomain -gt 3 -and $Deployment.DeployType -like "*management*") {
 			$domainnames = $Deployment.Hostname + " " + $Deployment.Hostname.split(".")[0] + "." + $Deployment.Hostname.split(".",$subdomain - 1)[$subdomain - 2] + " " + $Deployment.Hostname.split(".")[0]
 
 			$commandlist = @()
