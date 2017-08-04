@@ -2288,7 +2288,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
             for ($i=0;$i -lt $Plugins.Count;$i++){
                 if ($Plugins[$i].SourceDir) {
                     if ($commandlist) {
-                        ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vchandle
+                        ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
                         $commandlist = $null
                         $commandlist = @()
                     }
@@ -2298,7 +2298,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 	                $filelocations += "$($PSScriptRoot)\$($Plugins[$i].SourceDir)\$($Plugins[$i].SourceFiles)"
                     $filelocations += $Plugins[$i].DestDir
 
-					echo $$filelocations | Out-String
+					echo $filelocations | Out-String
 
         	        CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
                 }
@@ -2312,6 +2312,18 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 			Disconnect-viserver -server $vchandle -Confirm:$false
 
 			Separatorline
+		}
+
+		# Check to see if there are subdomains in the FQDN of the Node and update /etc/hosts if there are.
+		$subdomain = $Deployment.Hostname.split(".").count
+
+		if ($subdomain -gt 3) {
+			$domainnames = $Deployment.Hostname + " " + $Deployment.Hostname.split(".")[0] + "." + $Deployment.Hostname.split(".",$subdomain - 1)[$subdomain - 2] + " " + $Deployment.Hostname.split(".")[0]
+
+			$commandlist = @()
+			$commandlist += "sed -i `'/$($Deployment.IP)/c $($Deployment.IP) $domainnames`' /etc/hosts"
+			
+			ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
 		}
 
 		# Disconnect from the vcsa deployed esxi server.
