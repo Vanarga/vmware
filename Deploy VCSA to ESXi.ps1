@@ -1961,7 +1961,9 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -notmatch "null|false"}) {
         If ($Deployment.JumboFrames) {
             $commandlist = $null
 		    $commandlist = @()
-		    $commandlist += 'ip link set eth0 mtu 9000'
+			$commandlist += 'echo -e "" >> /etc/systemd/network/10-eth0.network'
+			$commandlist += 'echo -e "[Link]" >> /etc/systemd/network/10-eth0.network'
+			$commandlist += 'echo -e "MTUBytes=9000" >> /etc/systemd/network/10-eth0.network'
 
             ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
         }
