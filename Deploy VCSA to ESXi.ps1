@@ -2320,53 +2320,6 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
-			# Configure Build Cluster Alarm Action
-			Separatorline
-
-			echo "Adding Build Cluster Alarm" | Out-String
-
-            $dc = $Deployment.Hostname.split(".")[1]
-
-			$alarmMgr = Get-View AlarmManager
-			$entity = Get-Datacenter -Name $dc -server $vchandle | Get-cluster "build" | Get-View
- 
-			# AlarmSpec
-			$alarm = New-Object VMware.Vim.AlarmSpec
-			$alarm.Name = "1. Configure New Esxi Host"
-			$alarm.Description = "Configure a New Esxi Host added to the vCenter"
-			$alarm.Enabled = $TRUE
-			
-			$alarm.action = New-Object VMware.Vim.GroupAlarmAction
-			
-			$trigger = New-Object VMware.Vim.AlarmTriggeringAction
-			$trigger.action = New-Object VMware.Vim.RunScriptAction
-			$trigger.action.Script = "/root/esxconf.sh {targetName}"
-			
-			# Transition a - yellow --> red
-			$transa = New-Object VMware.Vim.AlarmTriggeringActionTransitionSpec
-			$transa.StartState = "yellow"
-			$transa.FinalState = "red"
-			
-			$trigger.TransitionSpecs = $transa
-			
-			$alarm.action = $trigger
-			
-			$expression = New-Object VMware.Vim.EventAlarmExpression
-			$expression.EventType = "EventEx"
-			$expression.eventTypeId = "vim.event.HostConnectedEvent"
-			$expression.objectType = "HostSystem"
-			$expression.status = "red"
-			
-			$alarm.expression = New-Object VMware.Vim.OrAlarmExpression
-			$alarm.expression.expression = $expression
-			
-			$alarm.setting = New-Object VMware.Vim.AlarmSetting
-			$alarm.setting.reportingFrequency = 0
-			$alarm.setting.toleranceRange = 0
-			
-			# Create alarm.
-			$alarmMgr.CreateAlarm($entity.MoRef, $alarm)
-
 			# Disconnect from the vCenter.
 			Disconnect-viserver -server $vchandle -Confirm:$false
 
