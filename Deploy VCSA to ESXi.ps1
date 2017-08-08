@@ -1681,7 +1681,7 @@ $workSheet		= $WorkBook.sheets.item("vcsa")
 $rows			= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 
 If ( $rows -gt 1 -and $rows -lt $lastrow) {
-	$data			= $Worksheet.Range("A2","z$rows").Value()
+	$data			= $Worksheet.Range("A2","AA$rows").Value()
 	$s_Deployments	= @()
 	for ($i=1;$i -lt $rows;$i++) {
 		$s_Deployment = New-Object System.Object
@@ -1694,23 +1694,24 @@ If ( $rows -gt 1 -and $rows -lt $lastrow) {
 		$s_Deployment | Add-Member -type NoteProperty -name NetMode -value $data[$i,7]
 		$s_Deployment | Add-Member -type NoteProperty -name NetFamily -value $data[$i,8]	
 		$s_Deployment | Add-Member -type NoteProperty -name NetPrefix -value $data[$i,9]
-		$s_Deployment | Add-Member -type NoteProperty -name IP -value $data[$i,10]
-		$s_Deployment | Add-Member -type NoteProperty -name Gateway -value $data[$i,11]	
-		$s_Deployment | Add-Member -type NoteProperty -name DNS -value $data[$i,12]
-		$s_Deployment | Add-Member -type NoteProperty -name NTP -value $data[$i,13]
-		$s_Deployment | Add-Member -type NoteProperty -name EnableSSH -value $data[$i,14]	
-		$s_Deployment | Add-Member -type NoteProperty -name DiskMode -value $data[$i,15]
-		$s_Deployment | Add-Member -type NoteProperty -name DeployType -value $data[$i,16]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiHost -value $data[$i,17]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiNet -value $data[$i,18]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiDatastore -value $data[$i,19]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiRootUser -value $data[$i,20]
-		$s_Deployment | Add-Member -type NoteProperty -name esxiRootPass -value $data[$i,21]
-		$s_Deployment | Add-Member -type NoteProperty -name Parent -value $data[$i,22]
-		$s_Deployment | Add-Member -type NoteProperty -name SSODomainName -value $data[$i,23]
-		$s_Deployment | Add-Member -type NoteProperty -name SSOSiteName -value $data[$i,24]
-		$s_Deployment | Add-Member -type NoteProperty -name SSOAdminPass -value $data[$i,25]
-		$s_Deployment | Add-Member -type NoteProperty -name OVA -value "$PSScriptRoot\$($data[$i,26])"
+		$s_Deployment | Add-Member -type NoteProperty -name JumboFrames -value $([System.Convert]::ToBoolean($($data[$i,10])))
+		$s_Deployment | Add-Member -type NoteProperty -name IP -value $data[$i,11]
+		$s_Deployment | Add-Member -type NoteProperty -name Gateway -value $data[$i,12]
+		$s_Deployment | Add-Member -type NoteProperty -name DNS -value $data[$i,13]
+		$s_Deployment | Add-Member -type NoteProperty -name NTP -value $data[$i,14]
+		$s_Deployment | Add-Member -type NoteProperty -name EnableSSH -value $data[$i,15]
+		$s_Deployment | Add-Member -type NoteProperty -name DiskMode -value $data[$i,16]
+		$s_Deployment | Add-Member -type NoteProperty -name DeployType -value $data[$i,17]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiHost -value $data[$i,18]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiNet -value $data[$i,19]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiDatastore -value $data[$i,20]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiRootUser -value $data[$i,21]
+		$s_Deployment | Add-Member -type NoteProperty -name esxiRootPass -value $data[$i,22]
+		$s_Deployment | Add-Member -type NoteProperty -name Parent -value $data[$i,23]
+		$s_Deployment | Add-Member -type NoteProperty -name SSODomainName -value $data[$i,24]
+		$s_Deployment | Add-Member -type NoteProperty -name SSOSiteName -value $data[$i,25]
+		$s_Deployment | Add-Member -type NoteProperty -name SSOAdminPass -value $data[$i,26]
+		$s_Deployment | Add-Member -type NoteProperty -name OVA -value "$PSScriptRoot\$($data[$i,27])"
 		$s_Deployments += $s_Deployment
 
 		$scrub += $s_Deployment.VCSARootPass
@@ -1955,7 +1956,16 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -notmatch "null|false"}) {
 			echo "== waiting 30 seconds while firstboot for $($Deployment.vmName) finishes ==" | Out-String
 			Start-Sleep -s 30
 		}
-	
+    
+        # Enable Jumbo Frames on eth0 if True.
+        If ($Deployment.JumboFrames) {
+            $commandlist = $null
+		    $commandlist = @()
+		    $commandlist += 'ip link set eth0 mtu 9000'
+
+            ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
+        }
+
 		echo "`r`n The VCSA $($Deployment.Hostname) has been deployed and is available.`r`n" | Out-String
 
 		# Disconnect from the vcsa deployed esxi server.
@@ -2307,6 +2317,53 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
             }
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
+
+			# Configure Build Cluster Alarm Action
+			Separatorline
+
+			echo "Adding Build Cluster Alarm" | Out-String
+
+            $dc = $Deployment.Hostname.split(".")[1]
+
+			$alarmMgr = Get-View AlarmManager
+			$entity = Get-Datacenter -Name $dc -server $vchandle | Get-cluster "build" | Get-View
+ 
+			# AlarmSpec
+			$alarm = New-Object VMware.Vim.AlarmSpec
+			$alarm.Name = "1. Configure New Esxi Host"
+			$alarm.Description = "Configure a New Esxi Host added to the vCenter"
+			$alarm.Enabled = $TRUE
+			
+			$alarm.action = New-Object VMware.Vim.GroupAlarmAction
+			
+			$trigger = New-Object VMware.Vim.AlarmTriggeringAction
+			$trigger.action = New-Object VMware.Vim.RunScriptAction
+			$trigger.action.Script = "/root/esxconf.sh {targetName}"
+			
+			# Transition a - yellow --> red
+			$transa = New-Object VMware.Vim.AlarmTriggeringActionTransitionSpec
+			$transa.StartState = "yellow"
+			$transa.FinalState = "red"
+			
+			$trigger.TransitionSpecs = $transa
+			
+			$alarm.action = $trigger
+			
+			$expression = New-Object VMware.Vim.EventAlarmExpression
+			$expression.EventType = "EventEx"
+			$expression.eventTypeId = "vim.event.HostConnectedEvent"
+			$expression.objectType = "HostSystem"
+			$expression.status = "red"
+			
+			$alarm.expression = New-Object VMware.Vim.OrAlarmExpression
+			$alarm.expression.expression = $expression
+			
+			$alarm.setting = New-Object VMware.Vim.AlarmSetting
+			$alarm.setting.reportingFrequency = 0
+			$alarm.setting.toleranceRange = 0
+			
+			# Create alarm.
+			$alarmMgr.CreateAlarm($entity.MoRef, $alarm)
 
 			# Disconnect from the vCenter.
 			Disconnect-viserver -server $vchandle -Confirm:$false
