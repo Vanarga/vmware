@@ -2320,16 +2320,18 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
-		# Run the vami_set_hostname to set the correct FQDN in the /etc/hosts file.
-		$commandlist = $null
-		$commandlist = @()
-		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-		$commandlist += "export VMWARE_LOG_DIR=/var/log"
-		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
-		$commandlist += "export VMWARE_DATA_DIR=/storage"
-		$commandlist += "/opt/vmware/share/vami/vami_set_hostname $($Deployment.Hostname)"
+		# Run the vami_set_hostname to set the correct FQDN in the /etc/hosts file on a vCenter with External PSC only.
+		if ($Deployment.DeployType -like "*management*") {
+			$commandlist = $null
+			$commandlist = @()
+			$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+			$commandlist += "export VMWARE_LOG_DIR=/var/log"
+			$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+			$commandlist += "export VMWARE_DATA_DIR=/storage"
+			$commandlist += "/opt/vmware/share/vami/vami_set_hostname $($Deployment.Hostname)"
 			
-		ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
+			ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
+		}
 
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
