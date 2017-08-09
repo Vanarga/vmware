@@ -2320,23 +2320,69 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
+			# Configure Build Cluster Alarm Action
+			Separatorline
+
+			echo "Adding Build Cluster Alarm" | Out-String
+
+            $dc = $Deployment.Hostname.split(".")[1]
+
+			$alarmMgr = Get-View AlarmManager
+			$entity = Get-Datacenter -Name $dc -server $vchandle | Get-cluster "build" | Get-View
+ 
+			# AlarmSpec
+			$alarm = New-Object VMware.Vim.AlarmSpec
+			$alarm.Name = "1. Configure New Esxi Host"
+			$alarm.Description = "Configure a New Esxi Host added to the vCenter"
+			$alarm.Enabled = $TRUE
+			
+			$alarm.action = New-Object VMware.Vim.GroupAlarmAction
+			
+			$trigger = New-Object VMware.Vim.AlarmTriggeringAction
+			$trigger.action = New-Object VMware.Vim.RunScriptAction
+			$trigger.action.Script = "/root/esxconf.sh {targetName}"
+			
+			# Transition a - yellow --> red
+			$transa = New-Object VMware.Vim.AlarmTriggeringActionTransitionSpec
+			$transa.StartState = "yellow"
+			$transa.FinalState = "red"
+			
+			$trigger.TransitionSpecs = $transa
+			
+			$alarm.action = $trigger
+			
+			$expression = New-Object VMware.Vim.EventAlarmExpression
+			$expression.EventType = "EventEx"
+			$expression.eventTypeId = "vim.event.HostConnectedEvent"
+			$expression.objectType = "HostSystem"
+			$expression.status = "red"
+			
+			$alarm.expression = New-Object VMware.Vim.OrAlarmExpression
+			$alarm.expression.expression = $expression
+			
+			$alarm.setting = New-Object VMware.Vim.AlarmSetting
+			$alarm.setting.reportingFrequency = 0
+			$alarm.setting.toleranceRange = 0
+			
+			# Create alarm.
+			$alarmMgr.CreateAlarm($entity.MoRef, $alarm)
+
 			# Disconnect from the vCenter.
 			Disconnect-viserver -server $vchandle -Confirm:$false
 
 			Separatorline
 		}
 
-		# Check to see if there are subdomains in the FQDN of the Node and update /etc/hosts if there are.
-		$subdomain = $Deployment.Hostname.split(".").count
-
-		if ($subdomain -gt 3 -and $Deployment.DeployType -like "*management*") {
-			$domainnames = $Deployment.Hostname + " " + $Deployment.Hostname.split(".")[0] + "." + $Deployment.Hostname.split(".",$subdomain - 1)[$subdomain - 2] + " " + $Deployment.Hostname.split(".")[0]
-
-			$commandlist = @()
-			$commandlist += "sed -i `'/$($Deployment.IP)/c $($Deployment.IP) $domainnames`' /etc/hosts"
+		# Run the vami_set_hostname to set the correct FQDN in the /etc/hosts file.
+		$commandlist = $null
+		$commandlist = @()
+		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+		$commandlist += "export VMWARE_LOG_DIR=/var/log"
+		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+		$commandlist += "export VMWARE_DATA_DIR=/storage"
+		$commandlist += "/opt/vmware/share/vami/vami_set_hostname $($Deployment.Hostname)"
 			
-			ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
-		}
+		ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
 
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
