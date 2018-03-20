@@ -1,0 +1,16 @@
+ad-info.yml
+autodeploy-rules.yml
+cert-info.yml
+cluster-info.yml
+deployments.yml
+folders.yml
+licenses.yml
+os-customizations.yml
+permissions.yml
+plugins.yml
+roles.yml
+services.yml
+sites.yml
+summary.yml
+vdswitches.yml
+vlans.yml
