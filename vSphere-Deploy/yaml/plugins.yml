@@ -1,0 +1,37 @@
+- Command: <null>
+  vCenter: vcsa1.acme.com
+  SourceFiles: '*'
+  SourceDir: onyx\onyx-setup-60u2
+  Config: true
+  DestDir: /root
+- Command: chmod +x ./install.sh
+  vCenter: vcsa1.acme.com
+  SourceFiles: <null>
+  SourceDir: <null>
+  Config: true
+  DestDir: <null>
+- Command: ./install.sh
+  vCenter: vcsa1.acme.com
+  SourceFiles: <null>
+  SourceDir: <null>
+  Config: true
+  DestDir: <null>
+- Command: <null>
+  vCenter: vcsa2.acme.com
+  SourceFiles: '*'
+  SourceDir: onyx\onyx-setup-60u2
+  Config: true
+  DestDir: /root
+- Command: chmod +x ./install.sh
+  vCenter: vcsa2.acme.com
+  SourceFiles: <null>
+  SourceDir: <null>
+  Config: true
+  DestDir: <null>
+- Command: ./install.sh
+  vCenter: vcsa2.acme.com
+  SourceFiles: <null>
+  SourceDir: <null>
+  Config: true
+  DestDir: <null>
+

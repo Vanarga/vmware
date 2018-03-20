@@ -1,0 +1,23 @@
+- ProfileName: Prod
+  Activate: true
+  Pattern: ipv4=10.100.100.10-10.100.100.250
+  vCenter: vcsa1.acme.com
+  SoftwareDepot: VMware-Host-Client-1.0.0-offline-bundle-3617585.zip
+  Datacenter: ny
+  ProfileRootPassword: N0t*Password2
+  ProfileAnnotation: AutoDeploy Profile
+  RuleName: Provision
+  Cluster: Provision
+  ProfileImport: Profile.vpf
+- ProfileName: Prod
+  Activate: true
+  Pattern: ipv4=10.120.100.10-10.120.100.250
+  vCenter: vcsa2.acme.com
+  SoftwareDepot: VMware-Host-Client-1.0.0-offline-bundle-3617585.zip
+  Datacenter: ca
+  ProfileRootPassword: N0t*Password2
+  ProfileAnnotation: AutoDeploy Profile
+  RuleName: Provision
+  Cluster: Provision
+  ProfileImport: Profile.vpf
+

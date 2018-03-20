@@ -1,0 +1,31 @@
+- Propagate: acme\helpdesk
+  vCenter: Helpdesk - Read Only
+  Role: true
+  Entity: NY
+  Principal: datacenter
+- Propagate: acme\temps
+  vCenter: Helpdesk - Read Only
+  Role: true
+  Entity: CA
+  Principal: datacenter
+- Propagate: acme\reporting
+  vCenter: Reporting
+  Role: false
+  Entity: Datacenters
+  Principal: folder
+- Propagate: acme\support
+  vCenter: NetOps
+  Role: true
+  Entity: Datacenters
+  Principal: folder
+- Propagate: acme\domainadmins
+  vCenter: Datacenter Managenent
+  Role: true
+  Entity: Datacenters
+  Principal: folder
+- Propagate: acme\levelthree
+  vCenter: IT Staff
+  Role: true
+  Entity: Datacenters
+  Principal: folder
+

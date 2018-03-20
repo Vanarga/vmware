@@ -1,0 +1,19 @@
+Country: US
+CADownload: https
+IssuingCA: ca3\ca3.acme
+SubCA1: ca2.acme.com
+CompanyName: FQDN
+RootRenewal: Renewal=0
+SubCA2: ca3.acme.com
+SubRenewal1: Renewal=0
+SubRenewal2: Renewal=0
+RootCA: ca1.acme.com
+V6Template: CertificateTemplate:vSphere6.0
+OrgName: Acme Virtual Company
+State: New York
+Locality: New York
+OrgUnit: IT
+Email: vcadmins@acme.com
+SubTemplate: CertificateTemplate:vSphere6.0VMCA
+openssldir: C:\OpenSSL
+

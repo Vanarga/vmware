@@ -1,0 +1,21 @@
+- vCenter: vcsa1.acme.com
+  Datacenter: ny
+  oct3: <null>
+  oct1: <null>
+  oct2: 100
+- vCenter: vcsa1.acme.com
+  Datacenter: ca
+  oct3: <null>
+  oct1: <null>
+  oct2: 120
+- vCenter: vcsa2.acme.com
+  Datacenter: uk
+  oct3: <null>
+  oct1: <null>
+  oct2: 130
+- vCenter: vcsa2.acme.com
+  Datacenter: nl
+  oct3: <null>
+  oct1: <null>
+  oct2: 140
+

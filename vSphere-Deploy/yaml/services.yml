@@ -1,0 +1,9 @@
+- Service: AuthProxy
+  vCenter: all
+- Service: AutoDeploy
+  vCenter: all
+- Service: Netdumpster
+  vCenter: all
+- Service: TFTP
+  vCenter: all
+

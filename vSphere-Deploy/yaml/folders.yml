@@ -1,0 +1,115 @@
+- Type: VM
+  vCenter: all
+  Name: build
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: all
+  Name: dev
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: all
+  Name: dmz
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: all
+  Name: lab
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: all
+  Name: prod
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: all
+  Name: qa
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: all
+  Name: stag
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: all
+  Name: test
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: all
+  Name: vdi
+  Datacenter: all
+  Location: vm
+  Tier: 1
+- Type: VM
+  vCenter: vcsa2.acme.com
+  Name: ca staff
+  Datacenter: ca
+  Location: Prod
+  Tier: 2
+- Type: VM
+  vCenter: vcsa1.acme.com
+  Name: ny staff
+  Datacenter: ny
+  Location: Prod
+  Tier: 2
+- Type: VM
+  vCenter: vcsa2.acme.com
+  Name: accounting
+  Datacenter: ca
+  Location: ca staff
+  Tier: 3
+- Type: VM
+  vCenter: vcsa1.acme.com
+  Name: accounting
+  Datacenter: ny
+  Location: ny staff
+  Tier: 3
+- Type: VM
+  vCenter: vcsa1.acme.com
+  Name: Expenses
+  Datacenter: ny
+  Location: ny staff
+  Tier: 3
+- Type: VM
+  vCenter: vcsa2.acme.com
+  Name: HR
+  Datacenter: ca
+  Location: ca staff
+  Tier: 3
+- Type: VM
+  vCenter: vcsa1.acme.com
+  Name: IT
+  Datacenter: ny
+  Location: ny staff
+  Tier: 3
+- Type: VM
+  vCenter: vcsa2.acme.com
+  Name: Marketing
+  Datacenter: ca
+  Location: ca staff
+  Tier: 3
+- Type: VM
+  vCenter: vcsa2.acme.com
+  Name: New Hires
+  Datacenter: ca
+  Location: ca staff
+  Tier: 3
+- Type: VM
+  vCenter: vcsa1.acme.com
+  Name: Sales
+  Datacenter: ny
+  Location: ny staff
+  Tier: 3
+

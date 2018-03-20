@@ -1,0 +1,295 @@
+- Vlan: vl 10
+  vCenter: all
+  Number: 1.0.0.0
+  VlanName: databases
+  Datacenter: ny,ca
+  Network: 10.oct2.10.0/24
+- Vlan: vl 20
+  vCenter: all
+  Number: 1.0.0.1
+  VlanName: applications
+  Datacenter: ny,ca
+  Network: 10.oct2.11.0/24
+- Vlan: vl 30
+  vCenter: all
+  Number: 1.0.0.2
+  VlanName: web servers
+  Datacenter: ny,ca
+  Network: 10.oct2.12.0/24
+- Vlan: vl 40
+  vCenter: all
+  Number: 1.0.0.3
+  VlanName: monitoring
+  Datacenter: ny,ca
+  Network: 10.oct2.13.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.0.9.8
+  VlanName: vmotion-1
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.0.9.9
+  VlanName: vmotion-2
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 100
+  vCenter: all
+  Number: 1.1.0.0
+  VlanName: databases
+  Datacenter: ny,ca
+  Network: 10.oct2.20.0/24
+- Vlan: vl 110
+  vCenter: all
+  Number: 1.1.0.1
+  VlanName: applications
+  Datacenter: ny,ca
+  Network: 10.oct2.21.0/24
+- Vlan: vl 120
+  vCenter: all
+  Number: 1.1.0.2
+  VlanName: web servers
+  Datacenter: ny,ca
+  Network: 10.oct2.22.0/24
+- Vlan: vl 130
+  vCenter: all
+  Number: 1.1.0.3
+  VlanName: monitoring
+  Datacenter: ny,ca
+  Network: 10.oct2.23.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.1.9.8
+  VlanName: vmotion-1
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.1.9.9
+  VlanName: vmotion-2
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 200
+  vCenter: all
+  Number: 1.2.0.0
+  VlanName: databases
+  Datacenter: ny,ca
+  Network: 10.oct2.30.0/24
+- Vlan: vl 210
+  vCenter: all
+  Number: 1.2.0.1
+  VlanName: applications
+  Datacenter: ny,ca
+  Network: 10.oct2.31.0/24
+- Vlan: vl 220
+  vCenter: all
+  Number: 1.2.0.2
+  VlanName: web servers
+  Datacenter: ny,ca
+  Network: 10.oct2.32.0/24
+- Vlan: vl 230
+  vCenter: all
+  Number: 1.2.0.3
+  VlanName: monitoring
+  Datacenter: ny,ca
+  Network: 10.oct2.33.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.2.9.8
+  VlanName: vmotion-1
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.2.9.9
+  VlanName: vmotion-2
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 300
+  vCenter: all
+  Number: 1.3.0.0
+  VlanName: databases
+  Datacenter: ny,ca
+  Network: 10.oct2.40.0/24
+- Vlan: vl 310
+  vCenter: all
+  Number: 1.3.0.1
+  VlanName: applications
+  Datacenter: ny,ca
+  Network: 10.oct2.41.0/24
+- Vlan: vl 320
+  vCenter: all
+  Number: 1.3.0.2
+  VlanName: web servers
+  Datacenter: ny,ca
+  Network: 10.oct2.42.0/24
+- Vlan: vl 330
+  vCenter: all
+  Number: 1.3.0.3
+  VlanName: monitoring
+  Datacenter: ny,ca
+  Network: 10.oct2.43.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.3.9.8
+  VlanName: vmotion-1
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.3.9.9
+  VlanName: vmotion-2
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 400
+  vCenter: all
+  Number: 1.4.0.0
+  VlanName: databases
+  Datacenter: ny,ca
+  Network: 10.oct2.50.0/24
+- Vlan: vl 410
+  vCenter: all
+  Number: 1.4.0.1
+  VlanName: applications
+  Datacenter: ny,ca
+  Network: 10.oct2.51.0/24
+- Vlan: vl 420
+  vCenter: all
+  Number: 1.4.0.2
+  VlanName: web servers
+  Datacenter: ny,ca
+  Network: 10.oct2.52.0/24
+- Vlan: vl 430
+  vCenter: all
+  Number: 1.4.0.3
+  VlanName: monitoring
+  Datacenter: ny,ca
+  Network: 10.oct2.53.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.4.9.8
+  VlanName: vmotion-1
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.4.9.9
+  VlanName: vmotion-2
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 500
+  vCenter: all
+  Number: 1.5.0.0
+  VlanName: databases
+  Datacenter: ny,ca
+  Network: 10.oct2.60.0/24
+- Vlan: vl 510
+  vCenter: all
+  Number: 1.5.0.1
+  VlanName: applications
+  Datacenter: ny,ca
+  Network: 10.oct2.61.0/24
+- Vlan: vl 520
+  vCenter: all
+  Number: 1.5.0.2
+  VlanName: web servers
+  Datacenter: ny,ca
+  Network: 10.oct2.62.0/24
+- Vlan: vl 530
+  vCenter: all
+  Number: 1.5.0.3
+  VlanName: monitoring
+  Datacenter: ny,ca
+  Network: 10.oct2.63.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.5.9.8
+  VlanName: vmotion-1
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.5.9.9
+  VlanName: vmotion-2
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 600
+  vCenter: all
+  Number: 1.6.0.0
+  VlanName: storage
+  Datacenter: ny,ca
+  Network: 10.oct2.70.0/24
+- Vlan: vl 610
+  vCenter: all
+  Number: 1.6.0.1
+  VlanName: network
+  Datacenter: ny,ca
+  Network: 10.oct2.71.0/24
+- Vlan: vl 620
+  vCenter: all
+  Number: 1.6.0.2
+  VlanName: monitoring
+  Datacenter: ny,ca
+  Network: 10.oct2.72.0/24
+- Vlan: vl 630
+  vCenter: all
+  Number: 1.6.0.3
+  VlanName: vmware mgmt
+  Datacenter: ny,ca
+  Network: 10.oct2.74.0/24
+- Vlan: vl 640
+  vCenter: all
+  Number: 1.6.0.4
+  VlanName: esx mgmt
+  Datacenter: ny,ca
+  Network: 10.oct2.75.0/24
+- Vlan: vl 650
+  vCenter: all
+  Number: 1.6.0.5
+  VlanName: server build
+  Datacenter: ny,ca
+  Network: 10.oct2.76.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.6.9.8
+  VlanName: vmotion-1
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.6.9.9
+  VlanName: vmotion-2
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 700
+  vCenter: all
+  Number: 1.7.0.0
+  VlanName: poc
+  Datacenter: ny,ca
+  Network: 10.oct2.80.0/24
+- Vlan: Trunk
+  vCenter: all
+  Number: 1.7.0.1
+  VlanName: Server build and Poc trunk
+  Datacenter: ny,ca
+  Network: 650710
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.7.9.8
+  VlanName: vmotion-1
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: vl 999
+  vCenter: all
+  Number: 1.7.9.9
+  VlanName: vmotion-2
+  Datacenter: ny,ca
+  Network: 10.oct2.250.0/24
+- Vlan: <null>
+  vCenter: all
+  Number: 9.9.9.9
+  VlanName: No Uplink Networks
+  Datacenter: ny,ca
+  Network: subnet NA
+
