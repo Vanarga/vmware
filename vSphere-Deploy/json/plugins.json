@@ -1,0 +1,50 @@
+[
+    {
+        "Config":  true,
+        "vCenter":  "vcsa1.acme.com",
+        "SourceDir":  "onyx\\onyx-setup-60u2",
+        "DestDir":  "/root",
+        "SourceFiles":  "*",
+        "Command":  "\u003cnull\u003e"
+    },
+    {
+        "Config":  true,
+        "vCenter":  "vcsa1.acme.com",
+        "SourceDir":  "\u003cnull\u003e",
+        "DestDir":  "\u003cnull\u003e",
+        "SourceFiles":  "\u003cnull\u003e",
+        "Command":  "chmod +x ./install.sh"
+    },
+    {
+        "Config":  true,
+        "vCenter":  "vcsa1.acme.com",
+        "SourceDir":  "\u003cnull\u003e",
+        "DestDir":  "\u003cnull\u003e",
+        "SourceFiles":  "\u003cnull\u003e",
+        "Command":  "./install.sh"
+    },
+    {
+        "Config":  true,
+        "vCenter":  "vcsa2.acme.com",
+        "SourceDir":  "onyx\\onyx-setup-60u2",
+        "DestDir":  "/root",
+        "SourceFiles":  "*",
+        "Command":  "\u003cnull\u003e"
+    },
+    {
+        "Config":  true,
+        "vCenter":  "vcsa2.acme.com",
+        "SourceDir":  "\u003cnull\u003e",
+        "DestDir":  "\u003cnull\u003e",
+        "SourceFiles":  "\u003cnull\u003e",
+        "Command":  "chmod +x ./install.sh"
+    },
+    {
+        "Config":  true,
+        "vCenter":  "vcsa2.acme.com",
+        "SourceDir":  "\u003cnull\u003e",
+        "DestDir":  "\u003cnull\u003e",
+        "SourceFiles":  "\u003cnull\u003e",
+        "Command":  "./install.sh"
+    }
+]

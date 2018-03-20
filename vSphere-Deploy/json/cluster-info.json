@@ -1,0 +1,47 @@
+[
+    {
+        "ClusterName":  "build",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "ClusterName":  "dmz",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "ClusterName":  "lab",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "ClusterName":  "vdi",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "ClusterName":  "prod",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "ClusterName":  "dev",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "ClusterName":  "qa",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "ClusterName":  "stag",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "ClusterName":  "test",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com"
+    }
+]

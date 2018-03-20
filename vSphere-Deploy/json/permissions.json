@@ -1,0 +1,44 @@
+[
+    {
+        "Entity":  "NY",
+        "Principal":  "datacenter",
+        "Propagate":  "acme\\helpdesk",
+        "Role":  true,
+        "vCenter":  "Helpdesk - Read Only"
+    },
+    {
+        "Entity":  "CA",
+        "Principal":  "datacenter",
+        "Propagate":  "acme\\temps",
+        "Role":  true,
+        "vCenter":  "Helpdesk - Read Only"
+    },
+    {
+        "Entity":  "Datacenters",
+        "Principal":  "folder",
+        "Propagate":  "acme\\reporting",
+        "Role":  false,
+        "vCenter":  "Reporting"
+    },
+    {
+        "Entity":  "Datacenters",
+        "Principal":  "folder",
+        "Propagate":  "acme\\support",
+        "Role":  true,
+        "vCenter":  "NetOps"
+    },
+    {
+        "Entity":  "Datacenters",
+        "Principal":  "folder",
+        "Propagate":  "acme\\domainadmins",
+        "Role":  true,
+        "vCenter":  "Datacenter Managenent"
+    },
+    {
+        "Entity":  "Datacenters",
+        "Principal":  "folder",
+        "Propagate":  "acme\\levelthree",
+        "Role":  true,
+        "vCenter":  "IT Staff"
+    }
+]

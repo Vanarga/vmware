@@ -1,0 +1,154 @@
+[
+    {
+        "Name":  "build",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "dev",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "dmz",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "lab",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "prod",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "qa",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "stag",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "test",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "vdi",
+        "Location":  "vm",
+        "Type":  "VM",
+        "Datacenter":  "all",
+        "vCenter":  "all",
+        "Tier":  1
+    },
+    {
+        "Name":  "ca staff",
+        "Location":  "Prod",
+        "Type":  "VM",
+        "Datacenter":  "ca",
+        "vCenter":  "vcsa2.acme.com",
+        "Tier":  2
+    },
+    {
+        "Name":  "ny staff",
+        "Location":  "Prod",
+        "Type":  "VM",
+        "Datacenter":  "ny",
+        "vCenter":  "vcsa1.acme.com",
+        "Tier":  2
+    },
+    {
+        "Name":  "accounting",
+        "Location":  "ca staff",
+        "Type":  "VM",
+        "Datacenter":  "ca",
+        "vCenter":  "vcsa2.acme.com",
+        "Tier":  3
+    },
+    {
+        "Name":  "accounting",
+        "Location":  "ny staff",
+        "Type":  "VM",
+        "Datacenter":  "ny",
+        "vCenter":  "vcsa1.acme.com",
+        "Tier":  3
+    },
+    {
+        "Name":  "Expenses",
+        "Location":  "ny staff",
+        "Type":  "VM",
+        "Datacenter":  "ny",
+        "vCenter":  "vcsa1.acme.com",
+        "Tier":  3
+    },
+    {
+        "Name":  "HR",
+        "Location":  "ca staff",
+        "Type":  "VM",
+        "Datacenter":  "ca",
+        "vCenter":  "vcsa2.acme.com",
+        "Tier":  3
+    },
+    {
+        "Name":  "IT",
+        "Location":  "ny staff",
+        "Type":  "VM",
+        "Datacenter":  "ny",
+        "vCenter":  "vcsa1.acme.com",
+        "Tier":  3
+    },
+    {
+        "Name":  "Marketing",
+        "Location":  "ca staff",
+        "Type":  "VM",
+        "Datacenter":  "ca",
+        "vCenter":  "vcsa2.acme.com",
+        "Tier":  3
+    },
+    {
+        "Name":  "New Hires",
+        "Location":  "ca staff",
+        "Type":  "VM",
+        "Datacenter":  "ca",
+        "vCenter":  "vcsa2.acme.com",
+        "Tier":  3
+    },
+    {
+        "Name":  "Sales",
+        "Location":  "ny staff",
+        "Type":  "VM",
+        "Datacenter":  "ny",
+        "vCenter":  "vcsa1.acme.com",
+        "Tier":  3
+    }
+]

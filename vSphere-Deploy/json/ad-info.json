@@ -1,0 +1,8 @@
+{
+    "ADDomain":  "acme.com",
+    "ADJoinUser":  "wcoyote",
+    "ADJoinPass":  "MyPassword1!",
+    "ADvCenterAdmins":  "vc_admins",
+    "ADvmcamUser":  "esxijoinad",
+    "ADvmcamPass":  "MyPassword2!"
+}

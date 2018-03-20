@@ -1,0 +1,58 @@
+[
+    {
+        "SwitchNumber":  1,
+        "vDSwitchName":  "vDS-XXX-Production",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "all",
+        "Version":  "6.5.0"
+    },
+    {
+        "SwitchNumber":  1.1,
+        "vDSwitchName":  "vDS-XXX-Staging",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "all",
+        "Version":  "6.5.0"
+    },
+    {
+        "SwitchNumber":  1.2,
+        "vDSwitchName":  "vDS-XXX-Testing",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "all",
+        "Version":  "6.5.0"
+    },
+    {
+        "SwitchNumber":  1.3,
+        "vDSwitchName":  "vDS-XXX-Development",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "all",
+        "Version":  "6.5.0"
+    },
+    {
+        "SwitchNumber":  1.4,
+        "vDSwitchName":  "vDS-XXX-QA",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "all",
+        "Version":  "6.5.0"
+    },
+    {
+        "SwitchNumber":  1.5,
+        "vDSwitchName":  "vDS-XXX-Infrastructure",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "all",
+        "Version":  "6.5.0"
+    },
+    {
+        "SwitchNumber":  1.6,
+        "vDSwitchName":  "vDS-XXX-Lab",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "all",
+        "Version":  "6.5.0"
+    },
+    {
+        "SwitchNumber":  9.9,
+        "vDSwitchName":  "vDS No UpLink Networks",
+        "Datacenter":  "ny,ca",
+        "vCenter":  "vcsa1.acme.com",
+        "Version":  "6.5.0"
+    }
+]

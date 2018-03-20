@@ -1,0 +1,30 @@
+[
+    {
+        "Datacenter":  "ny",
+        "oct1":  "\u003cnull\u003e",
+        "oct2":  100,
+        "oct3":  "\u003cnull\u003e",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "Datacenter":  "ca",
+        "oct1":  "\u003cnull\u003e",
+        "oct2":  120,
+        "oct3":  "\u003cnull\u003e",
+        "vCenter":  "vcsa1.acme.com"
+    },
+    {
+        "Datacenter":  "uk",
+        "oct1":  "\u003cnull\u003e",
+        "oct2":  130,
+        "oct3":  "\u003cnull\u003e",
+        "vCenter":  "vcsa2.acme.com"
+    },
+    {
+        "Datacenter":  "nl",
+        "oct1":  "\u003cnull\u003e",
+        "oct2":  140,
+        "oct3":  "\u003cnull\u003e",
+        "vCenter":  "vcsa2.acme.com"
+    }
+]
