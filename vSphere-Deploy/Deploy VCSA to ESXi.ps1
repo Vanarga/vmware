@@ -172,7 +172,7 @@ Param([Parameter(Mandatory=$false)]
     	[Parameter(Mandatory=$false)]
 		[switch]$Export,
     	[Parameter(Mandatory=$false)]
-    	[string]$FolderPath
+    	[string]$FilePath
 )
 
 # Clear the screen.
@@ -182,11 +182,11 @@ Add-Type -AssemblyName Microsoft.Office.Interop.Excel
 $xlFixedFormat = [Microsoft.Office.Interop.Excel.XlFileFormat]::xlOpenXMLWorkbook
 $ExcelFileName = "vsphere-configs.xlsx"
 
-if (!$FolderPath) {$FolderPath = $PSScriptRoot}
+if (!$FilePath) {$FolderPath = $PWD.path.ToString()}
 
-If ($Source -eq "excel" -and $FolderPath.Indexof(".") -gt -1) {
-    $ExcelFileName  = (Get-ChildItem -Path $FolderPath).Name
-    $Folderpath     = (Get-ChildItem -Path $FolderPath).DirectoryName
+if ($Source -eq "excel" -and $FilePath) {
+    $ExcelFileName  = $FilePath.split("\")[$FilePathn.split("\").count -1]
+    $Folderpath     = $FilePath.substring(0,$FilePath.Lastindexof("\"))
 }
 
 function Available ($url) {
@@ -229,28 +229,20 @@ function ConfigureAutoDeploy ($Deployment,$vihandle,$vcversion) {
 
 		ExecuteScript $commandlist $hostname "root" $password $vihandle}
 
-	If ($vcversion -eq 6.5) {
-		# Set Autodeploy (rbd) startype to Automatic and restart service.
-		$commandlist = $null
-		$commandlist = @()
-		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-		$commandlist += "export VMWARE_LOG_DIR=/var/log"
-		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
-		$commandlist += "export VMWARE_DATA_DIR=/storage"
-		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update rbd --starttype AUTOMATIC"
- 		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart rbd"
+	# Set Autodeploy (rbd) startype to Automatic and restart service.
+	$commandlist = $null
+	$commandlist = @()
+	$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+	$commandlist += "export VMWARE_LOG_DIR=/var/log"
+	$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+	$commandlist += "export VMWARE_DATA_DIR=/storage"
+	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update rbd --starttype AUTOMATIC"
+	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart rbd"
         
-		# imagebuilder set startype to Automatic and restart service.
-		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update imagebuilder --starttype AUTOMATIC"
- 		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart imagebuilder"
-	}
-	Else {
-           # Set Autodeploy to Autostart (rbd) and start service, vmware 6.0.
-		   $commandlist = $null
-		   $commandlist = @()
-   		   $commandlist += "/sbin/chkconfig vmware-rbd-watchdog on"
-		   $commandlist += "/etc/init.d/vmware-rbd-watchdog start"
-	}
+	# imagebuilder set startype to Automatic and restart service.
+	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update imagebuilder --starttype AUTOMATIC"
+	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart imagebuilder"
+
 	# Service update
 	ExecuteScript $commandlist $hostname "root" $password $vihandle
 }
@@ -395,137 +387,255 @@ function ConfigureCertPairs ($Cert_Dir,$Deployment,$vihandle) {
 
 }
 
+# Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
+function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
+	$sub_domain		= $Deployment.SSODomainName.split(".")[0]
+	$domain_ext		= $Deployment.SSODomainName.split(".")[1]
+	$fqdn			= $Deployment.Hostname
+	$commandlist 	= $null
+	$commandlist 	= @()
+
+	# Active Directory variables
+	$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
+
+	# Add AD domain as Native Identity Source.
+	echo "============ Adding AD Domain as Identity Source for SSO on vCenter Instance 6.7 ============" | Out-String
+	
+	Start-Sleep -Seconds 10
+
+	# Get list of existing Internet Explorer instances.
+	$instances = Get-Process -Name iexplore -erroraction silentlycontinue
+			
+	$ie = New-Object -com InternetExplorer.Application
+
+	$ie.visible=$false
+
+	$uri = "https://$fqdn/ui/"
+		
+	Do {
+		$ie.navigate($uri)
+
+		while($ie.ReadyState -ne 4) {start-sleep -m 100}
+
+		while($ie.document.ReadyState -ne "complete") {start-sleep -m 100}
+
+		echo $ie.document.url | Out-String
+
+		Start-Sleep -Seconds 30
+
+	} Until ($ie.document.url -match "websso")
+		
+	echo "ie" | Out-String
+	echo $ie | Out-String
+
+	Separatorline
+		
+	start-sleep 1
+
+	$ie.document.documentElement.GetElementsByClassName("margeTextInput")[0].value = 'administrator@' + $Deployment.SSODomainName
+	$ie.document.documentElement.GetElementsByClassName("margeTextInput")[1].value = $Deployment.SSOAdminPass
+		
+	start-sleep 1
+		
+	# Enable the submit button and click it.
+	$ie.document.documentElement.GetElementsByClassName("button blue")[0].Disabled = $false
+	$ie.document.documentElement.GetElementsByClassName("button blue")[0].click()
+
+	start-sleep 10
+		
+	$uri = "https://$fqdn/ui/#?extensionId=vsphere.core.administration.configurationView"
+
+	$ie.navigate($uri)
+		
+	start-sleep 1
+		
+	($ie.document.documentElement.getElementsByTagName('button') | ?{$_.id -eq 'clr-tab-link-3'}).click()
+		
+	start-sleep 1
+			
+	($ie.document.documentElement.getElementsByClassName('btn btn-link') | ?{$_.getAttributeNode('role').Value -eq 'addNewIdentity'}).click()
+		
+	start-sleep 1
+		
+	$ie.document.documentElement.getElementsByClassName('btn btn-primary')[0].click()
+		
+	start-sleep 1
+		
+	$selections = ($ie.document.documentElement.getElementsByTagName("clr-dg-cell") | Select outertext).outertext -replace " ",""
+	$row =  0..2 | ?{$selections[1,7,13][$_] -eq $ADInfo.ADDomain}
+
+	$ie.document.documentElement.getElementsByClassName("radio")[$row].childnodes[3].click()
+		
+	($ie.document.documentElement.getElementsByClassName('btn btn-link') | ?{$_.getAttributeNode('role').Value -eq 'defaultIdentity'}).click()
+		
+	start-sleep 1
+		
+	$ie.document.documentElement.getElementsByClassName('btn btn-primary')[0].click()
+	
+	# Exit Internet Explorer.
+	$ie.quit()
+
+	[System.GC]::Collect()
+	[System.GC]::WaitForPendingFinalizers()
+	[void][System.Runtime.Interopservices.Marshal]::FinalReleaseComObject($ie)
+
+	$ca = $null
+	$ie = $null
+
+	# Get a list of the new Internet Explorer Instances and close them, leaving the old instances running.
+	$newinstances = Get-Process -Name iexplore
+	$newinstances | ?{$instances.id -notcontains $_.id} | stop-process
+	
+	echo "============ Completed adding AD Domain as Identity Sourcefor SSO on PSC ============" | Out-String
+}
+
 
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
-function ConfigureIdentity ($Deployment,$ADInfo,$vihandle) {
-			$sub_domain		= $Deployment.SSODomainName.split(".")[0]
-			$domain_ext		= $Deployment.SSODomainName.split(".")[1]
-			$fqdn				= $Deployment.Hostname
-			$commandlist 	= $null
-			$commandlist 	= @()
+function ConfigureIdentity65 ($Deployment,$ADInfo,$vihandle) {
+	$sub_domain		= $Deployment.SSODomainName.split(".")[0]
+	$domain_ext		= $Deployment.SSODomainName.split(".")[1]
+	$fqdn			= $Deployment.Hostname
+	$commandlist 	= $null
+	$commandlist 	= @()
 
-			# Active Directory variables
-			$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
+	# Active Directory variables
+	$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
 
-			# Add AD domain as Native Identity Source.
-			echo "============ Adding AD Domain as Identity Source for SSO on PSC ============" | Out-String
+	# Add AD domain as Native Identity Source.
+	echo "============ Adding AD Domain as Identity Source for SSO on PSC Instance 6.5 ============" | Out-String
+			
+	Start-Sleep -Seconds 10
+
+    # Get list of existing Internet Explorer instances.
+	$instances = Get-Process -Name iexplore -erroraction silentlycontinue
+					
+	$ie = New-Object -com InternetExplorer.Application
+
+	$ie.visible=$false
+
+	$ie.navigate($("https://" + $fqdn + "/psc/"))
+
+	while($ie.ReadyState -ne 4) {start-sleep -m 100}
+
+	while($ie.document.ReadyState -ne "complete") {start-sleep -m 100}
+			
+	Separatorline
+
+	echo "ie" | Out-String
+	echo $ie | Out-String
+
+	Separatorline
+
+	echo '$ie.document.getElementById("username")' | Out-String
+	echo $ie.document.getElementById("username") | Out-string
+
+	Separatorline
             
-            # Get list of existing Internet Explorer instances.
-			$instances = Get-Process -Name iexplore -erroraction silentlycontinue
-			$ie = New-Object -com InternetExplorer.Application 
-			$ie.visible=$false
-			$ie.navigate("https://" + $fqdn + "/psc/")
+    # Fill in the username and password fields with the SSO Administrator credentials.
+	$ie.document.getElementById("username").value = 'administrator@' + $Deployment.SSODomainName
+	$ie.document.getElementById("password").value = $Deployment.SSOAdminPass
+				
+    # Enable the submit button and click it.
+	$ie.document.getElementById("submit").Disabled = $false
+	$ie.document.getElementById("submit").click()
+	start-sleep 10
+				
+    # Navigate to the add Identity Sources page for the SSO.
+	$ie.navigate("https://" + $fqdn + "/psc/#?extensionId=sso.identity.sources.extension") 
 
-			while($ie.ReadyState -ne 4) {start-sleep -m 100}
+	echo $ie | Out-String
 
-			while($ie.document.ReadyState -ne "complete") {start-sleep -m 100}
+	# Select the Add Identity Source button and click it.
+	$ca = $ie.document.documentElement.getElementsByClassName('vui-action-label ng-binding ng-scope') | select -first 1
+	$ca.click()
+				
+    # Click the Active Directory Type Radio button.
+	$ie.document.getElementById("adType").click()
 			
-			Separatorline
-
-			echo "ie" | Out-String
-			echo $ie | Out-String
-
-			Separatorline
-
-			echo '$ie.document.getElementById("username")' | Out-String
-			echo $ie.document.getElementById("username") | Out-string
-
-			Separatorline
-            
-            # Fill in the username and password fields with the SSO Administrator credentials.
-			$ie.document.getElementById("username").value = 'administrator@' + $Deployment.SSODomainName
-            $ie.document.getElementById("password").value = $Deployment.SSOAdminPass
-            # Enable the submit button and click it.
-			$ie.document.getElementById("submit").Disabled = $false
-			$ie.document.getElementById("submit").click()
-            start-sleep 10
-            # Navigate to the add Identity Sources page for the SSO.
-			$ie.navigate("https://" + $fqdn + "/psc/#?extensionId=sso.identity.sources.extension") 
-
-			echo $ie | Out-String
-
-            # Select the Add Identity Source button and click it.
-			$ca = $ie.document.documentElement.getElementsByClassName('vui-action-label ng-binding ng-scope') | select -first 1
-            $ca.click()
-            # Click the Active Directory Type Radio button.
-            $ie.document.getElementById("adType").click()
-            # Click OK.
-			$ca = $ie.document.documentElement.getElementsByClassName('ng-binding') | ?{$_.innerHTML -eq "OK"}
-            $ca.click()
-            # Exit Internet Explorer.
-			$ie.quit()
-
-			[System.GC]::Collect()
-			[System.GC]::WaitForPendingFinalizers()
-			[void][System.Runtime.Interopservices.Marshal]::FinalReleaseComObject($ie)
-
-			$ca = $null
-			$ie = $null
-
-            # Get a list of the new Internet Explorer Instances and close them, leaving the old instances running.
-			$newinstances = Get-Process -Name iexplore
-			$newinstances | ?{$instances.id -notcontains $_.id} | stop-process
+    # Click OK.
+	$ca = $ie.document.documentElement.getElementsByClassName('ng-binding') | ?{$_.innerHTML -eq "OK"}
+	$ca.click()
 			
-			echo "============ Completed adding AD Domain as Identity Sourcefor SSO on PSC ============" | Out-String
+    # Exit Internet Explorer.
+	$ie.quit()
+
+	[System.GC]::Collect()
+	[System.GC]::WaitForPendingFinalizers()
+	[void][System.Runtime.Interopservices.Marshal]::FinalReleaseComObject($ie)
+
+	$ca = $null
+	$ie = $null
 			
-			# Set Default SSO Identity Source Domain
-			$commandlist += "echo -e `"dn: cn=$($Deployment.SSODomainName),cn=Tenants,cn=IdentityManager,cn=Services,dc=$sub_domain,dc=$domain_ext`" >> defaultdomain.ldif"
-			$commandlist += "echo -e `"changetype: modify`" >> defaultdomain.ldif"
-			$commandlist += "echo -e `"replace: vmwSTSDefaultIdentityProvider`" >> defaultdomain.ldif"
-			$commandlist += "echo -e `"vmwSTSDefaultIdentityProvider: $($ADInfo.ADDomain)`" >> defaultdomain.ldif"
-			$commandlist += "echo -e `"-`" >> defaultdomain.ldif"
-			$commandlist += "/opt/likewise/bin/ldapmodify -f /root/defaultdomain.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	# Get a list of the new Internet Explorer Instances and close them, leaving the old instances running.
+	$newinstances = Get-Process -Name iexplore
+	$newinstances | ?{$instances.id -notcontains $_.id} | stop-process
 			
-			# Add AD vCenter Admins to Component Administrators SSO Group.
-			$commandlist += "echo -e `"dn: cn=ComponentManager.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_cma.ldif"
-			$commandlist += "echo -e `"changetype: modify`" >> groupadd_cma.ldif"
-			$commandlist += "echo -e `"add: member`" >> groupadd_cma.ldif"
-			$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_cma.ldif"
-			$commandlist += "echo -e `"-`" >> groupadd_cma.ldif"
-			$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_cma.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	echo "============ Completed adding AD Domain as Identity Sourcefor SSO on PSC ============" | Out-String
 			
-			# Add AD vCenter Admins to License Administrators SSO Group.
-			$commandlist += "echo -e `"dn: cn=LicenseService.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_la.ldif"
-			$commandlist += "echo -e `"changetype: modify`" >> groupadd_la.ldif"
-			$commandlist += "echo -e `"add: member`" >> groupadd_la.ldif"
-			$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_la.ldif"
-			$commandlist += "echo -e `"-`" >> groupadd_la.ldif"
-			$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_la.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+}
+
+function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
+
+	$commandlist = @()
+
+	# Set Default SSO Identity Source Domain
+	$commandlist += "echo -e `"dn: cn=$($Deployment.SSODomainName),cn=Tenants,cn=IdentityManager,cn=Services,dc=$sub_domain,dc=$domain_ext`" >> defaultdomain.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> defaultdomain.ldif"
+	$commandlist += "echo -e `"replace: vmwSTSDefaultIdentityProvider`" >> defaultdomain.ldif"
+	$commandlist += "echo -e `"vmwSTSDefaultIdentityProvider: $($ADInfo.ADDomain)`" >> defaultdomain.ldif"
+	$commandlist += "echo -e `"-`" >> defaultdomain.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/defaultdomain.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
-			# Add AD vCenter Admins to Administrators SSO Group.
-			$commandlist += "echo -e `"dn: cn=Administrators,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_adm.ldif"
-			$commandlist += "echo -e `"changetype: modify`" >> groupadd_adm.ldif"
-			$commandlist += "echo -e `"add: member`" >> groupadd_adm.ldif"
-			$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_adm.ldif"
-			$commandlist += "echo -e `"-`" >> groupadd_adm.ldif"
-			$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_adm.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	# Add AD vCenter Admins to Component Administrators SSO Group.
+	$commandlist += "echo -e `"dn: cn=ComponentManager.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_cma.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_cma.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_cma.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_cma.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_cma.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_cma.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
-			# Add AD vCenter Admins to Certificate Authority Administrators SSO Group.
-			$commandlist += "echo -e `"dn: cn=CAAdmins,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_caa.ldif"
-			$commandlist += "echo -e `"changetype: modify`" >> groupadd_caa.ldif"
-			$commandlist += "echo -e `"add: member`" >> groupadd_caa.ldif"
-			$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_caa.ldif"
-			$commandlist += "echo -e `"-`" >> groupadd_caa.ldif"
-			$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_caa.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	# Add AD vCenter Admins to License Administrators SSO Group.
+	$commandlist += "echo -e `"dn: cn=LicenseService.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_la.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_la.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_la.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_la.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_la.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_la.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
-			# Add AD vCenter Admins to Users SSO Group.
-			$commandlist += "echo -e `"dn: cn=Users,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_usr.ldif"
-			$commandlist += "echo -e `"changetype: modify`" >> groupadd_usr.ldif"
-			$commandlist += "echo -e `"add: member`" >> groupadd_usr.ldif"
-			$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_usr.ldif"
-			$commandlist += "echo -e `"-`" >> groupadd_usr.ldif"
-			$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_usr.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	# Add AD vCenter Admins to Administrators SSO Group.
+	$commandlist += "echo -e `"dn: cn=Administrators,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_adm.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_adm.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_adm.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_adm.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_adm.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_adm.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
-			# Add AD vCenter Admins to System Configuration Administrators SSO Group.
-			$commandlist += "echo -e `"dn: cn=SystemConfiguration.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_sca.ldif"
-			$commandlist += "echo -e `"changetype: modify`" >> groupadd_sca.ldif"
-			$commandlist += "echo -e `"add: member`" >> groupadd_sca.ldif"
-			$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_sca.ldif"
-			$commandlist += "echo -e `"-`" >> groupadd_sca.ldif"
-			$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	# Add AD vCenter Admins to Certificate Authority Administrators SSO Group.
+	$commandlist += "echo -e `"dn: cn=CAAdmins,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_caa.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_caa.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_caa.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_caa.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_caa.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_caa.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
-			# Excute the commands in $commandlist on the vcsa.
-			ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
+	# Add AD vCenter Admins to Users SSO Group.
+	$commandlist += "echo -e `"dn: cn=Users,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_usr.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_usr.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_usr.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_usr.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_usr.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_usr.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+			
+	# Add AD vCenter Admins to System Configuration Administrators SSO Group.
+	$commandlist += "echo -e `"dn: cn=SystemConfiguration.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_sca.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_sca.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_sca.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_sca.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_sca.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+			
+	# Excute the commands in $commandlist on the vcsa.
+	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 }
 
 function ConfigureLicensing ($Licenses, $vihandle) {
@@ -585,18 +695,13 @@ function ConfigureNetdumpster ($hostname,$username,$password,$vihandle,$vcversio
 	$commandlist = $null
 	$commandlist = @()
 
-	If ($vcversion -eq 6.5) {
-		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-		$commandlist += "export VMWARE_LOG_DIR=/var/log"
-		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
-		$commandlist += "export VMWARE_DATA_DIR=/storage"
-		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update netdumper --starttype AUTOMATIC"
-		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --start netdumper"
-	}
-	Else {
-		   $commandlist += "/sbin/chkconfig vmware-netdumper on"
-		   $commandlist += "/etc/init.d/vmware-netdumper start"
-	}
+	$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+	$commandlist += "export VMWARE_LOG_DIR=/var/log"
+	$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+	$commandlist += "export VMWARE_DATA_DIR=/storage"
+	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update netdumper --starttype AUTOMATIC"
+	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --start netdumper"
+
 	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 }
@@ -743,13 +848,21 @@ function Deploy ($parameterlist, $ovftoolpath, $LogPath) {
 
 	$argumentlist	= @()
 	$ovftool		= "$ovftoolpath\ovftool.exe"
+
+	# Get Esxi Host Certificate Thumbrpint.
+	$url = "https://$($parameterlist.esxiHost)"
+	$webRequest = [Net.WebRequest]::Create($url)
+	try { $webRequest.GetResponse() } catch {}
+	$esxiCert = $webRequest.ServicePoint.Certificate
+	$esxiThumbPrint = $esxiCert.GetCertHashString() -replace '(..(?!$))','$1:'
 	
 	if ($parameterlist.Action -ne "--version") {
 		$argumentlist += "--X:logFile=$LogPath\Logs\ofvtool_$($parameterlist.vmName)_$(get-date -format mm-dd-yyyy-HH_mm).log"
 		$argumentlist += "--X:logLevel=verbose"
 		$argumentlist += "--acceptAllEulas"
 		$argumentlist += "--skipManifestCheck"
-		$argumentlist += "--noSSLVerify"
+#		$argumentlist += "--noSSLVerify"
+		$argumentlist += "--targetSSLThumbprint=$esxiThumbPrint"
 		$argumentlist += "--X:injectOvfEnv"
 		$argumentlist += "--allowExtraConfig"
 		$argumentlist += "--X:enableHiddenProperties"
@@ -761,13 +874,15 @@ function Deploy ($parameterlist, $ovftoolpath, $LogPath) {
 		$argumentlist += "--diskMode=$($parameterlist.DiskMode)"
 		$argumentlist += "--name=$($parameterlist.vmName)"
 		$argumentlist += "--deploymentOption=$($parameterlist.DeployType)"
-		if ($parameterlist.DeployType -notlike "*infrastructure*") {
-			$argumentlist += "--prop:guestinfo.cis.system.vm0.hostname=$($parameterlist.Parent)"}
+		if ($parameterlist.DeployType -like "*management*") {
+			$argumentlist += "--prop:guestinfo.cis.system.vm0.hostname=$($parameterlist.Parent)"
+		}
 		$argumentlist += "--prop:guestinfo.cis.vmdir.domain-name=$($parameterlist.SSODomainName)"
 		$argumentlist += "--prop:guestinfo.cis.vmdir.site-name=$($parameterlist.SSOSiteName)"
 		$argumentlist += "--prop:guestinfo.cis.vmdir.password=$($parameterlist.SSOAdminPass)"
 		if ($parameterlist.Action -eq "first" -and $pscs -contains $parameterlist.DeployType) {
-			$argumentlist += "--prop:guestinfo.cis.vmdir.first-instance=True"}
+			$argumentlist += "--prop:guestinfo.cis.vmdir.first-instance=True"
+		}
 		else {
 			  $argumentlist += "--prop:guestinfo.cis.vmdir.first-instance=False"
 			  $argumentlist += "--prop:guestinfo.cis.vmdir.replication-partner-hostname=$($parameterlist.Parent)"
@@ -783,6 +898,7 @@ function Deploy ($parameterlist, $ovftoolpath, $LogPath) {
 		$argumentlist += "--prop:guestinfo.cis.appliance.ssh.enabled=$($parameterlist.EnableSSH)"
 		$argumentlist += "--prop:guestinfo.cis.appliance.ntp.servers=$($parameterlist.NTP)"
 		$argumentlist += "--prop:guestinfo.cis.deployment.autoconfig=True"
+		$argumentlist += "--prop:guestinfo.cis.clientlocale=en"
 		$argumentlist += "--prop:guestinfo.cis.ceip_enabled=False"
 		$argumentlist += "$($parameterlist.OVA)"
 		$argumentlist += "vi://$($parameterlist.esxiRootUser)`:$($parameterlist.esxiRootPass)@$($parameterlist.esxiHost)"
@@ -842,7 +958,16 @@ function CreatePermissions ($vPermissions, $vihandle) {
 	
 	foreach ($Permission in $vPermissions) {
 		$Entity = Get-Inventory -Name $Permission.Entity | ?{$_.Id -match $Permission.Location}
-		New-VIPermission -Server $vihandle -Entity $Entity -Principal $Permission.Principal -Role $Permission.Role -Propagate $([System.Convert]::ToBoolean($Permission.Propagate))
+		if ($Permission.Group) {
+			$Principal = Get-VIAccount -Group -Name $Permission.Principal -Server $vihandle
+		}
+		else { 
+			$Principal = Get-VIAccount -Name $Permission.Principal -Server $vihandle
+		}
+
+		echo "New-VIPermission -Server $vihandle -Entity $Entity -Principal $Principal -Role $($Permission.Role) -Propagate $([System.Convert]::ToBoolean($Permission.Propagate))" | Out-String
+
+		New-VIPermission -Server $vihandle -Entity $Entity -Principal $Principal -Role $Permission.Role -Propagate $([System.Convert]::ToBoolean($Permission.Propagate))
 		
 	}
 	
@@ -932,11 +1057,31 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 
 			# if the vcsa is the first PSC in the vsphere domain, set the default identity source to the windows domain,
 			# add the windows AD group to the admin groups of the PSC.
-			if ($pscdeployments -contains $Deployment.DeployType) {	
+			$commandlist = $null
+			$commandlist = "/opt/likewise/bin/ldapsearch -h $($Deployment.Hostname) -w `'$($Deployment.VCSARootPass)`' -x -D `"cn=Administrator,cn=Users,dc=lab-hcmny,dc=com`" -b `"cn=lab-hcmny.com,cn=Tenants,cn=IdentityManager,cn=services,dc=lab-hcmny,dc=com`" | grep vmwSTSDefaultIdentityProvider"
+
+			$DefaultIdentitySource = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput
+
+			$viversion = $(ExecuteScript "vpxd -v" $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput
+
+			If ($viversion -match "6.7." -and $Deployment.DeployType -ne "infrastructure" -and $DefaultIdentitySource -ne $ADInfo.ADDomain) {	
 				# Write separator line to transcript.
 				Separatorline
 
-				ConfigureIdentity $Deployment $ADInfo $vihandle
+				ConfigureIdentity67 $Deployment $ADInfo $vihandle
+
+				Separatorline
+
+				ConfigureSSOGroups $Deployment $ADInfo $vihandle
+			}
+			elseif ($viversion -match "6.5." -and $pscdeployments -contains $Deployment.DeployType) {
+				Separatorline
+
+				ConfigureIdentity65 $Deployment $ADInfo $vihandle
+
+				Separatorline
+
+				ConfigureSSOGroups $Deployment $ADInfo $vihandle
 			}
 
 		Separatorline
@@ -1455,12 +1600,6 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 		if (Test-Path -Path "$RootCert_Dir\interm264.cer") {
 		$filelocations += "$RootCert_Dir\interm264.cer"
 		$filelocations += "$SslPath/interm264.cer"}}
-	
-	If ($viversion -notlike "*6.5*") {
-		$filelocations += "$certpath\vmdir\vmdircert.pem"
-		$filelocations += "/usr/lib/vmware-vmdir/share/config/vmdircert.pem"
-		$filelocations += "$certpath\vmdir\vmdirkey.pem"
-		$filelocations += "/usr/lib/vmware-vmdir/share/config/vmdirkey.pem"}
 
 	$filelocations += "$certpath\solution\machine.cer"
 	$filelocations += "$SolutionPath/machine.cer"
@@ -1566,6 +1705,8 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
 
+	Start-Sleep -Seconds 10
+
 	if ($servertype -ne "Infrastructure"){
 		$commandlist = $null
 		$commandlist = @()
@@ -1588,10 +1729,7 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
     # Update VAMI Certs on External PSC.
 	$commandlist = $null
 	$commandlist = @()
-    If ($viversion -notlike "*6.5*") {
-    	$commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/lighttpd-vecs-integration.sh"}
-    Else {
-    	$commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/setup-webserver.sh"}
+   	$commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/setup-webserver.sh"
 
 	# Service update
 	ExecuteScript $commandlist $hostname $username $password $vihandle
@@ -1961,16 +2099,17 @@ switch ($Source) {
 			$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 			
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
-				$data			= $Worksheet.Range("A2","F$rows").Value()
+				$data			= $Worksheet.Range("A2","G$rows").Value()
 				$s_Permissions	= @()
 				for ($i=1;$i -lt $rows;$i++) {
 					$s_Permission  = [PSCustomObject]@{
 						Entity		= $data[$i,1]
 						Location	= $data[$i,2]
-						Principal	= $data[$i,3]	
-						Propagate	= $data[$i,4]	
-						Role		= $data[$i,5]
-						vCenter		= $data[$i,6]
+						Principal	= $data[$i,3]
+						Group		= $data[$i,4]	
+						Propagate	= $data[$i,5]	
+						Role		= $data[$i,6]
+						vCenter		= $data[$i,7]
 					}
 					$s_Permissions += $s_Permission
 				}
