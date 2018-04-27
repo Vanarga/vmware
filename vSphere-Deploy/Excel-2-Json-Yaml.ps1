@@ -298,15 +298,16 @@ switch ($Source) {
 			$rows		= $objExcel.Worksheetfunction.Countif($worksheet.Range("A:A"),"<>")
 			
 			If ( $rows -gt 1 -and $rows -lt $lastrow) {
-				$data			= $Worksheet.Range("A2","E$rows").Value()
+				$data			= $Worksheet.Range("A2","F$rows").Value()
 				$s_Permissions	= @()
 				for ($i=1;$i -lt $rows;$i++){
 					$s_Permission  = [PSCustomObject]@{
 						Entity		= $data[$i,1]
-						Principal	= $data[$i,2]	
-						Propagate	= $data[$i,3]	
-						Role		= $data[$i,4]
-						vCenter		= $data[$i,5]
+						Principal	= $data[$i,2]
+						Group		= $data[$i,3]
+						Propagate	= $data[$i,4]	
+						Role		= $data[$i,5]
+						vCenter		= $data[$i,6]
 					}
 					$s_Permissions += $s_Permission
 				}
