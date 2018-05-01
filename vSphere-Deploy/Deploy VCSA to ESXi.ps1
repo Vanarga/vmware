@@ -393,9 +393,6 @@ function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
 	$commandlist 	= $null
 	$commandlist 	= @()
 
-	# Active Directory variables
-	$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
-
 	# Add AD domain as Native Identity Source.
 	echo "============ Adding AD Domain as Identity Source for SSO on vCenter Instance 6.7 ============" | Out-String
 	
@@ -575,23 +572,18 @@ function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
 	$sub_domain		= $Deployment.SSODomainName.split(".")[0]
 	$domain_ext		= $Deployment.SSODomainName.split(".")[1]
 
+	# Active Directory variables
+	$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
+
 	$commandlist = @()
 
-	# Set Default SSO Identity Source Domain
-	$commandlist += "echo -e `"dn: cn=$($Deployment.SSODomainName),cn=Tenants,cn=IdentityManager,cn=Services,dc=$sub_domain,dc=$domain_ext`" >> defaultdomain.ldif"
-	$commandlist += "echo -e `"changetype: modify`" >> defaultdomain.ldif"
-	$commandlist += "echo -e `"replace: vmwSTSDefaultIdentityProvider`" >> defaultdomain.ldif"
-	$commandlist += "echo -e `"vmwSTSDefaultIdentityProvider: $($ADInfo.ADDomain)`" >> defaultdomain.ldif"
-	$commandlist += "echo -e `"-`" >> defaultdomain.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/defaultdomain.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
-			
 	# Add AD vCenter Admins to Component Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=ComponentManager.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_cma.ldif"
 	$commandlist += "echo -e `"changetype: modify`" >> groupadd_cma.ldif"
 	$commandlist += "echo -e `"add: member`" >> groupadd_cma.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_cma.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_cma.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_cma.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_cma.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
 	# Add AD vCenter Admins to License Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=LicenseService.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_la.ldif"
@@ -599,7 +591,7 @@ function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_la.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_la.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_la.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_la.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_la.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
 	# Add AD vCenter Admins to Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=Administrators,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_adm.ldif"
@@ -607,7 +599,7 @@ function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_adm.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_adm.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_adm.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_adm.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_adm.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
 	# Add AD vCenter Admins to Certificate Authority Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=CAAdmins,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_caa.ldif"
@@ -615,7 +607,7 @@ function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_caa.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_caa.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_caa.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_caa.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_caa.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
 	# Add AD vCenter Admins to Users SSO Group.
 	$commandlist += "echo -e `"dn: cn=Users,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_usr.ldif"
@@ -623,7 +615,7 @@ function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_usr.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_usr.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_usr.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_usr.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_usr.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
 	# Add AD vCenter Admins to System Configuration Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=SystemConfiguration.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_sca.ldif"
@@ -631,7 +623,7 @@ function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_sca.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_sca.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_sca.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h localhost -p 11711 -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
 			
 	# Excute the commands in $commandlist on the vcsa.
 	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
@@ -3018,6 +3010,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
+			# Configure Build Cluster Alarm Action
 			Separatorline
 
 			# Disconnect from the vCenter.
