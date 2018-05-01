@@ -3010,7 +3010,6 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
-			# Configure Build Cluster Alarm Action
 			Separatorline
 
 			# Disconnect from the vCenter.
