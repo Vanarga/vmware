@@ -389,8 +389,6 @@ function ConfigureCertPairs ($Cert_Dir,$Deployment,$vihandle) {
 
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
 function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
-	$sub_domain		= $Deployment.SSODomainName.split(".")[0]
-	$domain_ext		= $Deployment.SSODomainName.split(".")[1]
 	$fqdn			= $Deployment.Hostname
 	$commandlist 	= $null
 	$commandlist 	= @()
@@ -492,8 +490,6 @@ function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
 
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
 function ConfigureIdentity65 ($Deployment,$ADInfo,$vihandle) {
-	$sub_domain		= $Deployment.SSODomainName.split(".")[0]
-	$domain_ext		= $Deployment.SSODomainName.split(".")[1]
 	$fqdn			= $Deployment.Hostname
 	$commandlist 	= $null
 	$commandlist 	= @()
@@ -575,6 +571,9 @@ function ConfigureIdentity65 ($Deployment,$ADInfo,$vihandle) {
 }
 
 function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
+
+	$sub_domain		= $Deployment.SSODomainName.split(".")[0]
+	$domain_ext		= $Deployment.SSODomainName.split(".")[1]
 
 	$commandlist = @()
 
@@ -3019,7 +3018,6 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
-			# Configure Build Cluster Alarm Action
 			Separatorline
 
 			# Disconnect from the vCenter.
