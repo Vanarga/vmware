@@ -390,8 +390,23 @@ function ConfigureCertPairs ($Cert_Dir,$Deployment,$vihandle) {
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
 function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
 	$fqdn			= $Deployment.Hostname
+
 	$commandlist 	= $null
 	$commandlist 	= @()
+	$commandlist 	+= "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert list --login `'administrator@$($Deployment.SSODomainName)`' --password `'$($Deployment.SSOAdminPass)`' | grep `'CN(id):`'"
+
+	$certid = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.split("")[2]
+
+	$commandlist 	= $null
+	$commandlist 	= @()
+	$commandlist    += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert get --id $certid --outcert /root/vcrootcert.crt --login `'administrator@$($Deployment.SSODomainName)`' --password `'$($Deployment.SSOAdminPass)`'"
+	$commandlist    += "cat /root/vcrootcert.crt"
+
+	$vcrootcert 	= $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.substring(35,$vcrootcert.length-36)
+
+	$vcrootcert | Set-Content -Path "C:\Temp\vcroot.crt"
+
+	Import-Certificate -FilePath "C:\Temp\vc6root.crt" -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
 
 	# Add AD domain as Native Identity Source.
 	echo "============ Adding AD Domain as Identity Source for SSO on vCenter Instance 6.7 ============" | Out-String
@@ -998,6 +1013,34 @@ function CopyFiletoServer ($locations, $hostname, $username, $password, $vihandl
 
 	Separatorline
 }
+
+# Download the Node self signed certificate and install it in the local trusted root certificate store.
+function InstallNodeRootCert ($Certpath, $Deployment, $vihandle) {
+
+	SeparatorLine
+
+	$RootCertPath = $Certpath + "\" + $Deployment.Hostname.Split(".")[0] + "_self_signed_root_cert.crt"
+
+	$commandlist 	= $null
+	$commandlist 	= @()
+	$commandlist 	+= "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert list --login `'administrator@$($Deployment.SSODomainName)`' --password `'$($Deployment.SSOAdminPass)`' | grep `'CN(id):`'"
+
+	$certid = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.split("")[2]
+
+	$commandlist 	= $null
+	$commandlist 	= @()
+	$commandlist    += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert get --id $certid --outcert /root/vcrootcert.crt --login `'administrator@$($Deployment.SSODomainName)`' --password `'$($Deployment.SSOAdminPass)`'"
+	$commandlist    += "cat /root/vcrootcert.crt"
+
+	$vcrootcert 	= $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.substring(35,1500)
+
+	$vcrootcert | Set-Content -Path $RootCertPath
+
+	Import-Certificate -FilePath $RootCertPath -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
+
+	SeparatorLine
+}
+
 
 # Join the VCSA to the Windows AD Domain.
 function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
@@ -2620,6 +2663,8 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -notmatch "null|false"}) {
 		$commandlist = @()
 		$commandlist += 'test -e "/var/log/firstboot/succeeded"'
 		$commandlist += 'echo $?'
+
+		echo "== Firstboot process could take 10+ minutes to complete. please wait. ==" | Out-String
 		
 		while ((ExecuteScript $commandlist $Deployment.vmName "root" $($Deployment.VCSARootPass) $esxihandle).ScriptOutput[0] -eq "1") {
 			echo "== waiting 30 seconds while firstboot for $($Deployment.vmName) finishes ==" | Out-String
@@ -2639,6 +2684,14 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -notmatch "null|false"}) {
 
 		echo "`r`n The VCSA $($Deployment.Hostname) has been deployed and is available.`r`n" | Out-String
 
+		# Create certificate directory if it does not exist
+		$RootCert_Dir		 = $FolderPath + "\Certs\"
+		$Cert_Dir			 = $RootCert_Dir + $Deployment.SSODomainName
+		$DefaultRootCert_Dir = 	$Cert_Dir + "\" + $Deployment.Hostname + "\DefaultRootCert"
+		if (!(Test-Path $DefaultRootCert_Dir)) { New-Item $DefaultRootCert_Dir -Type Directory | Out-Null }
+
+		InstallNodeRootCert $DefaultRootCert_Dir $Deployment $esxihandle
+
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
 
@@ -2648,11 +2701,6 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -notmatch "null|false"}) {
 
 # Replace Certificates.
 foreach ($Deployment in $s_Deployments | ?{$_.Certs}) {
-
-	# Create certificate directory if it does not exist
-	$RootCert_Dir	= $FolderPath + "\Certs\"
-	$Cert_Dir		= $RootCert_Dir + $Deployment.SSODomainName
-	if (!(Test-Path $Cert_Dir)) { New-Item $Cert_Dir -Type Directory | Out-Null }
 
 	If ($s_Certinfo) {
 		# Create esxi credentials.
@@ -2820,7 +2868,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Certs}) {
 
 # Configure the vcsa.
 foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
-	
+
 		echo "== Starting configuration of $($Deployment.vmName) ==" | Out-String
 
 		Separatorline
@@ -3010,6 +3058,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
+			# Configure Build Cluster Alarm Action
 			Separatorline
 
 			# Disconnect from the vCenter.
