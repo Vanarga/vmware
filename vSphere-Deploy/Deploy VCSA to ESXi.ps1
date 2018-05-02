@@ -2665,12 +2665,25 @@ foreach ($Deployment in $s_Deployments | ?{$_.Action -notmatch "null|false"}) {
 		$commandlist += 'echo $?'
 
 		echo "== Firstboot process could take 10+ minutes to complete. please wait. ==" | Out-String
-		
-		while ((ExecuteScript $commandlist $Deployment.vmName "root" $($Deployment.VCSARootPass) $esxihandle).ScriptOutput[0] -eq "1") {
-			echo "== waiting 30 seconds while firstboot for $($Deployment.vmName) finishes ==" | Out-String
-			Start-Sleep -s 30
+
+		if (!$stopwatch) {
+			$stopwatch =  [system.diagnostics.stopwatch]::StartNew()}
+	  	else {$stopwatch.start()}
+	  
+	  	while ((ExecuteScript $commandlist $Deployment.Hostname "root" $($Deployment.VCSARootPass) $esxihandle).ScriptOutput[0] -eq "1") {
+	
+	  		Start-Sleep -s 15
+	  
+	  		$elapsed = $stopwatch.Elapsed.ToString('hh\:mm\:ss')
+	  
+			Write-Progress -Activity "Completing Firstboot for $($Deployment.Hostname)" -Status "Time Elapsed $elapsed"
+			
+			echo "Time Elapsed completing Firstboot for $($Deployment.Hostname): $elapsed" | Out-String
+	
 		}
-    
+	
+		$stopwatch.reset()
+
         # Enable Jumbo Frames on eth0 if True.
         If ($Deployment.JumboFrames) {
             $commandlist = $null
@@ -3058,7 +3071,6 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 
             if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
-			# Configure Build Cluster Alarm Action
 			Separatorline
 
 			# Disconnect from the vCenter.
@@ -3078,7 +3090,7 @@ foreach ($Deployment in $s_Deployments | ?{$_.Config}) {
 			$commandlist += "/opt/vmware/share/vami/vami_set_hostname $($Deployment.Hostname)"
 			
 			ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
-		}
+        }
 
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
