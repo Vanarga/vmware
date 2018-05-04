@@ -240,7 +240,7 @@ function ConfigureAutoDeploy ($Deployment, $vihandle, $vcversion) {
 	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart imagebuilder"
 
 	# Service update
-	ExecuteScript $commandlist $hostname "root" $password $vihandle
+	ExecuteScript $commandlist $Deployment.hostname "root" $Deployment.VCSARootPass $vihandle
 }
 
 function ConfigureAuthProxy ($Deployment, $vihandle, $ADdomain) {
