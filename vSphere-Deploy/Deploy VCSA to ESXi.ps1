@@ -1024,7 +1024,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 			$commandlist += 'export VMWARE_DATA_DIR=/storage'
 			$commandlist += 'export VMWARE_CFG_DIR=/etc/vmware'
 			$commandlist += '/usr/bin/service-control --start --all --ignore'
-			$commandlist += "/opt/likewise/bin/domainjoin-cli join " + $ADInfo.ADDomain + " " + $ADInfo.ADJoinUser + "`'" + $ADInfo.ADJoinPass + "`'"
+			$commandlist += "/opt/likewise/bin/domainjoin-cli join " + $ADInfo.ADDomain + " " + $ADInfo.ADJoinUser + " `'" + $ADInfo.ADJoinPass + "`'"
 	
 			# Excute the commands in $commandlist on the vcsa.
 			ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $vihandle
@@ -1038,7 +1038,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 			Start-Sleep -s 60
 			
 			# Wait until the vcsa is available.
-			Available "https://" + $Deployment.Hostname
+			Available $("https://" + $Deployment.Hostname)
 			
 			# Write separator line to transcript.
 			Separatorline
@@ -2842,14 +2842,14 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Certs}) {
 
         Separatorline
         
-        write-host "=============== Configure Certificate pair on " + $Deployment.vmName + " ===============" | Out-String
+        write-host "=============== Configure Certificate pair on $($Deployment.vmName) ===============" | Out-String
 
         ConfigureCertPairs $Cert_Dir $Deployment $esxihandle
 
 		# Write separator line to transcript.
 		Separatorline
 		
-		write-host "=============== Restarting " + $Deployment.vmName + " ===============" | Out-String
+		write-host "=============== Restarting $($Deployment.vmName) ===============" | Out-String
 		Restart-VMGuest -VM $Deployment.vmName -Server $esxihandle -Confirm:$false
 
 		# Wait until the vcsa is available.
@@ -2863,7 +2863,7 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Certs}) {
 # Configure the vcsa.
 ForEach ($Deployment in $s_Deployments | Where-Object {$_.Config}) {
 
-		Write-Output "== Starting configuration of " + $Deployment.vmName + " ==" | Out-String
+		Write-Output "== Starting configuration of $($Deployment.vmName) ==" | Out-String
 
 		Separatorline
 
@@ -2887,7 +2887,7 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Config}) {
 		# if the vcsa is not a stand alone PSC, configure the vCenter.
 		If ($Deployment.DeployType -ne "infrastructure" ) {
 
-			Write-Output "== vCenter " + $Deployment.vmName + " configuration ==" | Out-String
+			Write-Output "== vCenter $($Deployment.vmName) configuration ==" | Out-String
 
 			Separatorline
 
