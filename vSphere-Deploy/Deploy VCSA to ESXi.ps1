@@ -210,10 +210,7 @@ function Available ($url) {
 }
 
 # Configure the Autodeploy Service - set certificate, set auto start, register vCenter, and start service.
-function ConfigureAutoDeploy ($Deployment,$vihandle,$vcversion) {
-	$IP 	  = $Deployment.IP
-	$hostname = $Deployment.hostname
-	$password = $Deployment.VCSARootPass
+function ConfigureAutoDeploy ($Deployment, $vihandle, $vcversion) {
 
 	$commandlist = $null
 	$commandlist = @()
@@ -224,9 +221,9 @@ function ConfigureAutoDeploy ($Deployment,$vihandle,$vcversion) {
 		$commandlist += "export VMWARE_LOG_DIR=/var/log"
 		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
 		$commandlist += "export VMWARE_DATA_DIR=/storage"
-		$commandlist += "/usr/bin/autodeploy-register -R -a $($IP) -u root -w `'$password`' -p 80"
+		$commandlist += "/usr/bin/autodeploy-register -R -a " + $Deployment.IP + " -u root -w `'" + $Deployment.VCSARootPass + "`' -p 80"
 
-		ExecuteScript $commandlist $hostname "root" $password $vihandle}
+		ExecuteScript $commandlist $Deployment.hostname "root" $Deployment.VCSARootPass $vihandle}
 
 	# Set Autodeploy (rbd) startype to Automatic and restart service.
 	$commandlist = $null
@@ -247,8 +244,6 @@ function ConfigureAutoDeploy ($Deployment,$vihandle,$vcversion) {
 }
 
 function ConfigureAuthProxy ($Deployment, $vihandle, $ADdomain) {
-	$hostname = $Deployment.hostname
-	$password = $Deployment.VCSARootPass
 
 	# Set Join Domain Authorization Proxy (vmcam) startype to Automatic and restart service.
 	$commandlist = $null
@@ -259,30 +254,30 @@ function ConfigureAuthProxy ($Deployment, $vihandle, $ADdomain) {
 	$commandlist += "export VMWARE_DATA_DIR=/storage"
 	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --update vmcam --starttype AUTOMATIC"
  	$commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart vmcam"
- 	$commandlist += "/usr/lib/vmware-vmcam/bin/camconfig add-domain -d $($ADDomain.ADDomain) -u $($ADDomain.ADvmcamUser) -w `'$($ADDomain.ADvmcamPass)`'"
+ 	$commandlist += "/usr/lib/vmware-vmcam/bin/camconfig add-domain -d " + $ADDomain.ADDomain + " -u " + $ADDomain.ADvmcamUser + " -w `'" + $ADDomain.ADvmcamPass + "`'"
 
 	# Service update
-	ExecuteScript $commandlist $hostname "root" $password $vihandle
+	ExecuteScript $commandlist $Deployment.hostname "root" $Deployment.VCSARootPass $vihandle
 }
 
-function ConfigureAutoDeployRules ($rules,$path,$vihandle) {
+function ConfigureAutoDeployRules ($rules, $path, $vihandle) {
 
 	Write-Output $rules | Out-String
 
 	# Turn off signature check - needed to avoid errors from unsigned packages/profiles.
-	$DeployNoSignatureCheck = $true
+	#$DeployNoSignatureCheck = $true
 
-	foreach ($rule in $rules) {
+	ForEach ($rule in $rules) {
 		$hpExport = $path + "\" + $rule.ProfileImport
 		
 		$si = Get-View -Server $vihandle ServiceInstance
 		$hpMgr = Get-View -Server $vihandle -Id $si.Content.HostProfileManager
 		
-		$spec = New-Object VMware.Vim.HostProfileSerializedHostProfileSpec
-		$spec.Name = $rule.ProfileName
-		$spec.Enabled = $true
-		$spec.Annotation = $rule.ProfileAnnotation
-		$spec.Validating = $false
+		$spec 					  = New-Object VMware.Vim.HostProfileSerializedHostProfileSpec
+		$spec.Name 				  = $rule.ProfileName
+		$spec.Enabled 			  = $true
+		$spec.Annotation		  = $rule.ProfileAnnotation
+		$spec.Validating		  = $false
 		$spec.profileConfigString = (Get-Content -Path $hpExport)
 		
 		$hpMgr.CreateProfile($spec)
@@ -294,15 +289,15 @@ function ConfigureAutoDeployRules ($rules,$path,$vihandle) {
 		Add-EsxSoftwareDepot $Depotpath
 
 		# Create a new deploy rule.
-		$img = Get-EsxImageProfile | Where-Object{$rule.SoftwareDepot.substring(0,$rule.SoftwareDepot.Indexof(".zip"))}
+		$img = Get-EsxImageProfile | Where-Object {$rule.SoftwareDepot.substring(0,$rule.SoftwareDepot.Indexof(".zip"))}
 		if ($img.count -gt 1) {$img = $img[1]}
-		$img | Out-String
+		Write-Output $img | Out-String
 		
-		$pro = Get-VMHostProfile -Server $vihandle | Where-Object{$_.Name -eq $rule.ProfileName}
-		$pro | Out-String
+		$pro = Get-VMHostProfile -Server $vihandle | Where-Object {$_.Name -eq $rule.ProfileName}
+		Write-Output $pro | Out-String
 
 		$clu = Get-Datacenter -Server $vihandle -Name $rule.Datacenter | Get-Cluster -Name $rule.Cluster
-		$clu | Out-String
+		Write-Output $clu | Out-String
 
 		Write-Output "New-DeployRule -Name $($rule.RuleName) -Item $img, $pro, $clu -Pattern $($rule.Pattern)" | Out-String
 		New-DeployRule -Name $rule.RuleName -Item $img, $pro, $clu -Pattern $rule.Pattern -ErrorAction SilentlyContinue
@@ -314,11 +309,8 @@ function ConfigureAutoDeployRules ($rules,$path,$vihandle) {
 }
 
 # Configure Private/Public Keys for ssh authentication without password.
-function ConfigureCertPairs ($Cert_Dir,$Deployment,$vihandle) {
-    $Hostname   = $Deployment.Hostname
-    $Certpath 	= "$Cert_Dir\" + $Hostname
-    $Password   = $Deployment.VCSARootPass
-    $SSODomain  = $Deployment.SSODomainName
+function ConfigureCertPairs ($Cert_Dir, $Deployment, $vihandle) {
+    $Certpath 	= $Cert_Dir + "\" + $Deployment.Hostname
 
     # Create key pair for logining in to host without password.
 	$commandlist = $null
@@ -327,81 +319,63 @@ function ConfigureCertPairs ($Cert_Dir,$Deployment,$vihandle) {
 	$commandlist += "mkdir /root/.ssh"
     $commandlist += "chmod 700 /root/.ssh"
     # Create key pair for logining in to host without password.
-    $commandlist += "/usr/bin/ssh-keygen -t rsa -b 4096 -N `"`" -f /root/.ssh/$Hostname -q"
+    $commandlist += "/usr/bin/ssh-keygen -t rsa -b 4096 -N `"`" -f /root/.ssh/" + $Deployment.Hostname + " -q"
     # Add public key to authorized_keys for root account and permission authorized_keys.
-    $commandlist += "cat /root/.ssh/$Hostname.pub >> /root/.ssh/authorized_keys"
+    $commandlist += "cat /root/.ssh/" + $Deployment.Hostname + ".pub >> /root/.ssh/authorized_keys"
 	$commandlist += "chmod 600 /root/.ssh/authorized_keys"
     
-	ExecuteScript $commandlist $Hostname "root" $Password $vihandle
+	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
     # Copy private and public keys to deployment folder for host.
 	$filelocations = $null
 	$filelocations = @()
-	$filelocations += "/root/.ssh/" + $Hostname
-	$filelocations += $Certpath + "\" + $Hostname + ".priv"
-	$filelocations += "/root/.ssh/$Hostname.pub"
-	$filelocations += $Certpath + "\" + $Hostname + ".pub"
+	$filelocations += "/root/.ssh/" + $Deployment.Hostname
+	$filelocations += $Certpath + "\" + $Deployment.Hostname + ".priv"
+	$filelocations += "/root/.ssh/" + $Deployment.Hostname + ".pub"
+	$filelocations += $Certpath + "\" + $Deployment.Hostname + ".pub"
 
-    CopyFiletoServer $filelocations $Hostname "root" $Password $vihandle $false
+    CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle $false
     
 	# If there is no global private/public keys pair for the SSO domain hosts, create it.
-    If (!(Test-Path $($Cert_Dir + "\" + $SSODomain + ".priv"))) {
+    If (!(Test-Path $($Cert_Dir + "\" + $Deployment.SSODomainName + ".priv"))) {
         $commandlist = $null
         $commandlist = @()
         # Create key pair for logining in to host without password.
-        $commandlist += "/usr/bin/ssh-keygen -t rsa -b 4096 -N `"`" -f /root/.ssh/$SSODomain -q"
+        $commandlist += "/usr/bin/ssh-keygen -t rsa -b 4096 -N `"`" -f /root/.ssh/" + $Deployment.SSODomainName + " -q"
         # Add public key to authorized_keys for root account and permission authorized_keys.
-        $commandlist += "cat /root/.ssh/$SSODomain.pub >> /root/.ssh/authorized_keys"
+        $commandlist += "cat /root/.ssh/" + $Deployment.SSODomainName + ".pub >> /root/.ssh/authorized_keys"
 
-        ExecuteScript $commandlist $Hostname "root" $Password $vihandle
+        ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
         $filelocations = $null
         $filelocations = @()
-        $filelocations += "/root/.ssh/" + $SSODomain
-        $filelocations += $Cert_Dir + "\" + $SSODomain + ".priv"
-        $filelocations += "/root/.ssh/$SSODomain.pub"
-        $filelocations += $Cert_Dir + "\" + $SSODomain + ".pub"
+        $filelocations += "/root/.ssh/" + $Deployment.SSODomainName
+        $filelocations += $Cert_Dir + "\" + $Deployment.SSODomainName + ".priv"
+        $filelocations += "/root/.ssh/" + $Deployment.SSODomainName + ".pub"
+        $filelocations += $Cert_Dir + "\" + $Deployment.SSODomainName + ".pub"
     
-        CopyFiletoServer $filelocations $Hostname "root" $Password $vihandle $false
+        CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle $false
     }
     else {
            $filelocations = $null
            $filelocations = @()
-           $filelocations += $Cert_Dir + "\" + $SSODomain + ".pub"
-           $filelocations += "/root/.ssh/$SSODomain.pub"
+           $filelocations += $Cert_Dir + "\" + $Deployment.SSODomainName + ".pub"
+           $filelocations += "/root/.ssh/" + $Deployment.SSODomainName + ".pub"
 
-           CopyFiletoServer $filelocations $Hostname "root" $Password $vihandle $true
+           CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle $true
 
            $commandlist = $null
            $commandlist = @()
            # Add public cert to authorized keys.
-           $commandlist += "cat /root/.ssh/$SSODomain.pub >> /root/.ssh/authorized_keys"
+           $commandlist += "cat /root/.ssh/$($Deployment.SSODomainName).pub >> /root/.ssh/authorized_keys"
    
-           ExecuteScript $commandlist $Hostname "root" $Password $vihandle
+           ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
     }
 
 }
 
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
-function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
-	$fqdn			= $Deployment.Hostname
-
-	$commandlist 	= $null
-	$commandlist 	= @()
-	$commandlist 	+= "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert list --login `'administrator@$($Deployment.SSODomainName)`' --password `'$($Deployment.SSOAdminPass)`' | grep `'CN(id):`'"
-
-	$certid = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.split("")[2]
-
-	$commandlist 	= $null
-	$commandlist 	= @()
-	$commandlist    += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert get --id $certid --outcert /root/vcrootcert.crt --login `'administrator@$($Deployment.SSODomainName)`' --password `'$($Deployment.SSOAdminPass)`'"
-	$commandlist    += "cat /root/vcrootcert.crt"
-
-	$vcrootcert 	= $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.substring(35,$vcrootcert.length-36)
-
-	$vcrootcert | Set-Content -Path "C:\Temp\vcroot.crt"
-
-	Import-Certificate -FilePath "C:\Temp\vc6root.crt" -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
+function ConfigureIdentity67 ($Deployment, $ADInfo, $vihandle) {
 
 	# Add AD domain as Native Identity Source.
 	Write-Output "============ Adding AD Domain as Identity Source for SSO on vCenter Instance 6.7 ============" | Out-String
@@ -415,7 +389,7 @@ function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
 
 	$ie.visible=$false
 
-	$uri = "https://$fqdn/ui/"
+	$uri = "https://" + $Deployment.Hostname + "/ui/"
 		
 	Do {
 		$ie.navigate($uri)
@@ -448,17 +422,17 @@ function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
 
 	start-sleep 10
 		
-	$uri = "https://$fqdn/ui/#?extensionId=vsphere.core.administration.configurationView"
+	$uri = "https://" + $Deployment.Hostname + "/ui/#?extensionId=vsphere.core.administration.configurationView"
 
 	$ie.navigate($uri)
 		
 	start-sleep 1
 		
-	($ie.document.documentElement.getElementsByTagName('button') | Where-Object{$_.id -eq 'clr-tab-link-3'}).click()
+	($ie.document.documentElement.getElementsByTagName('button') | Where-Object {$_.id -eq 'clr-tab-link-3'}).click()
 		
 	start-sleep 1
 			
-	($ie.document.documentElement.getElementsByClassName('btn btn-link') | Where-Object{$_.getAttributeNode('role').Value -eq 'addNewIdentity'}).click()
+	($ie.document.documentElement.getElementsByClassName('btn btn-link') | Where-Object {$_.getAttributeNode('role').Value -eq 'addNewIdentity'}).click()
 		
 	start-sleep 1
 		
@@ -467,11 +441,11 @@ function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
 	start-sleep 1
 		
 	$selections = ($ie.document.documentElement.getElementsByTagName("clr-dg-cell") | Select-Object outertext).outertext -replace " ",""
-	$row =  0..2 | Where-Object{$selections[1,7,13][$_] -eq $ADInfo.ADDomain}
+	$row =  0..2 | Where-Object {$selections[1,7,13][$_] -eq $ADInfo.ADDomain}
 
 	$ie.document.documentElement.getElementsByClassName("radio")[$row].childnodes[3].click()
 		
-	($ie.document.documentElement.getElementsByClassName('btn btn-link') | Where-Object{$_.getAttributeNode('role').Value -eq 'defaultIdentity'}).click()
+	($ie.document.documentElement.getElementsByClassName('btn btn-link') | Where-Object {$_.getAttributeNode('role').Value -eq 'defaultIdentity'}).click()
 		
 	start-sleep 1
 		
@@ -488,17 +462,14 @@ function ConfigureIdentity67 ($Deployment,$ADInfo,$vihandle) {
 
 	# Get a list of the new Internet Explorer Instances and close them, leaving the old instances running.
 	$newinstances = Get-Process -Name iexplore
-	$newinstances | Where-Object{$instances.id -notcontains $_.id} | stop-process
+	$newinstances | Where-Object {$instances.id -notcontains $_.id} | stop-process
 	
 	Write-Output "============ Completed adding AD Domain as Identity Sourcefor SSO on PSC ============" | Out-String
 }
 
 
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
-function ConfigureIdentity65 ($Deployment,$ADInfo,$vihandle) {
-	$fqdn			= $Deployment.Hostname
-	$commandlist 	= $null
-	$commandlist 	= @()
+function ConfigureIdentity65 ($Deployment, $ADInfo, $vihandle) {
 
 	# Add AD domain as Native Identity Source.
 	Write-Output "============ Adding AD Domain as Identity Source for SSO on PSC Instance 6.5 ============" | Out-String
@@ -512,7 +483,7 @@ function ConfigureIdentity65 ($Deployment,$ADInfo,$vihandle) {
 
 	$ie.visible=$false
 
-	$ie.navigate($("https://" + $fqdn + "/psc/"))
+	$ie.navigate($("https://" + $Deployment.Hostname + "/psc/"))
 
 	while($ie.ReadyState -ne 4) {start-sleep -m 100}
 
@@ -540,11 +511,11 @@ function ConfigureIdentity65 ($Deployment,$ADInfo,$vihandle) {
 	start-sleep 10
 				
     # Navigate to the add Identity Sources page for the SSO.
-	$ie.navigate("https://" + $fqdn + "/psc/#?extensionId=sso.identity.sources.extension") 
+	$ie.navigate("https://" + $Deployment.Hostname + "/psc/#?extensionId=sso.identity.sources.extension") 
 
 	Write-Output $ie | Out-String
 
-	# Select-Object the Add Identity Source button and click it.
+	# Select the Add Identity Source button and click it.
 	$ca = $ie.document.documentElement.getElementsByClassName('vui-action-label ng-binding ng-scope') | Select-Object -first 1
 	$ca.click()
 				
@@ -552,7 +523,7 @@ function ConfigureIdentity65 ($Deployment,$ADInfo,$vihandle) {
 	$ie.document.getElementById("adType").click()
 			
     # Click OK.
-	$ca = $ie.document.documentElement.getElementsByClassName('ng-binding') | Where-Object{$_.innerHTML -eq "OK"}
+	$ca = $ie.document.documentElement.getElementsByClassName('ng-binding') | Where-Object {$_.innerHTML -eq "OK"}
 	$ca.click()
 			
     # Exit Internet Explorer.
@@ -567,13 +538,13 @@ function ConfigureIdentity65 ($Deployment,$ADInfo,$vihandle) {
 			
 	# Get a list of the new Internet Explorer Instances and close them, leaving the old instances running.
 	$newinstances = Get-Process -Name iexplore
-	$newinstances | Where-Object{$instances.id -notcontains $_.id} | stop-process
+	$newinstances | Where-Object {$instances.id -notcontains $_.id} | stop-process
 			
 	Write-Output "============ Completed adding AD Domain as Identity Sourcefor SSO on PSC ============" | Out-String
 			
 }
 
-function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
+function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 
 	$sub_domain		= $Deployment.SSODomainName.split(".")[0]
 	$domain_ext		= $Deployment.SSODomainName.split(".")[1]
@@ -581,55 +552,56 @@ function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
 	# Active Directory variables
 	$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
 
+	$commandlist = $null
 	$commandlist = @()
 
 	# Add AD vCenter Admins to Component Administrators SSO Group.
-	$commandlist += "Write-Output -e `"dn: cn=ComponentManager.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_cma.ldif"
-	$commandlist += "Write-Output -e `"changetype: modify`" >> groupadd_cma.ldif"
-	$commandlist += "Write-Output -e `"add: member`" >> groupadd_cma.ldif"
-	$commandlist += "Write-Output -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_cma.ldif"
-	$commandlist += "Write-Output -e `"-`" >> groupadd_cma.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_cma.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "echo -e `"dn: cn=ComponentManager.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_cma.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_cma.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_cma.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_cma.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_cma.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_cma.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to License Administrators SSO Group.
-	$commandlist += "Write-Output -e `"dn: cn=LicenseService.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_la.ldif"
-	$commandlist += "Write-Output -e `"changetype: modify`" >> groupadd_la.ldif"
-	$commandlist += "Write-Output -e `"add: member`" >> groupadd_la.ldif"
-	$commandlist += "Write-Output -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_la.ldif"
-	$commandlist += "Write-Output -e `"-`" >> groupadd_la.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_la.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "echo -e `"dn: cn=LicenseService.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_la.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_la.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_la.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_la.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_la.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_la.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to Administrators SSO Group.
-	$commandlist += "Write-Output -e `"dn: cn=Administrators,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_adm.ldif"
-	$commandlist += "Write-Output -e `"changetype: modify`" >> groupadd_adm.ldif"
-	$commandlist += "Write-Output -e `"add: member`" >> groupadd_adm.ldif"
-	$commandlist += "Write-Output -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_adm.ldif"
-	$commandlist += "Write-Output -e `"-`" >> groupadd_adm.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_adm.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "echo -e `"dn: cn=Administrators,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_adm.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_adm.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_adm.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_adm.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_adm.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_adm.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to Certificate Authority Administrators SSO Group.
-	$commandlist += "Write-Output -e `"dn: cn=CAAdmins,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_caa.ldif"
-	$commandlist += "Write-Output -e `"changetype: modify`" >> groupadd_caa.ldif"
-	$commandlist += "Write-Output -e `"add: member`" >> groupadd_caa.ldif"
-	$commandlist += "Write-Output -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_caa.ldif"
-	$commandlist += "Write-Output -e `"-`" >> groupadd_caa.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_caa.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "echo -e `"dn: cn=CAAdmins,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_caa.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_caa.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_caa.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_caa.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_caa.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_caa.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to Users SSO Group.
-	$commandlist += "Write-Output -e `"dn: cn=Users,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_usr.ldif"
-	$commandlist += "Write-Output -e `"changetype: modify`" >> groupadd_usr.ldif"
-	$commandlist += "Write-Output -e `"add: member`" >> groupadd_usr.ldif"
-	$commandlist += "Write-Output -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_usr.ldif"
-	$commandlist += "Write-Output -e `"-`" >> groupadd_usr.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_usr.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "echo -e `"dn: cn=Users,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_usr.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_usr.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_usr.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_usr.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_usr.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_usr.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to System Configuration Administrators SSO Group.
-	$commandlist += "Write-Output -e `"dn: cn=SystemConfiguration.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_sca.ldif"
-	$commandlist += "Write-Output -e `"changetype: modify`" >> groupadd_sca.ldif"
-	$commandlist += "Write-Output -e `"add: member`" >> groupadd_sca.ldif"
-	$commandlist += "Write-Output -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_sca.ldif"
-	$commandlist += "Write-Output -e `"-`" >> groupadd_sca.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	$commandlist += "echo -e `"dn: cn=SystemConfiguration.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_sca.ldif"
+	$commandlist += "echo -e `"changetype: modify`" >> groupadd_sca.ldif"
+	$commandlist += "echo -e `"add: member`" >> groupadd_sca.ldif"
+	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_sca.ldif"
+	$commandlist += "echo -e `"-`" >> groupadd_sca.ldif"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Excute the commands in $commandlist on the vcsa.
 	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
@@ -638,7 +610,7 @@ function ConfigureSSOGroups ($Deployment,$ADInfo,$vihandle) {
 function ConfigureLicensing ($Licenses, $vihandle) {
 # http://vniklas.djungeln.se/2012/03/29/a-powercli-function-to-manage-vmware-vsphere-licenses/
 	Write-Output $Licenses | Out-String
-	Foreach ($License in $Licenses) {
+	ForEach ($License in $Licenses) {
 		$LicMgr		= $null
 		$AddLic		= $null
 		$LicType	= $null
@@ -646,7 +618,7 @@ function ConfigureLicensing ($Licenses, $vihandle) {
 		$LicMgr  = Get-View -Server $vihandle ServiceInstance
 		$AddLic  = Get-View -Server $vihandle $LicMgr.Content.LicenseManager
 		Write-Output "Current Licenses in vCenter $($Addlic.Licenses.LicenseKey)" | Out-String
-		If (!($Addlic.Licenses.LicenseKey | Where-Object{$_ -eq $license.LicKey.trim()})) {
+		If (!($Addlic.Licenses.LicenseKey | Where-Object {$_ -eq $license.LicKey.trim()})) {
 			Write-Output "Adding $($License.LicKey) to vCenter" | Out-String
 			$LicType = $AddLic.AddLicense($($License.LicKey.trim()),$null)
 		}
@@ -663,16 +635,18 @@ function ConfigureLicensing ($Licenses, $vihandle) {
 		Else {
 			  # Assign Esxi License
 			  $licDataMgr = Get-LicenseDataManager -Server $vihandle
-			  for ($i=0;$i -lt $License.ApplyType.Split(",").count;$i++) {
-				   switch ($License.ApplyType.Split(",")[$i]) {
-					 CL {$viContainer = Get-Cluster -Server $vihandle -Name $License.ApplyTo.Split(",")[$i]; break}
-					 DC {if($License.ApplyTo.Split(",")[$i] -eq "Datacenters") {
+			  For ($i=0;$i -lt $License.ApplyType.Split(",").count;$i++) {
+				   Switch ($License.ApplyType.Split(",")[$i]) {
+					 CL {$viContainer = Get-Cluster -Server $vihandle -Name $License.ApplyTo.Split(",")[$i]; Break}
+					 DC {If($License.ApplyTo.Split(",")[$i] -eq "Datacenters") {
 						 	$viContainer = Get-Folder -Server $vihandle -Name $License.ApplyTo.Split(",")[$i] -Type "Datacenter"
-					 	 } Else {$viContainer = Get-Datacenter -Server $vihandle -Name $License.ApplyTo.Split(",")[$i]}; break}
-					 FO {$viContainer = Get-Folder -Server $vihandle -Name $License.ApplyTo.Split(",")[$i] -Type "HostAndCluster"; break}
-					 default {$viContainer = $null; break}
+					 	 } Else {$viContainer = Get-Datacenter -Server $vihandle -Name $License.ApplyTo.Split(",")[$i]}; Break}
+					 FO {$viContainer = Get-Folder -Server $vihandle -Name $License.ApplyTo.Split(",")[$i] -Type "HostAndCluster"; Break}
+					 default {$viContainer = $null; Break}
 				   }
+
 				   Write-Output $viContainer | Out-String
+
 				   If ($viContainer) {
 				   	   $LicData					= New-Object VMware.VimAutomation.License.Types.LicenseData
 				   	   $LicKeyEntry				= New-Object Vmware.VimAutomation.License.Types.LicenseKeyEntry
@@ -688,7 +662,7 @@ function ConfigureLicensing ($Licenses, $vihandle) {
 }
 
 # Configure Network Dumpster to Auto Start and start service.
-function ConfigureNetdumpster ($hostname,$username,$password,$vihandle,$vcversion) {
+function ConfigureNetdumpster ($hostname, $username, $password, $vihandle, $vcversion) {
 	$commandlist = $null
 	$commandlist = @()
 
@@ -704,40 +678,40 @@ function ConfigureNetdumpster ($hostname,$username,$password,$vihandle,$vcversio
 }
 
 # Configure TFTP, set firewall exemption, set service to auto start, start service.
-function ConfigureTFTP ($hostname,$username,$password,$vihandle) {
+function ConfigureTFTP ($hostname, $username, $password, $vihandle) {
 	$commandlist = $null
 	$commandlist = @()
 
 	# Set Permanent Firewall Exception
-	$commandlist += 'Write-Output -e "{" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "  	\"firewall\": {" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "    	\"enable\": true," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "    	\"rules\": [" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "      	{" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"direction\": \"inbound\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"protocol\": \"tcp\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"porttype\": \"dst\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"port\": \"69\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"portoffset\": 0" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "      	}," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "      {" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"direction\": \"inbound\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"protocol\": \"udp\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"porttype\": \"dst\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"port\": \"69\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "        	\"portoffset\": 0" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "      }" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "    ]" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "  }" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += 'Write-Output -e "}" >> /etc/vmware/appliance/firewall/tftp'
-	$commandlist += "Write-Output `"#!/bin/bash`" > /tmp/tftpcmd"
-	$commandlist += "Write-Output -n `"sed -i `" >> /tmp/tftpcmd"
-	$commandlist += "Write-Output -n `'`"s/`' >> /tmp/tftpcmd"
-	$commandlist += "Write-Output -n \`'/ >> /tmp/tftpcmd"
-	$commandlist += "Write-Output -n `'\`' >> /tmp/tftpcmd"
-	$commandlist += "Write-Output -n `'`"/g`' >> /tmp/tftpcmd"
-	$commandlist += "Write-Output -n `'`"`' >> /tmp/tftpcmd"
-	$commandlist += "Write-Output -n `" /etc/vmware/appliance/firewall/tftp`" >> /tmp/tftpcmd"
+	$commandlist += 'echo -e "{" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "  	\"firewall\": {" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "    	\"enable\": true," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "    	\"rules\": [" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "      	{" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"direction\": \"inbound\"," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"protocol\": \"tcp\"," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"porttype\": \"dst\"," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"port\": \"69\"," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"portoffset\": 0" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "      	}," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "      {" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"direction\": \"inbound\"," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"protocol\": \"udp\"," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"porttype\": \"dst\"," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"port\": \"69\"," >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "        	\"portoffset\": 0" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "      }" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "    ]" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "  }" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += 'echo -e "}" >> /etc/vmware/appliance/firewall/tftp'
+	$commandlist += "echo `"#!/bin/bash`" > /tmp/tftpcmd"
+	$commandlist += "echo -n `"sed -i `" >> /tmp/tftpcmd"
+	$commandlist += "echo -n `'`"s/`' >> /tmp/tftpcmd"
+	$commandlist += "echo -n \`'/ >> /tmp/tftpcmd"
+	$commandlist += "echo -n `'\`' >> /tmp/tftpcmd"
+	$commandlist += "echo -n `'`"/g`' >> /tmp/tftpcmd"
+	$commandlist += "echo -n `'`"`' >> /tmp/tftpcmd"
+	$commandlist += "echo -n `" /etc/vmware/appliance/firewall/tftp`" >> /tmp/tftpcmd"
 	$commandlist += "chmod a+x /tmp/tftpcmd"
 	$commandlist += "/tmp/tftpcmd"
 	$commandlist += "rm /tmp/tftpcmd"
@@ -756,7 +730,7 @@ function ConfigureTFTP ($hostname,$username,$password,$vihandle) {
 }
 
 function ConvertPSObjectToExcel {
-    param (
+    Param (
         [Parameter(Mandatory=$true, Position=0)]
 		$InputObject,
         [Parameter(Mandatory=$true, Position=1)]
@@ -770,24 +744,24 @@ function ConvertPSObjectToExcel {
 	$mystack = new-object system.collections.stack
 		
 	$headers = $InputObject[0].PSObject.Properties.Name
-	$values  = $InputObject | ForEach-Object{$_.psobject.properties.Value}
+	$values  = $InputObject | ForEach-Object {$_.psobject.properties.Value}
 	
 	If ($headers.count -gt 1) {
-		$values[($values.length - 1)..0] | ForEach-Object{$mystack.Push($_)}
-		$headers[($headers.length - 1)..0] | ForEach-Object{$mystack.Push($_)}
+		$values[($values.length - 1)..0] | ForEach-Object {$mystack.Push($_)}
+		$headers[($headers.length - 1)..0] | ForEach-Object {$mystack.Push($_)}
 	}
-	else {
-		$values	 | ForEach-Object{$mystack.Push($_)}
-		$headers | ForEach-Object{$mystack.Push($_)}
+	Else {
+		$values	 | ForEach-Object {$mystack.Push($_)}
+		$headers | ForEach-Object {$mystack.Push($_)}
 	}			
 	
 	$columns = $headers.count
 	$rows = $values.count/$headers.count + 1
 	$array = New-Object 'object[,]' $rows, $columns
 		
-	for ($i=0;$i -lt $rows;$i++)
+	For ($i=0;$i -lt $rows;$i++)
 		{ 
-			for ($j = 0; $j -lt $columns; $j++) {
+			For ($j = 0; $j -lt $columns; $j++) {
 				$array[$i,$j] = $mystack.Pop()
 			}
 		}
@@ -795,7 +769,8 @@ function ConvertPSObjectToExcel {
 	$WorkSheet.name = $SheetName
 	If ($columns -le 26) {
 		$ascii = [char]($columns + 96) + $rows
-	} else { $ascii = "aa" + $rows}
+	} 
+	Else { $ascii = "aa" + $rows}
 	$range = $WorkSheet.Range("a1",$ascii)
 	$range.Value2 = $array
 }
@@ -816,7 +791,7 @@ function ConvertPSObjectToHashtable
         if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string])
         {
             $collection = @(
-                ForEach ($object in $InputObject) { ConvertPSObjectToHashtable $object }
+                foreach ($object in $InputObject) { ConvertPSObjectToHashtable $object }
             )
 
             Write-Output -NoEnumerate $collection
@@ -840,88 +815,88 @@ function ConvertPSObjectToHashtable
 }
 
 # Deploy a VCSA.
-function Deploy ($parameterlist, $ovftoolpath, $LogPath) {
+function Deploy ($ParameterList, $OvfToolPath, $LogPath) {
 	$pscs			= @("tiny","small","medium","large","infrastructure")
 
-	$argumentlist	= @()
-	$ovftool		= "$ovftoolpath\ovftool.exe"
+	$ArgumentList	= @()
+	$OvfTool		= $OvfToolPath + "\ovftool.exe"
 
 	# Get Esxi Host Certificate Thumbrpint.
-	$url = "https://$($parameterlist.esxiHost)"
+	$url = "https://" + $ParameterList.esxiHost
 	$webRequest = [Net.WebRequest]::Create($url)
-	try { $webRequest.GetResponse() } catch {}
+	Try { $webRequest.GetResponse() } Catch {}
 	$esxiCert = $webRequest.ServicePoint.Certificate
 	$esxiThumbPrint = $esxiCert.GetCertHashString() -replace '(..(?!$))','$1:'
 	
-	if ($parameterlist.Action -ne "--version") {
-		$argumentlist += "--X:logFile=$LogPath\Logs\ofvtool_$($parameterlist.vmName)_$(get-date -format mm-dd-yyyy-HH_mm).log"
-		$argumentlist += "--X:logLevel=verbose"
-		$argumentlist += "--acceptAllEulas"
-		$argumentlist += "--skipManifestCheck"
-#		$argumentlist += "--noSSLVerify"
-		$argumentlist += "--targetSSLThumbprint=$esxiThumbPrint"
-		$argumentlist += "--X:injectOvfEnv"
-		$argumentlist += "--allowExtraConfig"
-		$argumentlist += "--X:enableHiddenProperties"
-		$argumentlist += "--X:waitForIp"
-		$argumentlist += "--sourceType=OVA"
-		$argumentlist += "--powerOn"
-		$argumentlist += "--net:Network 1=$($parameterlist.esxiNet)"
-		$argumentlist += "--datastore=$($parameterlist.esxiDatastore)"
-		$argumentlist += "--diskMode=$($parameterlist.DiskMode)"
-		$argumentlist += "--name=$($parameterlist.vmName)"
-		$argumentlist += "--deploymentOption=$($parameterlist.DeployType)"
-		if ($parameterlist.DeployType -like "*management*") {
-			$argumentlist += "--prop:guestinfo.cis.system.vm0.hostname=$($parameterlist.Parent)"
+	If ($parameterlist.Action -ne "--version") {
+		$ArgumentList += "--X:logFile=$LogPath\Logs\ofvtool_" + $ParameterList.vmName + "_$(get-date -format mm-dd-yyyy-HH_mm).log"
+		$ArgumentList += "--X:logLevel=verbose"
+		$ArgumentList += "--acceptAllEulas"
+		$ArgumentList += "--skipManifestCheck"
+		$ArgumentList += "--targetSSLThumbprint=$esxiThumbPrint"
+		$ArgumentList += "--X:injectOvfEnv"
+		$ArgumentList += "--allowExtraConfig"
+		$ArgumentList += "--X:enableHiddenProperties"
+		$ArgumentList += "--X:waitForIp"
+		$ArgumentList += "--sourceType=OVA"
+		$ArgumentList += "--powerOn"
+		$ArgumentList += "--net:Network 1=" + $ParameterList.EsxiNet
+		$ArgumentList += "--datastore=" + $ParameterList.esxiDatastore
+		$ArgumentList += "--diskMode=" + $ParameterList.DiskMode
+		$ArgumentList += "--name=" + $ParameterList.vmName
+		$ArgumentList += "--deploymentOption=" + $ParameterList.DeployType
+		If ($parameterlist.DeployType -like "*management*") {
+			$ArgumentList += "--prop:guestinfo.cis.system.vm0.hostname=" + $ParameterList.Parent
 		}
-		$argumentlist += "--prop:guestinfo.cis.vmdir.domain-name=$($parameterlist.SSODomainName)"
-		$argumentlist += "--prop:guestinfo.cis.vmdir.site-name=$($parameterlist.SSOSiteName)"
-		$argumentlist += "--prop:guestinfo.cis.vmdir.password=$($parameterlist.SSOAdminPass)"
-		if ($parameterlist.Action -eq "first" -and $pscs -contains $parameterlist.DeployType) {
-			$argumentlist += "--prop:guestinfo.cis.vmdir.first-instance=True"
+		$ArgumentList += "--prop:guestinfo.cis.vmdir.domain-name=" + $ParameterList.SSODomainName
+		$ArgumentList += "--prop:guestinfo.cis.vmdir.site-name=" + $ParameterList.SSOSiteName
+		$ArgumentList += "--prop:guestinfo.cis.vmdir.password=" + $ParameterList.SSOAdminPass
+		If ($parameterlist.Action -eq "first" -and $pscs -contains $ParameterList.DeployType) {
+			$ArgumentList += "--prop:guestinfo.cis.vmdir.first-instance=True"
 		}
-		else {
-			  $argumentlist += "--prop:guestinfo.cis.vmdir.first-instance=False"
-			  $argumentlist += "--prop:guestinfo.cis.vmdir.replication-partner-hostname=$($parameterlist.Parent)"
+		Else {
+			  $ArgumentList += "--prop:guestinfo.cis.vmdir.first-instance=False"
+			  $ArgumentList += "--prop:guestinfo.cis.vmdir.replication-partner-hostname=" + $ParameterList.Parent
 		}
-		$argumentlist += "--prop:guestinfo.cis.appliance.net.addr.family=$($parameterlist.NetFamily)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.net.addr=$($parameterlist.IP)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.net.pnid=$($parameterlist.Hostname)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.net.prefix=$($parameterlist.NetPrefix)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.net.mode=$($parameterlist.NetMode)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.net.dns.servers=$($parameterlist.DNS)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.net.gateway=$($parameterlist.Gateway)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.root.passwd=$($parameterlist.VCSARootPass)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.ssh.enabled=$($parameterlist.EnableSSH)"
-		$argumentlist += "--prop:guestinfo.cis.appliance.ntp.servers=$($parameterlist.NTP)"
-		$argumentlist += "--prop:guestinfo.cis.deployment.autoconfig=True"
-		$argumentlist += "--prop:guestinfo.cis.clientlocale=en"
-		$argumentlist += "--prop:guestinfo.cis.ceip_enabled=False"
-		$argumentlist += "$($parameterlist.OVA)"
-		$argumentlist += "vi://$($parameterlist.esxiRootUser)`:$($parameterlist.esxiRootPass)@$($parameterlist.esxiHost)"
+		$ArgumentList += "--prop:guestinfo.cis.appliance.net.addr.family=" + $ParameterListNetFamily
+		$ArgumentList += "--prop:guestinfo.cis.appliance.net.addr=" + $ParameterList.IP
+		$ArgumentList += "--prop:guestinfo.cis.appliance.net.pnid=" + $ParameterList.Hostname
+		$ArgumentList += "--prop:guestinfo.cis.appliance.net.prefix=" + $ParameterList.NetPrefix
+		$ArgumentList += "--prop:guestinfo.cis.appliance.net.mode=" + $ParameterList.NetMode
+		$ArgumentList += "--prop:guestinfo.cis.appliance.net.dns.servers=" + $ParameterList.DNS
+		$ArgumentList += "--prop:guestinfo.cis.appliance.net.gateway=" + $ParameterList.Gateway
+		$ArgumentList += "--prop:guestinfo.cis.appliance.root.passwd=" + $ParameterList.VCSARootPass
+		$ArgumentList += "--prop:guestinfo.cis.appliance.ssh.enabled=" + $ParameterList.EnableSSH
+		$ArgumentList += "--prop:guestinfo.cis.appliance.ntp.servers=" + $ParameterList.NTP
+		$ArgumentList += "--prop:guestinfo.cis.deployment.autoconfig=True"
+		$ArgumentList += "--prop:guestinfo.cis.clientlocale=en"
+		$ArgumentList += "--prop:guestinfo.cis.ceip_enabled=False"
+		$ArgumentList += $ParameterList.OVA
+		$ArgumentList += "vi://" + $ParameterList.esxiRootUser + "`:" + $ParameterList.esxiRootPass + "@" + $ParameterList.esxiHost
 	}
 	
-	Write-Output $argumentlist | Out-String
+	Write-Output $ArgumentList | Out-String
 	
-	& $ovftool $argumentlist
+	& $OvfTool $ArgumentList
 
-	return
+	Return
 }
 
 # Create Folders
 function CreateFolders ($folders, $vihandle) {
+
 	Separatorline
 	
-foreach ($folder in $folders) {
-	Write-Output $folder.Name | Out-String
-	foreach ($datacenter in get-datacenter -Server $vihandle) {
-		if ($folder.datacenter.split(",") -match "all|$($Datacenter.name)") {	
-			$location = $datacenter | get-folder -name $folder.Location | Where-Object{$_.Parentid -notlike "*ha*"}
-			Write-Output $location | Out-String
-			New-Folder -Server $vihandle -Name $folder.Name -Location $location -Confirm:$false
-		}
-	}	
-}
+	ForEach ($folder in $folders) {
+		Write-Output $folder.Name | Out-String
+		ForEach ($datacenter in get-datacenter -Server $vihandle) {
+			If ($folder.datacenter.split(",") -match "all|$($Datacenter.name)") {	
+				$location = $datacenter | get-folder -name $folder.Location | Where-Object {$_.Parentid -notlike "*ha*"}
+				Write-Output $location | Out-String
+				New-Folder -Server $vihandle -Name $folder.Name -Location $location -Confirm:$false
+			}
+		}	
+	}
 	   
 	Separatorline
 }
@@ -932,16 +907,16 @@ function CreateRoles ($Roles, $vihandle) {
 
 	$ExistingRoles = Get-ViRole -Server $vihandle | Select-Object Name
 
-	$Names = $($Roles | Select-Object Name -Unique) | Where-Object{$ExistingRoles.name -notcontains $_.name}
+	$Names = $($Roles | Select-Object Name -Unique) | Where-Object {$ExistingRoles.name -notcontains $_.name}
 
 	Write-Output $Names | Out-String
 
-	foreach ($Name in $Names) {
-		$vPrivilege = $Roles | Where-Object{$_.Name -like $Name.Name} | Select-Object Privilege
+	ForEach ($Name in $Names) {
+		$vPrivilege = $Roles | Where-Object {$_.Name -like $Name.Name} | Select-Object Privilege
 		
 		Write-Output $vPrivilege | Out-String
 		
-		New-VIRole -Server $vihandle -Name $Name.Name -Privilege (Get-VIPrivilege -Server $vihandle | Where-Object{$vPrivilege.Privilege -like $_.id})
+		New-VIRole -Server $vihandle -Name $Name.Name -Privilege (Get-VIPrivilege -Server $vihandle | Where-Object {$vPrivilege.Privilege -like $_.id})
 	}
 
 	Separatorline
@@ -949,16 +924,17 @@ function CreateRoles ($Roles, $vihandle) {
 
 # Set Permissions
 function CreatePermissions ($vPermissions, $vihandle) {
+
 	Separatorline
 
 	Write-Output  "Permissions:" $vPermissions  | Out-String
 	
-	foreach ($Permission in $vPermissions) {
-		$Entity = Get-Inventory -Name $Permission.Entity | Where-Object{$_.Id -match $Permission.Location}
-		if ($Permission.Group) {
+	ForEach ($Permission in $vPermissions) {
+		$Entity = Get-Inventory -Name $Permission.Entity | Where-Object {$_.Id -match $Permission.Location}
+		If ($Permission.Group) {
 			$Principal = Get-VIAccount -Group -Name $Permission.Principal -Server $vihandle
 		}
-		else { 
+		Else { 
 			$Principal = Get-VIAccount -Name $Permission.Principal -Server $vihandle
 		}
 
@@ -976,13 +952,13 @@ function ExecuteScript ($script, $hostname, $username, $password, $vihandle) {
 
 	Separatorline
 	
-	$script | ForEach-Object{Write-Output $_} | Out-String
+	$script | ForEach-Object {Write-Output $_} | Out-String
 	
 	Separatorline
 	
-	$output = Invoke-VMScript -ScriptText $(if ($script.count -gt 1) {$script -join(";")} else {$script}) -vm $hostname -GuestUser $username -GuestPassword $password -Server $vihandle
+	$output = Invoke-VMScript -ScriptText $(If ($script.count -gt 1) {$script -join(";")} Else {$script}) -vm $hostname -GuestUser $username -GuestPassword $password -Server $vihandle
 
-	return $output
+	Return $output
 }
 
 # Copy a file to a VM.
@@ -990,12 +966,12 @@ function CopyFiletoServer ($locations, $hostname, $username, $password, $vihandl
 	
 	Separatorline
 	
-	for ($i=0; $i -le ($locations.count/2)-1;$i++) {
+	For ($i=0; $i -le ($locations.count/2)-1;$i++) {
 		Write-Host "Sources: `n"
 		Write-Output $locations[$i*2] | Out-String
 		Write-Host "Destinations: `n"
 		Write-Output $locations[($i*2)+1] | Out-String
-		if ($upload) {
+		If ($upload) {
 			Copy-VMGuestFile -VM $hostname -LocalToGuest -Source $($locations[$i*2]) -Destination $($locations[($i*2)+1]) -guestuser $username -GuestPassword $password -Server $vihandle -force}
 		Else {
 			Copy-VMGuestFile -VM $hostname -GuestToLocal -Source $($locations[$i*2]) -Destination $($locations[($i*2)+1]) -guestuser $username -GuestPassword $password -Server $vihandle -force
@@ -1014,13 +990,13 @@ function InstallNodeRootCert ($Certpath, $Deployment, $vihandle) {
 
 	$commandlist 	= $null
 	$commandlist 	= @()
-	$commandlist 	+= "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert list --login `'administrator@$($Deployment.SSODomainName)`' --password `'$($Deployment.SSOAdminPass)`' | grep `'CN(id):`'"
+	$commandlist 	+= "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert list --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`' | grep `'CN(id):`'"
 
 	$certid = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.split("")[2]
 
 	$commandlist 	= $null
 	$commandlist 	= @()
-	$commandlist    += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert get --id $certid --outcert /root/vcrootcert.crt --login `'administrator@$($Deployment.SSODomainName)`' --password `'$($Deployment.SSOAdminPass)`'"
+	$commandlist    += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert get --id $certid --outcert /root/vcrootcert.crt --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
 	$commandlist    += "cat /root/vcrootcert.crt"
 
 	$vcrootcert 	= $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.substring(35,1500)
@@ -1048,7 +1024,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 			$commandlist += 'export VMWARE_DATA_DIR=/storage'
 			$commandlist += 'export VMWARE_CFG_DIR=/etc/vmware'
 			$commandlist += '/usr/bin/service-control --start --all --ignore'
-			$commandlist += "/opt/likewise/bin/domainjoin-cli join $($ADInfo.ADDomain) $($ADInfo.ADJoinUser) `'$($ADInfo.ADJoinPass)`'"
+			$commandlist += "/opt/likewise/bin/domainjoin-cli join " + $ADInfo.ADDomain + " " + $ADInfo.ADJoinUser + "`'" + $ADInfo.ADJoinPass + "`'"
 	
 			# Excute the commands in $commandlist on the vcsa.
 			ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $vihandle
@@ -1062,7 +1038,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 			Start-Sleep -s 60
 			
 			# Wait until the vcsa is available.
-			Available "https://$($Deployment.Hostname)"
+			Available "https://" + $Deployment.Hostname
 			
 			# Write separator line to transcript.
 			Separatorline
@@ -1083,7 +1059,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 			# if the vcsa is the first PSC in the vsphere domain, set the default identity source to the windows domain,
 			# add the windows AD group to the admin groups of the PSC.
 			$commandlist = $null
-			$commandlist = "/opt/likewise/bin/ldapsearch -h $($Deployment.Hostname) -w `'$($Deployment.VCSARootPass)`' -x -D `"cn=Administrator,cn=Users,dc=lab-hcmny,dc=com`" -b `"cn=lab-hcmny.com,cn=Tenants,cn=IdentityManager,cn=services,dc=lab-hcmny,dc=com`" | grep vmwSTSDefaultIdentityProvider"
+			$commandlist = "/opt/likewise/bin/ldapsearch -h " + $Deployment.Hostname + " -w `'" + $Deployment.VCSARootPass + "`' -x -D `"cn=Administrator,cn=Users,dc=lab-hcmny,dc=com`" -b `"cn=lab-hcmny.com,cn=Tenants,cn=IdentityManager,cn=services,dc=lab-hcmny,dc=com`" | grep vmwSTSDefaultIdentityProvider"
 
 			$DefaultIdentitySource = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput
 
@@ -1099,7 +1075,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 
 				ConfigureSSOGroups $Deployment $ADInfo $vihandle
 			}
-			elseif ($viversion -match "6.5." -and $pscdeployments -contains $Deployment.DeployType) {
+			ElseIf ($viversion -match "6.5." -and $pscdeployments -contains $Deployment.DeployType) {
 				Separatorline
 
 				ConfigureIdentity65 $Deployment $ADInfo $vihandle
@@ -1115,15 +1091,17 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 # Convert OS Customization Object to Stirng needed to run the command.
 function OSString
 {
-    param (
+    Param (
         [Parameter(ValueFromPipeline)]
         $InputObject
-    )
+	)
+	
 	$o = "New-OSCustomizationSpec "
-	Foreach ($i in $InputObject.PSObject.Properties) {
-		if ($i.Value -ne $null) {
+	ForEach ($i in $InputObject.PSObject.Properties) {
+		If ($i.Value -ne $null) {
 			$o = $o.insert($o.length,"-" + $i.Name + ' "' + $i.Value + '" ')}
 	}
+
 	$o = $o -replace " `"true`"", ""
 	$o = $o -replace " -ChangeSid `"false`"",""
 	$o = $o -replace " -DeleteAccounts `"false`"",""
@@ -1136,29 +1114,30 @@ function OSString
 # Replace $null values with "<null>" string in objects.
 function RemoveNull
 {
-    param (
+    Param (
         [Parameter(ValueFromPipeline)]
         $InputObject
     )
 
-	$InputObject | ForEach-Object{$_.psobject.properties | Where-Object{!$_.value -and $_.TypeNameOfValue -ne "System.Boolean"} | ForEach-Object{$_.value = "<null>"}}
+	$InputObject | ForEach-Object {$_.psobject.properties | Where-Object {!$_.value -and $_.TypeNameOfValue -ne "System.Boolean"} | ForEach-Object {$_.value = "<null>"}}
 }
 
 # Replace "<null>" string values with $null in objects.
 function ReplaceNull
 {
-    param (
+    Param (
         [Parameter(ValueFromPipeline)]
         $InputObject
-    )
-	for ($i=0;$i -lt ($InputObject | Measure-Object).count;$i++)
-		{$InputObject[$i].psobject.properties | Where-Object{if($_.Value -match "<null>") {$_.Value = $null}}}
+	)
+	
+	For ($i=0;$i -lt ($InputObject | Measure-Object).count;$i++)
+		{$InputObject[$i].psobject.properties | Where-Object {If($_.Value -match "<null>") {$_.Value = $null}}}
 }
 
 # Print a dated line to standard output.
 function Separatorline {
-	$date = Get-Date
-	Write-Output "`n---------------------------- $date ----------------------------`r`n" | Out-String
+	$Date = Get-Date
+	Write-Output "`n---------------------------- $Date ----------------------------`r`n" | Out-String
 }
 
 #
@@ -1168,31 +1147,31 @@ function Separatorline {
 function ChainCAs ($Cert_Dir, $rootcer, $intermcer, $interm2cer) {
 # Chains CA files together in a PEM encoded file. Supports root CA and two subordinates.
 # Skip if we have pending cert requests
-	if ($Script:CertsWaitingForApproval) {return}
+	If ($Script:CertsWaitingForApproval) {Return}
 	# Prompt for Root cert if it's not there yet
-	if (Test-Path $intermcer) {
+	If (Test-Path $intermcer) {
 		get-content -path $intermcer,$rootcer | set-content -path $Cert_Dir\chain.cer
 	}
-	if (Test-Path $interm2cer) {
+	If (Test-Path $interm2cer) {
 		get-content -path $interm2cer,$intermcer,$rootcer | set-content -path $Cert_Dir\chain.cer
 	}
 }
 
 function CheckOpenSSL ($openssl) {
-   if (!(Test-Path $openssl)) {throw "Openssl required, unable to download, please install manually. Use latest OpenSSL 1.0.2."; Exit}
+   If (!(Test-Path $openssl)) {Throw "Openssl required, unable to download, please install manually. Use latest OpenSSL 1.0.2."; Exit}
 }
 
 function CreatePEMFiles ($SVCDir, $CertFile, $CerFile, $Cert_Dir, $InstanceCertDir) {
 	# Create PEM file for supplied certificate
 	# Skip if we have pending cert requests
-	if ($Script:CertsWaitingForApproval) {return;}
-	if (Test-Path $Cert_Dir\chain.cer) {$chaincer = "$Cert_Dir\chain.cer"}
-	else {$chaincer = "$Cert_Dir\root64.cer"}
+	If ($Script:CertsWaitingForApproval) {Return;}
+	If (Test-Path $Cert_Dir\chain.cer) {$chaincer = "$Cert_Dir\chain.cer"}
+	Else {$chaincer = "$Cert_Dir\root64.cer"}
 	
-	if (!(Test-Path $InstanceCertDir\$SVCDir\$CertFile)) {
+	If (!(Test-Path $InstanceCertDir\$SVCDir\$CertFile)) {
 		Write-Host "$InstanceCertDir\$SVCDir\$CertFile file not found. Skipping PEM creation. Please correct and re-run." -ForegroundColor Red
 	}
-	else {$RUI = get-content $InstanceCertDir\$SVCDir\$CertFile
+	Else {$RUI = get-content $InstanceCertDir\$SVCDir\$CertFile
 		  $ChainCont = get-content $chaincer -encoding default
 		  $RUI + $ChainCont | out-file  $InstanceCertDir\$SVCDir\$CerFile -Encoding default
 		  Write-Host "PEM file $InstanceCertDir\$SVCDir\$CerFile succesfully created" -ForegroundColor Yellow
@@ -1206,11 +1185,11 @@ function CreatePEMFiles ($SVCDir, $CertFile, $CerFile, $Cert_Dir, $InstanceCertD
 
 function CreateCSR ($SVCDir, $CSRName, $CFGName, $PrivFile, $Flag, $Cert_Dir, $Certinfo) {
 # Create RSA private key and CSR for vSphere 6.0 SSL templates
-	if (!(Test-Path $Cert_Dir\$SVCDir)) {New-Item $Cert_Dir\$SVCDir -Type Directory}
+	If (!(Test-Path $Cert_Dir\$SVCDir)) {New-Item $Cert_Dir\$SVCDir -Type Directory}
 	# vSphere 5 and 6 CSR Options are different. Set according to flag type
 	# VUM 6.0 needs vSphere 5 template type
-	if ($Flag -eq 5) {$CSROption1 = "dataEncipherment"}
-	if ($Flag -eq 6) {$CSROption1 = "nonRepudiation"}
+	If ($Flag -eq 5) {$CSROption1 = "dataEncipherment"}
+	If ($Flag -eq 6) {$CSROption1 = "nonRepudiation"}
 	$DEFFQDN = $Certinfo.CompanyName
 	$CommonName = $CSRName.Split(".")[0] + " " + $Certinfo.CompanyName
 	$MachineShort = $DEFFQDN.split(".")[0] 
@@ -1239,10 +1218,10 @@ function CreateCSR ($SVCDir, $CSRName, $CFGName, $PrivFile, $Flag, $Cert_Dir, $C
 	commonName = $CommonName
 	"
 	Set-Location $Cert_Dir
-    if (!(Test-Path $SVCDir)) {new-Item Machine -Type Directory}
+    If (!(Test-Path $SVCDir)) {new-Item Machine -Type Directory}
 	# Create CSR and private key
     $Out = $RequestTemplate | Out-File "$Cert_Dir\$SVCDir\$CFGName" -Encoding Default -Force 
-    Use-OpenSSL "req -new -nodes -out `"$Cert_Dir\$SVCDir\$CSRName`" -keyout `"$Cert_Dir\$SVCDir\$CSRName.key`" -config  `"$Cert_Dir\$SVCDir\$CFGName`""
+    Use-OpenSSL "req -new -nodes -out `"$Cert_Dir\$SVCDir\$CSRName`" -keyout `"$Cert_Dir\$SVCDir\$CSRName.key`" -config `"$Cert_Dir\$SVCDir\$CFGName`""
     Use-OpenSSL "rsa -in `"$Cert_Dir\$SVCDir\$CSRName.key`" -out `"$Cert_Dir\$SVCDir\$PrivFile`""
     Remove-Item $SVCDir\$CSRName.key
     Write-Host "CSR is located at $Cert_Dir\$SVCDir\$CSRName" -ForegroundColor Yellow
@@ -1250,12 +1229,12 @@ function CreateCSR ($SVCDir, $CSRName, $CFGName, $PrivFile, $Flag, $Cert_Dir, $C
 
 function CreateSolutionCSR ($SVCDir, $CSRName, $CFGName, $PrivFile, $Flag, $SolutionUser, $Cert_Dir, $Certinfo) {
 # Create RSA private key and CSR for vSphere 6.0 SSL templates
-	if (!(Test-Path $Cert_Dir\$SVCDir)) {New-Item $Cert_Dir\$SVCDir -Type Directory}
+	If (!(Test-Path $Cert_Dir\$SVCDir)) {New-Item $Cert_Dir\$SVCDir -Type Directory}
 	# vSphere 5 and 6 CSR Options are different. Set according to flag type
 	# VUM 6.0 needs vSphere 5 template type
 	$CommonName = $CSRName.Split(".")[0] + " " + $Certinfo.CompanyName
-	if ($Flag -eq 5) {$CSROption1 = "dataEncipherment"}
-	if ($Flag -eq 6) {$CSROption1 = "nonRepudiation"}
+	If ($Flag -eq 5) {$CSROption1 = "dataEncipherment"}
+	If ($Flag -eq 6) {$CSROption1 = "nonRepudiation"}
 	$DEFFQDN = $Certinfo.CompanyName
 	$MachineShort = $DEFFQDN.split(".")[0] 
 	$MachineIP = [System.Net.Dns]::GetHostAddresses("$DEFFQDN").IPAddressToString
@@ -1283,10 +1262,10 @@ function CreateSolutionCSR ($SVCDir, $CSRName, $CFGName, $PrivFile, $Flag, $Solu
 	commonName = $CommonName
 	"
 	Set-Location $Cert_Dir
-	if (!(Test-Path $SVCDir)) { new-Item Machine -Type Directory }
+	If (!(Test-Path $SVCDir)) { new-Item Machine -Type Directory }
 	# Create CSR and private key
 	$Out = $RequestTemplate | Out-File "$Cert_Dir\$SVCDir\$CFGName" -Encoding Default -Force 
-	Use-OpenSSL "req -new -nodes -out `"$Cert_Dir\$SVCDir\$CSRName`" -keyout `"$Cert_Dir\$SVCDir\$CSRName.key`" -config  `"$Cert_Dir\$SVCDir\$CFGName`""
+	Use-OpenSSL "req -new -nodes -out `"$Cert_Dir\$SVCDir\$CSRName`" -keyout `"$Cert_Dir\$SVCDir\$CSRName.key`" -config `"$Cert_Dir\$SVCDir\$CFGName`""
 	Use-OpenSSL "rsa -in `"$Cert_Dir\$SVCDir\$CSRName.key`" -out `"$Cert_Dir\$SVCDir\$PrivFile`""
 	Remove-Item $SVCDir\$CSRName.key
     Write-Host "CSR is located at $Cert_Dir\$SVCDir\$CSRName" -ForegroundColor Yellow
@@ -1299,7 +1278,7 @@ function CreateVMCACSR {
 	$VPSCFQDN = $(
 		Write-Host "Is the vCenter Platform Services Controller FQDN $DEFFQDN ?"
 		$InputFQDN = Read-Host "Press ENTER to accept or input a new PSC FQDN"
-		if ($inputFQDN) {$inputFQDN} else {$DEFFQDN}
+		If ($inputFQDN) {$inputFQDN} Else {$DEFFQDN}
 	)
 	$RequestTemplate = "[ req ]
 	default_md = sha512
@@ -1322,7 +1301,7 @@ function CreateVMCACSR {
 	commonName = $VPSCFQDN
 	"
 	Set-Location $Cert_Dir
-    if (!(Test-Path VMCA)) {new-Item VMCA -Type Directory}
+    If (!(Test-Path VMCA)) {new-Item VMCA -Type Directory}
 	# Create CSR and private key
     $Out = $RequestTemplate | Out-File "$Cert_Dir\VMCA\root_signing_cert.cfg" -Encoding Default -Force
     Use-OpenSSL "req -new -nodes -out `"$Cert_Dir\VMCA\root_signing_cert.csr`" -keyout `"$Cert_Dir\VMCA\vmca-org.key`" -config `"$Cert_Dir\VMCA\root_signing_cert.cfg`""
@@ -1338,17 +1317,17 @@ function DisplayVMDir {
 	$VMDirHost = $(
 		Write-Host "Do you want to dispaly the VMDir SSL certificate of $DEFFQDN ?"
 		$InputFQDN = Read-Host "Press ENTER to accept or input a new FQDN"
-		if ($InputFQDN) {$InputFQDN} else {$DEFFQDN})
+		If ($InputFQDN) {$InputFQDN} Else {$DEFFQDN})
 	Use-OpenSSL "s_client -servername $VMDirHost -connect `"${VMDirHost}:636`""
 }
 
-function DownloadRoots ($Cert_Dir,$RootCA,$rootcer,$SubCA,$intermcer,$SubCA2,$interm2cer,$CADownload) {
+function DownloadRoots ($Cert_Dir, $RootCA, $rootcer, $SubCA, $intermcer, $SubCA2, $interm2cer, $CADownload) {
 # https://powershell.org/forums/topic/export-certificate-using-base-64-cer-format-with-powershell/
 # Download Root CA public certificate, if defined
 # if the certificate exists (root64.cer) then it won't attempt to download
-	if ($RootCA) {
-		if (!(Test-Path -Path $rootcer)) {
-			$CertThumbprint = (Get-ChildItem Cert:\LocalMachine\Root | Where-Object{$_.Subject -match $rootca.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 1} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
+	If ($RootCA) {
+		If (!(Test-Path -Path $rootcer)) {
+			$CertThumbprint = (Get-ChildItem Cert:\LocalMachine\Root | Where-Object {$_.Subject -match $rootca.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 1} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
 
 			$cert = Get-Item -Path cert:\LocalMachine\root\$CertThumbprint
 			$certFile = "$Cert_Dir\root64.cer"
@@ -1358,20 +1337,20 @@ function DownloadRoots ($Cert_Dir,$RootCA,$rootcer,$SubCA,$intermcer,$SubCA2,$in
 				'-----END CERTIFICATE-----'
 			)
 			$content | Out-File -FilePath $certFile -Encoding ascii
-			if (!(Test-Path -Path $rootcer)) {
-				Write-Host "Root64.cer did not download. Check root CA variable, CA web services, or manually download root cert and copy to $Cert_Dir\root64.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;exit}
+			If (!(Test-Path -Path $rootcer)) {
+				Write-Host "Root64.cer did not download. Check root CA variable, CA web services, or manually download root cert and copy to $Cert_Dir\root64.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;Exit}
 			Write-Host "Root CA download successful." -foregroundcolor yellow
 		}
-		else {Write-Host "Root CA file found, will not download." -ForegroundColor yellow} 
+		Else {Write-Host "Root CA file found, will not download." -ForegroundColor yellow} 
 	}
 	$Validation = select-string -simple CERTIFICATE----- $rootcer
-	if (!$Validation) {
-		Write-Host "Invalid Root certificate format. Validate BASE64 encoding and try again. Also try decrementing RootRenewal value by 1." -foregroundcolor red; exit}
+	If (!$Validation) {
+		Write-Host "Invalid Root certificate format. Validate BASE64 encoding and try again. Also try decrementing RootRenewal value by 1." -foregroundcolor red; Exit}
 	# Download Subordinate CA public certificate, if defined
 	# if the certificate exists (interm64.cer) then it won't attempt to download
-	if ($SubCA) {
-		if (!(Test-Path -Path $intermcer)) {
-            $CertThumbprint = (Get-ChildItem Cert:\LocalMachine\CA | Where-Object{$_.Subject -match $subca.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 256} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
+	If ($SubCA) {
+		If (!(Test-Path -Path $intermcer)) {
+            $CertThumbprint = (Get-ChildItem Cert:\LocalMachine\CA | Where-Object {$_.Subject -match $subca.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 256} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
 
 			$cert = Get-Item -Path cert:\LocalMachine\CA\$CertThumbprint
 			$certFile = "$Cert_Dir\interm64.cer"
@@ -1381,21 +1360,21 @@ function DownloadRoots ($Cert_Dir,$RootCA,$rootcer,$SubCA,$intermcer,$SubCA2,$in
 				'-----END CERTIFICATE-----'
 			)
 			$content | Out-File -FilePath $certFile -Encoding ascii
-			if (!(Test-Path -Path $intermcer)) {
-				Write-Host "Interm64.cer did not download. Check subordinate variable, CA web services, or manually download intermediate cert and copy to $Cert_Dir\interm64.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;exit}
+			If (!(Test-Path -Path $intermcer)) {
+				Write-Host "Interm64.cer did not download. Check subordinate variable, CA web services, or manually download intermediate cert and copy to $Cert_Dir\interm64.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;Exit}
 			Write-Host "Intermediate CA download successful." -foregroundcolor yellow
 		}
-		else { Write-Host "Intermediate CA file found, will not download." -ForegroundColor yellow} 
+		Else { Write-Host "Intermediate CA file found, will not download." -ForegroundColor yellow} 
 		
 		$Validation = select-string -simple CERTIFICATE----- $intermcer
-		if (!$Validation) {
-			Write-Host "Invalid subordinate certificate format. Validate BASE64 encoding and try again. Also try decrementing SubRenewal value by 1." -foregroundcolor red; exit}
+		If (!$Validation) {
+			Write-Host "Invalid subordinate certificate format. Validate BASE64 encoding and try again. Also try decrementing SubRenewal value by 1." -foregroundcolor red; Exit}
 	}
 	# Download second-level Subordinate CA public certificate, if defined
 	# if the certificate exists (interm264.cer) then it won't attempt to download
-	if ($SubCA2) {
-		if (!(Test-Path -Path $interm2cer)) {
-            $CertThumbprint = (Get-ChildItem Cert:\LocalMachine\CA | Where-Object{$_.Subject -match $subca2.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 256} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
+	If ($SubCA2) {
+		If (!(Test-Path -Path $interm2cer)) {
+            $CertThumbprint = (Get-ChildItem Cert:\LocalMachine\CA | Where-Object {$_.Subject -match $subca2.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 256} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
 
 			$cert = Get-Item -Path cert:\LocalMachine\CA\$CertThumbprint
 			$certFile = "$Cert_Dir\interm264.cer"
@@ -1405,22 +1384,22 @@ function DownloadRoots ($Cert_Dir,$RootCA,$rootcer,$SubCA,$intermcer,$SubCA2,$in
 				'-----END CERTIFICATE-----'
 			)
 			$content | Out-File -FilePath $certFile -Encoding ascii
-			if (!(Test-Path -Path $interm2cer)) {
-				Write-Host "Interm264.cer did not download. Check subordinate 2 CA variable, CA web services, or manually download intermediate cert and copy to $Cert_Dir\interm264.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;exit}
+			If (!(Test-Path -Path $interm2cer)) {
+				Write-Host "Interm264.cer did not download. Check subordinate 2 CA variable, CA web services, or manually download intermediate cert and copy to $Cert_Dir\interm264.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;Exit}
 			Write-Host "Second Intermediate CA download successful." -foregroundcolor yellow
 		}
-		else { Write-Host "Second Intermediate CA file found, will not download." -ForegroundColor yellow} 
+		Else { Write-Host "Second Intermediate CA file found, will not download." -ForegroundColor yellow} 
 		
 		$Validation = select-string -simple CERTIFICATE----- $intermcer
-		if (!$Validation) {
-			Write-Host "Invalid second subordinate certificate format. Validate BASE64 encoding and try again. Also try decrementing Sub2Renewal value by 1." -foregroundcolor red; exit}
+		If (!$Validation) {
+			Write-Host "Invalid second subordinate certificate format. Validate BASE64 encoding and try again. Also try decrementing Sub2Renewal value by 1." -foregroundcolor red; Exit}
 	}
 }
 
 function MoveUserCerts {
 	Get-ChildItem -Path $Cert_Dir -filter "*.crt" | ForEach-Object {
 		$Dir = $_.basename
-		if (!(Test-Path $Cert_Dir\$Dir)) {New-Item $Cert_Dir\$Dir -Type Directory}
+		If (!(Test-Path $Cert_Dir\$Dir)) {New-Item $Cert_Dir\$Dir -Type Directory}
 		move-Item -Path $_.FullName -Destination $Cert_Dir\$Dir -Force
 	}
 	Get-ChildItem -Path $Cert_Dir -filter "*.key" | ForEach-Object {
@@ -1447,13 +1426,13 @@ function OnlineMint ($SVCDir, $CSRFile, $CertFile, $Template, $Cert_Dir, $ISSUIN
         Write-Host "Submitting certificate request for $SVCDir..." -ForegroundColor Yellow
         [void]$process.Start()
         $cmdOut = $process.StandardOutput.ReadToEnd()
-        if ($cmdOut.Trim() -like "*request is pending*")
+        If ($cmdOut.Trim() -like "*request is pending*")
         {
             # Output indicates the request requires approval before we can download the signed cert.
             $Script:CertsWaitingForApproval = $true
             # So we need to save the request ID to use later once they're approved.
             $reqID = ([regex]"RequestId: (\d+)").Match($cmdOut).Groups[1].Value
-            if ($reqID.Trim() -eq [String]::Empty)
+            If ($reqID.Trim() -eq [String]::Empty)
             {
                 Write-Error "Unable to parse RequestId from output."
                 Write-Debug $cmdOut
@@ -1463,10 +1442,10 @@ function OnlineMint ($SVCDir, $CSRFile, $CertFile, $Template, $Cert_Dir, $ISSUIN
             # Save the request ID to a file that OnlineMintResume can read back in later
             $reqID | out-file "$Cert_Dir\$SVCDir\requestid.txt"
         }
-        else
+        Else
         {
             # Output doesn't indicate a pending request, so check for a signed cert file
-            if (!(Test-Path $Cert_Dir\$SVCDir\$CertFile)) {
+            If (!(Test-Path $Cert_Dir\$SVCDir\$CertFile)) {
                 Write-Error "Certificate request failed or was unable to download the signed certificate."
                 Write-Error "Verify that the ISSUING_CA variable is set correctly." 
                 Write-Debug $cmdOut
@@ -1494,7 +1473,7 @@ function OnlineMintResume ($SVCDir, $CertFile) {
     $process.StartInfo = $psi
     $Script:CertsWaitingForApproval = $false
     # skip if there's no requestid.txt file
-    if (!(Test-Path "$Cert_Dir\$SVCDir\requestid.txt")) {continue}
+    If (!(Test-Path "$Cert_Dir\$SVCDir\requestid.txt")) {Continue}
     $reqID = Get-Content "$Cert_Dir\$SVCDir\requestid.txt"
     Write-Verbose "Found RequestId: $reqID for $SVCDir"
     # retrieve the signed certificate
@@ -1503,20 +1482,20 @@ function OnlineMintResume ($SVCDir, $CertFile) {
     Write-Host "Downloading the signed $SVCDir certificate..." -ForegroundColor Yellow
     [void]$process.Start()
     $cmdOut = $process.StandardOutput.ReadToEnd()
-    if (!(Test-Path "$Cert_Dir\$SVCDir\$CertFile")) {
+    If (!(Test-Path "$Cert_Dir\$SVCDir\$CertFile")) {
         # it's not there, so check if the request is still pending
-        if ($cmdOut.Trim() -like "*request is pending*") {
+        If ($cmdOut.Trim() -like "*request is pending*") {
             $Script:CertsWaitingForApproval = $true
             Write-Host "RequestId: $reqID is pending" -ForegroundColor Yellow
         }
-        else
+        Else
         {
 			Write-Warning "There was a problem downloading the signed certificate" -foregroundcolor red
 			Write-Warning $cmdOut
-			continue
+			Continue
         }
     }
-    if ($Script:CertsWaitingForApproval) {
+    If ($Script:CertsWaitingForApproval) {
         Write-Host
         Write-Host "One or more certificate requests require manual approval before they can be downloaded." -ForegroundColor Yellow
         Write-Host "Contact your CA administrator to approve the request IDs listed above." -ForegroundColor Yellow
@@ -1527,7 +1506,7 @@ function OnlineMintResume ($SVCDir, $CertFile) {
 # Save Object to yaml file.
 function SaveToYaml
 {
-    param (
+    Param (
 		[Parameter(Mandatory=$true, Position=0)]
 		$InputObject,
 		[Parameter(Mandatory=$true, Position=1)]
@@ -1542,7 +1521,7 @@ function SaveToYaml
 # Save Object to json file.
 function SaveToJson
 {
-    param (
+    Param (
 		[Parameter(Mandatory=$true, Position=0)]
 		$InputObject,
 		[Parameter(Mandatory=$true, Position=1)]
@@ -1574,31 +1553,26 @@ function Use-Openssl ($OpenSSLArgs) {
 	Write-Host "exit code: " + $o.ExitCode
 }
 
-function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent) {
-# http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vsphere.security.doc/GUID-BD70615E-BCAA-4906-8E13-67D0DBF715E4.html
-# Copy SSL certificates to a VCSA and replace the existing ones.
+function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $VCSAParent) {
+	# http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vsphere.security.doc/GUID-BD70615E-BCAA-4906-8E13-67D0DBF715E4.html
+	# Copy SSL certificates to a VCSA and replace the existing ones.
 
-	$hostname       = $VCSA.Hostname
-    $username       = "root"
-    $password       = $VCSA.VCSARootPass
-	$SSOAdminPassword  = $VCSA.SSOAdminPass
-	$servertype		= $VCSA.DeployType
 	$pscdeployments	= @("tiny","small","medium","large","infrastructure")
 	
-	$certpath 		= "$Cert_Dir\$hostname"
+	$certpath 		= "$Cert_Dir\" + $Deployment.Hostname
 	$SslPath		= "/root/ssl"
 	$SolutionPath	= "/root/solutioncerts"
 	$script 		= "mkdir $SslPath;mkdir $SolutionPath"
 	
-	ExecuteScript $script $hostname $username $password $vihandle
+	ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
 	$commandlist = $null
 	$commandlist = @()
-	$commandlist += "Write-Output `'$password`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+	$commandlist += "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
 
 	Write-Output $commandlist | Out-String
 
-	$viversion = $(ExecuteScript $commandlist $hostname $username $password $vihandle).Scriptoutput.Split("`n")[5]
+	$viversion = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("`n")[5]
 
 	Write-Output $viversion
 
@@ -1610,19 +1584,20 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 	$filelocations += "$SslPath/new_machine.cer"
 	$filelocations += "$certpath\machine\ssl_key.priv"
 	$filelocations += "$SslPath/ssl_key.priv"
-	if ($servertype -eq "Infrastructure"){
-		$filelocations += "$RootCert_Dir\chain.cer"
-		$filelocations += "$SslPath/chain.cer"}
-	if ($pscdeployments -contains $servertype) {
-		if (Test-Path -Path "$RootCert_Dir\root64.cer") {
+	If ($pscdeployments -contains $Deployment.DeployType) {
+		If (Test-Path -Path "$RootCert_Dir\root64.cer") {
 			$filelocations += "$RootCert_Dir\root64.cer"
 			$filelocations += "$SslPath/root64.cer"}
-		if (Test-Path -Path "$RootCert_Dir\interm64.cer") {
+		If (Test-Path -Path "$RootCert_Dir\interm64.cer") {
 			$filelocations += "$RootCert_Dir\interm64.cer"
 			$filelocations += "$SslPath/interm64.cer"}
-		if (Test-Path -Path "$RootCert_Dir\interm264.cer") {
+		If (Test-Path -Path "$RootCert_Dir\interm264.cer") {
 		$filelocations += "$RootCert_Dir\interm264.cer"
 		$filelocations += "$SslPath/interm264.cer"}}
+
+	If (Test-Path -Path "$RootCert_Dir\interm64.cer") {
+		$filelocations += "$RootCert_Dir\chain.cer"
+		$filelocations += "$SslPath/chain.cer"}
 
 	$filelocations += "$certpath\solution\machine.cer"
 	$filelocations += "$SolutionPath/machine.cer"
@@ -1632,7 +1607,7 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 	$filelocations += "$SolutionPath/vsphere-webclient.cer"
 	$filelocations += "$certpath\solution\vsphere-webclient.priv"
 	$filelocations += "$SolutionPath/vsphere-webclient.priv"
-	if ($servertype -ne "Infrastructure") {
+	If ($Deployment.DeployType -ne "Infrastructure") {
 		$filelocations += "$certpath\solution\vpxd.cer"
 		$filelocations += "$SolutionPath/vpxd.cer"
 		$filelocations += "$certpath\solution\vpxd.priv"
@@ -1642,7 +1617,7 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 		$filelocations += "$certpath\solution\vpxd-extension.priv"
 		$filelocations += "$SolutionPath/vpxd-extension.priv"}
 
-	CopyFiletoServer $filelocations $hostname $username $password $vihandle $true
+	CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle $true
 
 	$commandlist = $null
 	$commandlist = @()
@@ -1660,62 +1635,75 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 	$commandlist += "service-control --start vmca"
 
 	# Replace the root cert.
-	if ($pscdeployments -contains $servertype) {
-		if (Test-Path -Path "$RootCert_Dir\root64.cer") {
-			$commandlist += "Write-Output `'$SSOAdminPassword`' | /usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/root64.cer"}
-		if (Test-Path -Path "$RootCert_Dir\interm64.cer") {	
-			$commandlist += "Write-Output `'$SSOAdminPassword`' | /usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm64.cer"}
-		if (Test-Path -Path "$RootCert_Dir\interm264.cer") {	
-			$commandlist += "Write-Output `'$SSOAdminPassword`' | /usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm264.cer"}}
+	If ($pscdeployments -contains $Deployment.DeployType) {
+		If (Test-Path -Path "$RootCert_Dir\root64.cer") {
+			$commandlist += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/root64.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"}
+		If (Test-Path -Path "$RootCert_Dir\interm64.cer") {	
+			$commandlist += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm64.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"}
+		If (Test-Path -Path "$RootCert_Dir\interm264.cer") {	
+			$commandlist += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm264.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"}}
 
-	# Add certificate chain to TRUSTED_ROOTS of the PSC for ESXi Cert Replacement.
-	if ($pscdeployments -contains $servertype) {
-		$commandlist += "Write-Output Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry create --store TRUSTED_ROOTS --alias chain.cer --cert $SslPath/chain.cer"
+	<# Add certIficate chain to TRUSTED_ROOTS of the PSC for ESXi Cert Replacement.
+	If ($pscdeployments -contains $Deployment.DeployType -and (Test-Path -Path "$RootCert_Dir\interm64.cer")) {
+		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry create --store TRUSTED_ROOTS --alias chain.cer --cert $SslPath/chain.cer"
 	}
+#>
 
 	# Retrive the Old Machine Cert and save its thumbprint to a file.
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store MACHINE_SSL_CERT --alias __MACHINE_CERT --output $SslPath/old_machine.crt"
 	$commandlist += "openssl x509 -in $SslPath/old_machine.crt -noout -sha1 -fingerprint > $SslPath/thumbprint.txt"
 
     # Replace the Machine Cert.
-	$commandlist += "Write-Output Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store MACHINE_SSL_CERT --alias __MACHINE_CERT"
+	$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store MACHINE_SSL_CERT --alias __MACHINE_CERT"
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store MACHINE_SSL_CERT --alias __MACHINE_CERT --cert $SslPath/new_machine.cer --key $SslPath/ssl_key.priv"
 
-	ExecuteScript $commandlist $hostname $username $password $vihandle
+	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
 	$commandlist = $null
 	$commandlist = @()
-	$commandlist += "Write-Output Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vsphere-webclient --alias vsphere-webclient"
+	$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vsphere-webclient --alias vsphere-webclient"
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vsphere-webclient --alias vsphere-webclient --cert $SolutionPath/vsphere-webclient.cer --key $SolutionPath/vsphere-webclient.priv"
-	# Skip if server is an External PSC. - vpxd and vpxd-extension do not need to be replaced on an external PSC.
-	if ($servertype -ne "Infrastructure"){
-		$commandlist += "Write-Output Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd --alias vpxd"
+	# Skip If server is an External PSC. - vpxd and vpxd-extension do not need to be replaced on an external PSC.
+	If ($Deployment.DeployType -ne "Infrastructure"){
+		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd --alias vpxd"
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd --alias vpxd --cert $SolutionPath/vpxd.cer --key $SolutionPath/vpxd.priv"
-		$commandlist += "Write-Output Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd-extension --alias vpxd-extension"	
+		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd-extension --alias vpxd-extension"	
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd-extension --alias vpxd-extension --cert $SolutionPath/vpxd-extension.cer --key $SolutionPath/vpxd-extension.priv"	
 	}
 
-	ExecuteScript $commandlist $hostname $username $password $vihandle
+	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 	
 	$commandlist = $null
 	$commandlist = @()
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vmafd-cli get-machine-id --server-name localhost"
-	$commandlist += "Write-Output `'$SSOAdminPassword`' | /usr/lib/vmware-vmafd/bin/dir-cli service list"
+	$commandlist += "/usr/lib/vmware-vmafd/bin/dir-cli service list --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
 	
-	$UniqueID = Invoke-VMScript -ScriptText $commandlist[0] -vm $hostname -GuestUser $username -GuestPassword $password -Server $vihandle
-	$CertList = Invoke-VMScript -ScriptText $commandlist[1] -vm $hostname -GuestUser $username -GuestPassword $password -Server $vihandle
+	$UniqueID = Invoke-VMScript -ScriptText $commandlist[0] -vm $Deployment.Hostname -GuestUser "root" -GuestPassword $Deployment.VCSARootPass -Server $vihandle
+	$CertList = Invoke-VMScript -ScriptText $commandlist[1] -vm $Deployment.Hostname -GuestUser "root" -GuestPassword $Deployment.VCSARootPass -Server $vihandle
+
+	Separatorline
+
+	Write-Output "Unique ID: " + $UniqueID | Out-String
+	Write-Output "Certificate List: " + $CertList | Out-String
+
+	Separatorline
 	
 	# Retrieve unique key list relevant to the server.
-	$SolutionUsers = ($Certlist.ScriptOutput.split(".").Split("`n") | ForEach-Object {if($_[0] -eq " "){$_}} | Where-Object{$_.ToString() -like "*$($UniqueID.ScriptOutput.split("`n")[0])*"}).Trim(" ")
+	$SolutionUsers = ($Certlist.ScriptOutput.split(".").Split("`n") | ForEach-Object {If($_[0] -eq " "){$_}} | Where-Object {$_.ToString() -like "*$($UniqueID.ScriptOutput.split("`n")[0])*"}).Trim(" ")
+
+	Separatorline
+
+	Write-Output "Solution Users: " + $SolutionUsers | Out-String
+
+	Separatorline
 
 	$commandlist = $null
 	$commandlist = @()
 
-	#$commandlist += "Write-Output `'$password`' | /usr/lib/vmware-vmafd/bin/dir-cli service update --name $($SolutionUsers[0]) --cert $SolutionPath/machine.cer"
-	$commandlist += "Write-Output `'$SSOAdminPassword`' | /usr/lib/vmware-vmafd/bin/dir-cli service update --name $($SolutionUsers[1]) --cert $SolutionPath/vsphere-webclient.cer"
-	if ($servertype -ne "Infrastructure") {
-		$commandlist += "Write-Output `'$SSOAdminPassword`' | /usr/lib/vmware-vmafd/bin/dir-cli service update --name $($SolutionUsers[2]) --cert $SolutionPath/vpxd.cer"
-		$commandlist += "Write-Output `'$SSOAdminPassword`' | /usr/lib/vmware-vmafd/bin/dir-cli service update --name $($SolutionUsers[3]) --cert $SolutionPath/vpxd-extension.cer"}
+	$commandlist += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $SolutionUsers[1] + " --cert $SolutionPath/vsphere-webclient.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+	If ($Deployment.DeployType -ne "Infrastructure") {
+		$commandlist += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $SolutionUsers[2] + " --cert $SolutionPath/vpxd.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+		$commandlist += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $SolutionUsers[3] + " --cert $SolutionPath/vpxd-extension.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"}
 		
 	# Set path for python.
 	$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
@@ -1726,11 +1714,11 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 	$commandlist += "service-control --start --all --ignore"
 	
 	# Service update
-	ExecuteScript $commandlist $hostname $username $password $vihandle
+	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
 	Start-Sleep -Seconds 10
 
-	if ($servertype -ne "Infrastructure"){
+	If ($Deployment.DeployType -ne "Infrastructure"){
 		$commandlist = $null
 		$commandlist = @()
 		# Set path for python.
@@ -1741,12 +1729,12 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 		# Replace EAM Solution User Cert.
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
 		$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
-		$commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.vim.eam -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $hostname -u administrator@$($VCSA.SSODomainName) -p `'$SSOAdminPassword`'"
+		$commandlist += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.vim.eam -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s " + $Deployment.Hostname + " -u administrator@" + $Deployment.SSODomainName + " -p `'" + $Deployment.SSOAdminPass + "`'"
 		$commandlist += '/usr/bin/service-control --stop vmware-eam'
 		$commandlist += '/usr/bin/service-control --start vmware-eam'
 
 		# Service update
-		ExecuteScript $commandlist $hostname $username $password $vihandle
+		ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 	}
 
     # Update VAMI Certs on External PSC.
@@ -1755,10 +1743,10 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
    	$commandlist += "/usr/lib/applmgmt/support/scripts/postinstallscripts/setup-webserver.sh"
 
 	# Service update
-	ExecuteScript $commandlist $hostname $username $password $vihandle
+	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
-    # Refresh Update Manager Certificates.
-	if ($servertype -ne "Infrastructure") {
+    # Refresh Update Manager CertIficates.
+	If ($Deployment.DeployType -ne "Infrastructure") {
     	$commandlist = $null
 		$commandlist = @()
 		# Set path for python.
@@ -1767,26 +1755,25 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
 		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
 		$commandlist += "export VMWARE_DATA_DIR=/storage"
 		$commandlist += "export VMWARE_RUNTIME_DATA_DIR=/var"
-		#$commandlist += "service-control --stop vmware-updatemgr"
     	$commandlist += "/usr/lib/vmware-updatemgr/bin/updatemgr-util refresh-certs"
     	$commandlist += "/usr/lib/vmware-updatemgr/bin/updatemgr-util register-vc"		
-		#$commandlist += "service-control --start vmware-updatemgr"
+
 
     	# Service update
-		ExecuteScript $commandlist $hostname $username $password $vihandle
+		ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 	}
 
- 	# Assign the original machine certificate thumbprint to $thumbprint and remove the carriage return.
-    # Change the shell to Bash to enable scp and retrieve the original machine certificate thumbprint.
+ 	# Assign the original machine certIficate thumbprint to $thumbprint and remove the carriage return.
+    # Change the shell to Bash to enable scp and retrieve the original machine certIficate thumbprint.
     $commandlist = $null
     $commandlist = @()
     $commandlist += "chsh -s /bin/bash"
     $commandlist += "cat /root/ssl/thumbprint.txt"
-    $thumbprint = $(ExecuteScript $commandlist $hostname $username $password $vihandle).Scriptoutput.Split("=",2)[1] 
+    $thumbprint = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("=",2)[1] 
 	$thumbprint = $thumbprint -replace "`t|`n|`r",""
 
-    # Register new certificates with VMWare Lookup Service - KB2121701 and KB2121689.
-	if ($pscdeployments -contains $VCSA.DeployType) {
+    # Register new certIficates with VMWare Lookup Service - KB2121701 and KB2121689.
+	If ($pscdeployments -contains $Deployment.DeployType) {
         # Register the new machine thumbprint with the lookup service.
         $commandlist = $null
         $commandlist = @()
@@ -1797,24 +1784,24 @@ function TransferCertToNode ($RootCert_Dir,$Cert_Dir,$VCSA,$vihandle,$VCSAParent
         $commandlist += "export VMWARE_DATA_DIR=/storage"
 		$commandlist += "export VMWARE_JAVA_HOME=/usr/java/jre-vmware"
 		# Register the new machine thumprint.
-        $commandlist += "python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://$hostname/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_machine.crt --user administrator@$($VCSA.SSODomainName) --password `'$SSOAdminPassword`'"
+        $commandlist += "python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://" + $Deployment.Hostname + "/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_machine.crt --user administrator@" + $Deployment.SSODomainName + " --password `'" + $Deployment.SSOAdminPass + "`'"
 
         Write-Output $commandlist | Out-String
         
-        ExecuteScript $commandlist $hostname $username $password $vihandle}
-    else {
-		  # If the VCSA vCenter does not have an embedded PSC Register its Machine Certificate with the External PSC.
-          Write-Output $VCSAParent | Out-String
+        ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle}
+    Else {
+		  # If the VCSA vCenter does not have an embedded PSC Register its Machine CertIficate with the External PSC.
+          Write-Output $DeploymentParent | Out-String
           
-          # SCP the new vCenter machine certificate to the external PSC and register it with the VMWare Lookup Service via SSH.
+          # SCP the new vCenter machine certIficate to the external PSC and register it with the VMWare Lookup Service via SSH.
               $commandlist = $null
               $commandlist = @()
-              $commandlist += "sshpass -p `'$($VCSAParent.VCSARootPass)`' scp -oStrictHostKeyChecking=no /root/ssl/new_machine.crt root@$($VCSAParent.Hostname):/root/ssl/new_$($hostname)_machine.crt"
-              $commandlist += "sshpass -p `'$($VCSAParent.VCSARootPass)`' ssh -oStrictHostKeyChecking=no root@$($VCSAParent.Hostname) `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://$($VCSAParent.Hostname)/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_$($hostname)_machine.crt --user administrator@$($VCSAParent.SSODomainName) --password `'$($VCSAParent.SSOAdminPass)`'`""
+              $commandlist += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' scp -oStrictHostKeyChecking=no /root/ssl/new_machine.crt root@" + $DeploymentParent.Hostname + ":/root/ssl/new_" + $Deployment.Hostname + "_machine.crt"
+              $commandlist += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://" + $DeploymentParent.Hostname + "/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_" + $Deployment.Hostname + "_machine.crt --user administrator@" + $DeploymentParent.SSODomainName + " --password `'" + $DeploymentParent.SSOAdminPass + "`'`""
 
               Write-Output $commandlist | Out-String
 
-              ExecuteScript $commandlist $hostname $username $password $vihandle
+              ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
     }
 
 }
@@ -1838,18 +1825,18 @@ function VMDirRename ($Cert_Dir) {
 
 function VMCAMint ($SVCDir, $CFGFile, $CertFile, $PrivFile) {
 	# This function issues a new SSL certificate from the VMCA.
-	if(!(Test-Path $Cert_Dir\$SVCDir)) {New-Item $Cert_Dir\$SVCDir -Type Directory}
+	If(!(Test-Path $Cert_Dir\$SVCDir)) {New-Item $Cert_Dir\$SVCDir -Type Directory}
 	$Computername = get-wmiobject win32_computersystem
 	$DEFFQDN = "$($computername.name).$($computername.domain)".ToLower() 
 	$MachineFQDN = $(
 		Write-Host "Do you want to replace the SSL certificate on $DEFFQDN ?"
 		$InputFQDN = Read-Host "Press ENTER to accept or input a new FQDN"
-		if ($InputFQDN) {$InputFQDN} else {$DEFFQDN}
+		If ($InputFQDN) {$InputFQDN} Else {$DEFFQDN}
 	)
 	$PSCFQDN = $(
 		Write-Host "Is the PSC $DEFFQDN ?"
 		$InputFQDN = Read-Host "Press ENTER to accept or input the correct PSC FQDN"
-		if ($InputFQDN) {$InputFQDN} else {$DEFFQDN}
+		If ($InputFQDN) {$InputFQDN} Else {$DEFFQDN}
 	)
 	$MachineIP = [System.Net.Dns]::GetHostAddresses("$MachineFQDN").IPAddressToString -like '*.*'
 	Write-Host $MachineIP
@@ -1873,7 +1860,7 @@ function VMCAMint ($SVCDir, $CFGFile, $CertFile, $PrivFile) {
 	Set-Location "C:\Program Files\VMware\vCenter Server\vmcad"
 	.\certool --genkey --privkey=$Cert_Dir\$SVCDir\$PrivFile --pubkey=$Cert_Dir\$SVCDir\$SVCDir.pub
 	.\certool --gencert --cert=$Cert_Dir\$SVCDir\$CertFile --privkey=$Cert_Dir\$SVCDir\$PrivFile --config=$Cert_Dir\$SVCDir\$CFGFile --server=$PSCFQDN
-	if (Test-Path $Cert_Dir\$SVCDir\$CertFile) {Write-Host "PEM file located at $Cert_Dir\$SVCDir\new_machine.cer" -ForegroundColor Yellow n}
+	If (Test-Path $Cert_Dir\$SVCDir\$CertFile) {Write-Host "PEM file located at $Cert_Dir\$SVCDir\new_machine.cer" -ForegroundColor Yellow n}
 }
 
 function CDDir ($FolderPath) {
@@ -1918,7 +1905,7 @@ Write-Output $FolderPath | Out-String
 $ErrorActionPreference = "SilentlyContinue"
 Stop-Transcript | Out-Null
 $ErrorActionPreference = "Continue"
-if (!(Test-Path "$FolderPath\Logs")) {New-Item "$FolderPath\Logs" -Type Directory}
+If (!(Test-Path "$FolderPath\Logs")) {New-Item "$FolderPath\Logs" -Type Directory}
 $OutputPath = "$FolderPath\Logs\Deploy_" + $(Get-date -format "dd-MM-yyyy_HH-mm") + ".log"
 Start-Transcript -path $OutputPath -append
 
@@ -1926,50 +1913,50 @@ Separatorline
 
 # Check to see if Powershell is at least version 3.0
 $PSpath = "HKLM:\SOFTWARE\Microsoft\PowerShell\3"
-if (!(Test-Path $PSpath)) {
-	Write-Host "PowerShell 3.0 or higher required. Please install"; exit 
+If (!(Test-Path $PSpath)) {
+	Write-Host "PowerShell 3.0 or higher required. Please install"; Exit 
 }
 
 # Load Powercli Modules
-If (get-module -ListAvailable | Where-Object{$_.Name -match "VMware.PowerCLI"}) {
+If (get-module -ListAvailable | Where-Object {$_.Name -match "VMware.PowerCLI"}) {
 	import-module VMware.PowerCLI
 }
-else {
+Else {
 		If (get-command Install-module -ErrorAction SilentlyContinue) {
 			Install-Module -Name VMware.PowerCLI -Confirm:$false
 		}
-		else 
-		{exit}
+		Else 
+		{Exit}
 }
 
-If (get-module -ListAvailable | Where-Object{$_.Name -match "powershell-yaml"}) {
+If (get-module -ListAvailable | Where-Object {$_.Name -match "powershell-yaml"}) {
 	import-module powershell-yaml
 }
-else {
+Else {
 		If (get-command Install-module -ErrorAction SilentlyContinue) {
 			Install-Module -Name powershell-yaml -Confirm:$false
 		}
-		else 
-		{exit}
+		Else 
+		{Exit}
 }
 
 Separatorline
 
 # Check the version of Ovftool and get it's path. Search C:\program files\ and C:\Program Files (x86)\ subfolders for vmware and find the
 # Ovftool folders. Then check the version and return the first one that is version 4 or higher.
-$ovftoolpath = (Get-ChildItem (Get-ChildItem $env:ProgramFiles, ${env:ProgramFiles(x86)} -filter vmware).fullname -recurse -filter ovftool.exe | ForEach-Object{if(!((& $($_.DirectoryName+"\ovftool.exe") --version).split(" ")[2] -lt 4.0.0)){$_}} | Select-Object -first 1).DirectoryName
+$OvfToolPath = (Get-ChildItem (Get-ChildItem $env:ProgramFiles, ${env:ProgramFiles(x86)} -filter vmware).fullname -recurse -filter ovftool.exe | ForEach-Object {If(!((& $($_.DirectoryName + "\ovftool.exe") --version).split(" ")[2] -lt 4.0.0)){$_}} | Select-Object -first 1).DirectoryName
 
 # Check ovftool version
-if (!$ovftoolpath) 
+if (!$OvfToolPath) 
 	{Write-Host "Script requires installation of ovftool 4.0.0 or newer";
 	 Exit} 
-else
+Else
 	{Write-Host "ovftool version OK `r`n"}
 	
 # ---------------------  Load Parameters from Excel ------------------------------
 
 ### Load from Excel
-switch ($Source) {
+Switch ($Source) {
 	'excel' {
 			# Source Excel Path
 			$ExcelFilePathSrc = "$FolderPath\$ExcelFileName"
@@ -2009,7 +1996,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data 		= $Worksheet.Range("A2","F$rows").Value()
 				$s_plugins	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_plugin  = [PSCustomObject]@{
 						Config 			= $data[$i,1]
 						vCenter 		= $data[$i,2]
@@ -2029,7 +2016,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data	  = $Worksheet.Range("A2","K$rows").Value()
 				$s_arules = @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_arule  = [PSCustomObject]@{
 						vCenter					= $data[$i,1]
 						RuleName				= $data[$i,2]			
@@ -2075,8 +2062,8 @@ switch ($Source) {
 					SubRenewal2		= $data[17]
 				}
 				
-				if ($s_Certinfo.SubCA1 -eq "null") {$s_Certinfo.SubCA1 = $null}
-				if ($s_Certinfo.SubCA2 -eq "null") {$s_Certinfo.SubCA2 = $null}
+				If ($s_Certinfo.SubCA1 -eq "null") {$s_Certinfo.SubCA1 = $null}
+				If ($s_Certinfo.SubCA2 -eq "null") {$s_Certinfo.SubCA2 = $null}
 			}
 			
 			# get clusters
@@ -2086,7 +2073,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data 		= $Worksheet.Range("A2","C$rows").Value()
 				$s_clusters = @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_cluster  = [PSCustomObject]@{
 						ClusterName     = $data[$i,1]
 						Datacenter		= $data[$i,2]
@@ -2103,7 +2090,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data		= $Worksheet.Range("A2","F$rows").Value()
 				$s_folders	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_folder  = [PSCustomObject]@{
 						Name		= $data[$i,1]
 						Location	= $data[$i,2]
@@ -2124,7 +2111,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data			= $Worksheet.Range("A2","G$rows").Value()
 				$s_Permissions	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_Permission  = [PSCustomObject]@{
 						Entity		= $data[$i,1]
 						Location	= $data[$i,2]
@@ -2146,7 +2133,7 @@ switch ($Source) {
 				$data				= $Worksheet.Range("A2","Y$rows").Value()
 				$s_Customizations	= @()
 				
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_Customization  = [PSCustomObject]@{
 						OSType					= $data[$i,1]
 						Server					= $data[$i,2]	
@@ -2186,7 +2173,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data			= $Worksheet.Range("A2","AA$rows").Value()
 				$s_Deployments	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_Deployment  = [PSCustomObject]@{
 						Action			= $data[$i,1]
 						Config			= $data[$i,2]
@@ -2227,7 +2214,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data		= $Worksheet.Range("A2","D$rows").Value()
 				$s_Licenses	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_License = [PSCustomObject]@{
 						vCenter		= $data[$i,1]
 						LicKey		= $data[$i,2]
@@ -2245,7 +2232,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data		= $Worksheet.Range("A2","C$rows").Value()
 				$s_Roles	= @()
-				for ($i=1;$i -lt $rows;$i++){
+				For ($i=1;$i -lt $rows;$i++){
 					$s_Role = [PSCustomObject]@{
 						Name		= $data[$i,1]
 						Privilege	= $data[$i,2]
@@ -2262,7 +2249,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data		= $Worksheet.Range("A2","B$rows").Value()
 				$s_Services	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_Service = [PSCustomObject]@{
 						vCenter	= $data[$i,1]
 						Service	= $data[$i,2]
@@ -2278,7 +2265,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data 		= $Worksheet.Range("A2","E$rows").Value()
 				$s_sites	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_site = [PSCustomObject]@{
 						Datacenter	= $data[$i,1]
 						oct1		= $data[$i,2]
@@ -2297,7 +2284,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data 			= $Worksheet.Range("A2","E$rows").Value()
 				$s_vdswitches	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_vdswitch = [PSCustomObject]@{
 						SwitchNumber    = $data[$i,1]
 						vDSwitchName	= $data[$i,2]
@@ -2316,7 +2303,7 @@ switch ($Source) {
 			If ($rows -gt 1 -and $rows -lt $lastrow) {
 				$data		= $Worksheet.Range("A2","F$rows").Value()
 				$s_vlans 	= @()
-				for ($i=1;$i -lt $rows;$i++) {
+				For ($i=1;$i -lt $rows;$i++) {
 					$s_vlan = [PSCustomObject]@{
 						Number      = $data[$i,1]
 						Vlan		= $data[$i,2]
@@ -2390,8 +2377,8 @@ switch ($Source) {
 			$s_summary          = [pscustomobject](Get-Content -Raw -Path "$Yaml_Dir\summary.yml"	    	| ConvertFrom-Yaml | ConvertTo-Json | ConvertFrom-Json)
 
             # Change ":" Colon to commas for Vlan Network Properties.
-			for ($i=0;$i -lt ($s_vlans | Measure-Object).count;$i++) {
-				$s_vlans[$i].psobject.properties | Where-Object{if ($_.name -eq "network") {$commacorrect = $_.value -replace ":",','; $_.value = $commacorrect}}
+			For ($i=0;$i -lt ($s_vlans | Measure-Object).count;$i++) {
+				$s_vlans[$i].psobject.properties | Where-Object {if ($_.name -eq "network") {$commacorrect = $_.value -replace ":",','; $_.value = $commacorrect}}
 			}
 		}
 }
@@ -2525,15 +2512,15 @@ If ($Source -ne 3 -and $Export) {
 	SaveToYaml -InputObject $s_vdswitches -FilePath "$FolderPath\vdswitches.yml"
 
     # Change commas to ":" Colon for Vlan Network Properties.
-	for ($i=0;$i -lt ($s_vlans | Measure-Object).count;$i++) {
-		$s_vlans[$i].psobject.properties | Where-Object{if ($_.name -eq "network") {$commacorrect = $_.value -replace ",",':'; $_.value = $commacorrect}}
+	For ($i=0;$i -lt ($s_vlans | Measure-Object).count;$i++) {
+		$s_vlans[$i].psobject.properties | Where-Object {If ($_.name -eq "network") {$commacorrect = $_.value -replace ",",':'; $_.value = $commacorrect}}
 	}
 
 	SaveToYaml -InputObject $s_vlans -FilePath "$FolderPath\vlans.yml"
     
     # Change ":" Colon to commas for Vlan Network Properties.
-	for ($i=0;$i -lt ($s_vlans | Measure-Object).count;$i++) {
-		$s_vlans[$i].psobject.properties | Where-Object{if ($_.name -eq "network") {$commacorrect = $_.value -replace ":",','; $_.value = $commacorrect}}
+	For ($i=0;$i -lt ($s_vlans | Measure-Object).count;$i++) {
+		$s_vlans[$i].psobject.properties | Where-Object {If ($_.name -eq "network") {$commacorrect = $_.value -replace ":",','; $_.value = $commacorrect}}
 	}
 
     SaveToYaml -InputObject $s_summary -FilePath "$FolderPath\summary.yml"
@@ -2562,17 +2549,18 @@ ReplaceNull $s_summary
 $InstalledApps = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*, HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName} | Sort-Object
 
 # Download OpenSSL if it's not already installed
-if (!($InstalledApps | Where-Object{$_.DisplayName -like "*openssl*"})) {
-	#$href = ((Invoke-WebRequest –Uri 'https://slproweb.com/products/Win32OpenSSL.html').Links | Where-Object{$_ -like "*Win64OpenSSL_*"} | Select-Object -first 1).href.split("/")[2]
-	Write-Host -Foreground "DarkBlue" -Background "White" "Downloading OpenSSL $href ..."
+If (!($InstalledApps | Where-Object {$_.DisplayName -like "*openssl*"})) {
+	$uri = "https://slproweb.com/products/Win32OpenSSL.html"
+	$downloadref = ((Invoke-WebRequest -uri $uri).Links | Where-Object {$_.outerHTML -like "*Win64OpenSSL_*"} | Select-Object -first 1).href.split("/")[2]
+	Write-Host -Foreground "DarkBlue" -Background "White" "Downloading OpenSSL $downloadref ..."
 	$null = New-Item -Type Directory $s_Certinfo.openssldir -erroraction silentlycontinue
-	$sslurl = "http://slproweb.com/download/$href"
+	$sslurl = "http://slproweb.com/download/$downloadref"
 	$sslexe = "$env:temp\openssl.exe"
 	$wc 							= New-Object System.Net.WebClient
 	$wc.UseDefaultCredentials 		= $true
 	$wc.DownloadFile($sslurl,$sslexe)
 	$env:path = $env:path + ";$($s_Certinfo.openssldir)"
-    if (!(test-Path($sslexe))) { Write-Host -Foreground "red" -Background "white" "Could not download or find OpenSSL. Please install the latest $href manually or update download name."; exit}
+    If (!(test-Path($sslexe))) { Write-Host -Foreground "red" -Background "white" "Could not download or find OpenSSL. Please install the latest $downloadref manually or update download name."; Exit}
 	Write-Host -Foreground "DarkBlue" -Background "White" "Installing OpenSSL..."
     cmd /c $sslexe /DIR="$($s_Certinfo.openssldir)" /silent /verysilent /sp- /suppressmsgboxes
 	Remove-Item $sslexe
@@ -2581,7 +2569,7 @@ if (!($InstalledApps | Where-Object{$_.DisplayName -like "*openssl*"})) {
 # Get list of installed Applications
 $InstalledApps = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*, HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName} | Sort-Object
 
-$openssl = ($InstalledApps | Where-Object{$_.DisplayName -like "*openssl*"}).InstallLocation + "bin\openssl.exe"
+$openssl = ($InstalledApps | Where-Object {$_.DisplayName -like "*openssl*"}).InstallLocation + "bin\openssl.exe"
 
 # Check for openssl
 CheckOpenSSL $openssl
@@ -2591,19 +2579,19 @@ Separatorline
 # https://blogs.technet.microsoft.com/bshukla/2010/04/12/ignoring-ssl-trust-in-powershell-system-net-webclient/
 $netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
 
-if($netAssembly)
+If($netAssembly)
 {
     $bindingFlags = [Reflection.BindingFlags] "Static,GetProperty,NonPublic"
     $settingsType = $netAssembly.GetType("System.Net.Configuration.SettingsSectionInternal")
 
     $instance = $settingsType.InvokeMember("Section", $bindingFlags, $null, $null, @())
 
-    if($instance)
+    If($instance)
     {
         $bindingFlags = "NonPublic","Instance"
         $useUnsafeHeaderParsingField = $settingsType.GetField("useUnsafeHeaderParsing", $bindingFlags)
 
-        if($useUnsafeHeaderParsingField)
+        If($useUnsafeHeaderParsingField)
         {
           $useUnsafeHeaderParsingField.SetValue($instance, $true)
         }
@@ -2616,21 +2604,22 @@ $mtu						= "9000"
 
 # Certificate variables	
 # Create the RANDFILE environmental parameter for openssl to fuction properly.
-$env:RANDFILE 					= "$FolderPath\Certs\.rnd"
-$rootcer						= "$FolderPath\Certs\root64.cer"
-$intermcer 						= "$FolderPath\Certs\interm64.cer" 
-$interm2cer 					= "$FolderPath\Certs\interm264.cer" 
+$env:RANDFILE 		= "$FolderPath\Certs\.rnd"
+$rootcer			= "$FolderPath\Certs\root64.cer"
+$intermcer 			= "$FolderPath\Certs\interm64.cer" 
+$interm2cer 		= "$FolderPath\Certs\interm264.cer" 
+$RootCert_Dir		= $FolderPath + "\Certs"
 $Script:CertsWaitingForApproval = $false
 New-Alias -Name OpenSSL $openssl
 
 # Deploy the VCSA servers.
-foreach ($Deployment in $s_Deployments | Where-Object{$_.Action -notmatch "null|false"}) {
+ForEach ($Deployment in $s_Deployments | Where-Object {$_.Action -notmatch "null|false"}) {
 	# Skip deployment if set to null.
 
 		Write-Host "`r`n Deploying $($Deployment.Hostname) now.`r`n" -foregroundcolor cyan
 	
 		# Deploy the vcsa
-		Deploy $Deployment $ovftoolpath $FolderPath
+		Deploy $Deployment $OvfToolPath $FolderPath
 
 		# Write separator line to transcript.
 		Separatorline
@@ -2649,15 +2638,15 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Action -notmatch "null|
 		$commandlist = $null
 		$commandlist = @()
 		$commandlist += 'test -e "/var/log/firstboot/succeeded"'
-		$commandlist += 'Write-Output $?'
+		$commandlist += 'echo $?'
 
 		Write-Output "== Firstboot process could take 10+ minutes to complete. please wait. ==" | Out-String
 
-		if (!$stopwatch) {
+		If (!$stopwatch) {
 			$stopwatch =  [system.diagnostics.stopwatch]::StartNew()}
-	  	else {$stopwatch.start()}
+	  	Else {$stopwatch.start()}
 	  
-	  	while ((ExecuteScript $commandlist $Deployment.Hostname "root" $($Deployment.VCSARootPass) $esxihandle).ScriptOutput[0] -eq "1") {
+	  	While ((ExecuteScript $commandlist $Deployment.Hostname "root" $($Deployment.VCSARootPass) $esxihandle).ScriptOutput[0] -eq "1") {
 	
 	  		Start-Sleep -s 15
 	  
@@ -2675,9 +2664,9 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Action -notmatch "null|
         If ($Deployment.JumboFrames) {
             $commandlist = $null
 		    $commandlist = @()
-			$commandlist += 'Write-Output -e "" >> /etc/systemd/network/10-eth0.network'
-			$commandlist += 'Write-Output -e "[Link]" >> /etc/systemd/network/10-eth0.network'
-			$commandlist += 'Write-Output -e "MTUBytes=9000" >> /etc/systemd/network/10-eth0.network'
+			$commandlist += 'echo -e "" >> /etc/systemd/network/10-eth0.network'
+			$commandlist += 'echo -e "[Link]" >> /etc/systemd/network/10-eth0.network'
+			$commandlist += 'echo -e "MTUBytes=9000" >> /etc/systemd/network/10-eth0.network'
 
             ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
         }
@@ -2685,10 +2674,9 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Action -notmatch "null|
 		Write-Output "`r`n The VCSA $($Deployment.Hostname) has been deployed and is available.`r`n" | Out-String
 
 		# Create certificate directory if it does not exist
-		$RootCert_Dir		 = $FolderPath + "\Certs\"
-		$Cert_Dir			 = $RootCert_Dir + $Deployment.SSODomainName
+		$Cert_Dir			 = $RootCert_Dir + "\" + $Deployment.SSODomainName
 		$DefaultRootCert_Dir = 	$Cert_Dir + "\" + $Deployment.Hostname + "\DefaultRootCert"
-		if (!(Test-Path $DefaultRootCert_Dir)) { New-Item $DefaultRootCert_Dir -Type Directory | Out-Null }
+		If (!(Test-Path $DefaultRootCert_Dir)) { New-Item $DefaultRootCert_Dir -Type Directory | Out-Null }
 
 		InstallNodeRootCert $DefaultRootCert_Dir $Deployment $esxihandle
 
@@ -2700,8 +2688,14 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Action -notmatch "null|
 }
 
 # Replace Certificates.
-foreach ($Deployment in $s_Deployments | Where-Object{$_.Certs}) {
+ForEach ($Deployment in $s_Deployments | Where-Object {$_.Certs}) {
 
+	# Wait until the vcsa is available.
+	Available $("https://" + $Deployment.Hostname)
+	
+	# Set $Cert_Dir
+	$Cert_Dir = $RootCert_Dir + "\" + $Deployment.SSODomainName
+	
 	If ($s_Certinfo) {
 		# Create esxi credentials.
         $esxi_secpasswd		= $null
@@ -2746,23 +2740,23 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Certs}) {
 		CDDir $FolderPath
 
         $SSOParent = $null
-        $SSOParent = $s_Deployments | Where-Object{$Deployment.Parent -eq $_.Hostname}
+        $SSOParent = $s_Deployments | Where-Object {$Deployment.Parent -eq $_.Hostname}
 
 		# Create the Solution User Certs - 2 for External PSC, 4 for all other deployments.
-		if ($Deployment.DeployType -eq "infrastructure" ) {
+		If ($Deployment.DeployType -eq "infrastructure" ) {
 			CreatePscSolutionCert $RootCert_Dir $Cert_Dir $InstanceCertDir $s_certinfo
 			Separatorline
             # Copy Cert files to vcsa Node and deploy them.
             TransferCerttoNode $RootCert_Dir $Cert_Dir $Deployment $esxihandle $SSOParent
 		}
-		else {CreateVCSolutionCert $RootCert_Dir $Cert_Dir $InstanceCertDir $s_certinfo
+		Else {CreateVCSolutionCert $RootCert_Dir $Cert_Dir $InstanceCertDir $s_certinfo
 			  Separatorline
               # Copy Cert files to vcsa Node and deploy them.
               TransferCerttoNode $RootCert_Dir $Cert_Dir $Deployment $esxihandle $SSOParent
 
 			  # Configure Autodeploy and replace the solution user certificates, and update the thumbprint to the new machine ssl thumbprint.
 			  # https://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=2000988
-              If (($s_Services | Where-Object{($_.vCenter.split(",") -match "all|$($Deployment.Hostname)") -and $_.Service -eq "AutoDeploy"}).Service) {
+              If (($s_Services | Where-Object {($_.vCenter.split(",") -match "all|$($Deployment.Hostname)") -and $_.Service -eq "AutoDeploy"}).Service) {
 				  $commandlist = $null
 				  $commandlist = @()
 				  # Set path for python.
@@ -2800,12 +2794,12 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Certs}) {
 				  # Stop the autodeploy service.
 				  $commandlist += "/usr/bin/service-control --stop vmware-rbd-watchdog"
 				  # Replace the thumbprint.
-				  $commandlist += "autodeploy-register -R -a $($Deployment.Hostname) -u Administrator@$($Deployment.SSODomainName) -w `'$($Deployment.SSOAdminPass)`' -s `"/etc/vmware-rbd/autodeploy-setup.xml`" -f -T $newthumbprint"
+				  $commandlist += "autodeploy-register -R -a " + $Deployment.Hostname + " -u Administrator@" + $Deployment.SSODomainName + " -w `'" + $Deployment.SSOAdminPass + "`' -s `"/etc/vmware-rbd/autodeploy-setup.xml`" -f -T $newthumbprint"
 				  # Start the autodeploy service.
 				  $commandlist += "/usr/bin/service-control --start vmware-rbd-watchdog"
 				  ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
 				}
-			  If (($s_Services | Where-Object{($_.vCenter.split(",") -match "all|$($Deployment.Hostname)") -and $_.Service -eq "AuthProxy"}).Service) {
+			  If (($s_Services | Where-Object {($_.vCenter.split(",") -match "all|$($Deployment.Hostname)") -and $_.Service -eq "AuthProxy"}).Service) {
 				  # Create Authorization Proxy Server Certificates.
 				  CreateCSR authproxy authproxy.csr authproxy.cfg authproxy.priv 6 $InstanceCertDir $s_certinfo
 				  OnlineMint authproxy authproxy.csr authproxy.crt $s_certinfo.V6Template $InstanceCertDir $s_certinfo.IssuingCA
@@ -2829,7 +2823,7 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Certs}) {
 				  $commandlist += "export VMWARE_DATA_DIR=/storage"
 				  $commandlist += "/usr/lib/vmware-vmon/vmon-cli --update vmcam --starttype AUTOMATIC"
  				  $commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart vmcam"
-				  $commandlist += "/usr/lib/vmware-vmcam/bin/camregister --unregister -a $($Deployment.hostname) -u Administrator@$($Deployment.SSODomainName) -p `'$($Deployment.SSOAdminPass)`'"
+				  $commandlist += "/usr/lib/vmware-vmcam/bin/camregister --unregister -a " + $Deployment.hostname + " -u Administrator@" + $Deployment.SSODomainName + " -p `'" + $Deployment.SSOAdminPass + "`'"
 				  $commandlist += "/usr/bin/service-control --stop vmcam"
 				  $commandlist += "mv /var/lib/vmware/vmcam/ssl/rui.crt /var/lib/vmware/vmcam/ssl/rui.crt.bak"
 				  $commandlist += "mv /var/lib/vmware/vmcam/ssl/rui.key /var/lib/vmware/vmcam/ssl/rui.key.bak"
@@ -2838,7 +2832,7 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Certs}) {
 				  $commandlist += "chmod 600 /var/lib/vmware/vmcam/ssl/rui.crt"
 				  $commandlist += "chmod 600 /var/lib/vmware/vmcam/ssl/rui.key"
 				  $commandlist += "/usr/lib/vmware-vmon/vmon-cli --restart vmcam"
-				  $commandlist += "/usr/lib/vmware-vmcam/bin/camregister --register -a $($Deployment.hostname) -u Administrator@$($Deployment.SSODomainName) -p `'$($Deployment.SSOAdminPass)`' -c /var/lib/vmware/vmcam/ssl/rui.crt -k /var/lib/vmware/vmcam/ssl/rui.key"
+				  $commandlist += "/usr/lib/vmware-vmcam/bin/camregister --register -a " + $Deployment.hostname + " -u Administrator@" + $Deployment.SSODomainName + " -p `'" + $Deployment.SSOAdminPass + "`' -c /var/lib/vmware/vmcam/ssl/rui.crt -k /var/lib/vmware/vmcam/ssl/rui.key"
 
 				  # Service update
 				  ExecuteScript $commandlist $Deployment.hostname "root" $Deployment.VCSARootPass $esxihandle
@@ -2848,18 +2842,18 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Certs}) {
 
         Separatorline
         
-        write-host "=============== Configure Certificate pair on $($Deployment.vmName) ===============" | Out-String
+        write-host "=============== Configure Certificate pair on " + $Deployment.vmName + " ===============" | Out-String
 
         ConfigureCertPairs $Cert_Dir $Deployment $esxihandle
 
 		# Write separator line to transcript.
 		Separatorline
 		
-		write-host "=============== Restarting $($Deployment.vmName) ===============" | Out-String
+		write-host "=============== Restarting " + $Deployment.vmName + " ===============" | Out-String
 		Restart-VMGuest -VM $Deployment.vmName -Server $esxihandle -Confirm:$false
 
 		# Wait until the vcsa is available.
-		Available "https://$($Deployment.Hostname)"
+		Available $("https://" + $Deployment.Hostname)
 	
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
@@ -2867,14 +2861,14 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Certs}) {
 }
 
 # Configure the vcsa.
-foreach ($Deployment in $s_Deployments | Where-Object{$_.Config}) {
+ForEach ($Deployment in $s_Deployments | Where-Object {$_.Config}) {
 
-		Write-Output "== Starting configuration of $($Deployment.vmName) ==" | Out-String
+		Write-Output "== Starting configuration of " + $Deployment.vmName + " ==" | Out-String
 
 		Separatorline
 
 		# Wait until the vcsa is available.
-		Available "https://$($Deployment.Hostname)"
+		Available $("https://" + $Deployment.Hostname)
 	
 		# Create esxi credentials.
         $esxi_secpasswd		= $null
@@ -2891,66 +2885,66 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Config}) {
 		JoinADDomain $Deployment $s_adinfo $esxihandle
 		
 		# if the vcsa is not a stand alone PSC, configure the vCenter.
-		if ($Deployment.DeployType -ne "infrastructure" ) {
+		If ($Deployment.DeployType -ne "infrastructure" ) {
 
-			Write-Output "== vCenter $($Deployment.vmName) configuration ==" | Out-String
+			Write-Output "== vCenter " + $Deployment.vmName + " configuration ==" | Out-String
 
 			Separatorline
 
-			$Datacenters	= $s_sites | Where-Object{$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"}
+			$Datacenters	= $s_sites | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"}
 			$sso_secpasswd	= ConvertTo-SecureString $($Deployment.SSOAdminPass) -AsPlainText -Force
-			$sso_creds		= New-Object System.Management.Automation.PSCredential ("Administrator@$($Deployment.SSODomainName)", $sso_secpasswd)
+			$sso_creds		= New-Object System.Management.Automation.PSCredential ($("Administrator@" + $Deployment.SSODomainName), $sso_secpasswd)
 
 			# Connect to the vCenter
 			$vchandle = Connect-viserver $Deployment.Hostname -Credential $sso_creds
 			
 			# Create Datacenter
 			If ($Datacenters) {
-				$Datacenters.Datacenter.ToUpper() | ForEach-Object{New-Datacenter -Location Datacenters -Name $_}
+				$Datacenters.Datacenter.ToUpper() | ForEach-Object {New-Datacenter -Location Datacenters -Name $_}
 			}
 				
 			# Create Folders, Roles, and Permissions.
-			$folders = $s_folders | Where-Object{$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"}
-			if ($folders) {
+			$folders = $s_folders | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"}
+			If ($folders) {
 				Write-Output "Folders:" $folders
 				CreateFolders $folders $vchandle
 			}
 
 			# if this is the first vCenter, create custom Roles.
 			$existingroles = Get-VIRole -Server $vchandle
-			$roles = $s_roles | Where-Object{$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"} | Where-Object{$ExistingRoles -notcontains $_.Name}
-            if ($roles) {
+			$roles = $s_roles | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"} | Where-Object {$ExistingRoles -notcontains $_.Name}
+            If ($roles) {
 				Write-Output  "Roles:" $roles
 				CreateRoles $roles $vchandle
 			}	
 
 			# Create OS Customizations for the vCenter.
-			$s_Customizations | Where-Object{$_.Server -eq $Deployment.Hostname} | ForEach-Object{OSString $_}
+			$s_Customizations | Where-Object {$_.Server -eq $Deployment.Hostname} | ForEach-Object {OSString $_}
 
 			# Create Clusters
-			foreach ($Datacenter in $Datacenters) {
+			ForEach ($Datacenter in $Datacenters) {
 				# Define IP Octets
 				$oct1 = $Datacenter.oct1
 				$oct2 = $Datacenter.oct2
 				$oct3 = $Datacenter.oct3
 			
 				# Create the cluster if it is defined for all vCenters or the current vCenter and the current Datacenter.
-                ($s_clusters | Where-Object{($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)")`
+                ($s_clusters | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)")`
                     -and ($_.Datacenter.split(",") -match "all|$($Datacenter.Datacenter)")}).Clustername |`
-					ForEach-Object {if ($_) {New-Cluster -Location (Get-Datacenter -Server $vchandle -Name $Datacenter.Datacenter) -Name $_}}
+					ForEach-Object {If ($_) {New-Cluster -Location (Get-Datacenter -Server $vchandle -Name $Datacenter.Datacenter) -Name $_}}
 						
 				# Create New vDSwitch
-				# Select-Object vdswitches if definded for all vCenters or the current vCentere and the current Datacenter.
-				$vdswitches = $s_vdswitches | Where-Object{($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)") -and ($_.Datacenter.Split(",") -match "all|$($Datacenter.Datacenter)")}
+				# Select vdswitches if definded for all vCenters or the current vCentere and the current Datacenter.
+				$vdswitches = $s_vdswitches | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)") -and ($_.Datacenter.Split(",") -match "all|$($Datacenter.Datacenter)")}
 
-				foreach ($vdswitch in $vdswitches) {		
+				ForEach ($vdswitch in $vdswitches) {		
 					$SwitchDatacenter	= Get-Inventory -Name $Datacenter.Datacenter
 
-					if ($vdswitch.SwitchNumber.ToString().indexof(".") -eq -1) {
+					If ($vdswitch.SwitchNumber.ToString().indexof(".") -eq -1) {
 						$SwitchNumber = $vdswitch.SwitchNumber.ToString() + ".0"}
-					else { $SwitchNumber = $vdswitch.SwitchNumber.ToString()}
+					Else { $SwitchNumber = $vdswitch.SwitchNumber.ToString()}
 				
-					$SwitchName 		= $SwitchNumber + " " + $vdswitch.vDSwitchName -replace "XXX", $Datacenter.Datacenter
+					$SwitchName = $SwitchNumber + " " + $vdswitch.vDSwitchName -replace "XXX", $Datacenter.Datacenter
 				
 					# Create new vdswitch.
 					New-VDSwitch -Server $vchandle -Name $SwitchName -Location $SwitchDatacenter -Mtu $mtu -NumUplinkPorts 2 -Version $vdswitch.Version
@@ -2958,12 +2952,12 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Config}) {
 					# Enable NIOC
 					(get-vdswitch -Server $vchandle -Name $SwitchName | get-view).EnableNetworkResourceManagement($true)
 
-					$vlanadd = $s_vlans | Where-Object{$_.Number.StartsWith($SwitchName.split(" ")[0])}
-					$vlanadd = $vlanadd | Where-Object{$_.Datacenter.split(",") -match "all|$($Datacenter.Datacenter)"}
-					$vlanadd = $vlanadd | Where-Object{$_.vCenter.split(",") -match "all|$($Deployment.Hostname)"}
+					$vlanadd = $s_vlans | Where-Object {$_.Number.StartsWith($SwitchName.split(" ")[0])}
+					$vlanadd = $vlanadd | Where-Object {$_.Datacenter.split(",") -match "all|$($Datacenter.Datacenter)"}
+					$vlanadd = $vlanadd | Where-Object {$_.vCenter.split(",") -match "all|$($Deployment.Hostname)"}
 					
 					# Create Portgroups
-					foreach ($vlan in $vlanadd) {
+					ForEach ($vlan in $vlanadd) {
 					
 						$PortGroup =	$vlan.Number.padright(8," ") +`
 										$vlan.Vlan.padright(8," ") + "- " +`
@@ -2974,54 +2968,54 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Config}) {
 						$PortGroup = $PortGroup -replace "oct2", $oct2
 						$PortGroup = $PortGroup -replace "oct2", $oct3
 						
-                        if ($PortGroup.split("-")[0] -like "*trunk*") {
+                        If ($PortGroup.split("-")[0] -like "*trunk*") {
                             New-VDPortgroup -Server $vchandle -VDSwitch $SwitchName -Name $PortGroup -Notes $PortGroup.split("-")[0] -VlanTrunkRange $vlan.network
                         }
                         Else {
 						    New-VDPortgroup -Server $vchandle -VDSwitch $SwitchName -Name $PortGroup -Notes $PortGroup.split("-")[0] -VlanId $vlan.vlan.split(" ")[1]
                         }
 						# Set Portgroup Team policies
-						if ($PortGroup -like "*vmotion-1*") {
-							Get-vdportgroup -Server $vchandle | Where-Object{$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink1" -StandbyUplinkPort "dvUplink2"
+						If ($PortGroup -like "*vmotion-1*") {
+							Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink1" -StandbyUplinkPort "dvUplink2"
 						}
-						if ($PortGroup -like "*vmotion-2*") {
-							Get-vdportgroup -Server $vchandle | Where-Object{$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink2" -StandbyUplinkPort "dvUplink1"
+						If ($PortGroup -like "*vmotion-2*") {
+							Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink2" -StandbyUplinkPort "dvUplink1"
 						}
-						if ($PortGroup -notlike "*vmotion*") {
-							Get-vdportgroup -Server $vchandle | Where-Object{$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceLoadBased -EnableFailback $false
+						If ($PortGroup -notlike "*vmotion*") {
+							Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceLoadBased -EnableFailback $false
 						}
-						else
+						Else
 						{
 						#Set Traffic Shaping on vmotion portgroups for egress traffic
-						Get-VDPortgroup -Server $vchandle -VDSwitch $SwitchName | Where-Object{$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDTrafficShapingPolicy -Server $vchandle -Direction Out| Set-VDTrafficShapingPolicy -Enabled:$true -AverageBandwidth 8589934592 -PeakBandwidth 8589934592 -BurstSize 1
+						Get-VDPortgroup -Server $vchandle -VDSwitch $SwitchName | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDTrafficShapingPolicy -Server $vchandle -Direction Out| Set-VDTrafficShapingPolicy -Enabled:$true -AverageBandwidth 8589934592 -PeakBandwidth 8589934592 -BurstSize 1
 						}
 					}
 				}
 			}
 
 			# Add Licenses to vCenter.
-			if ($s_Licenses | Where-Object{$_.vCenter -eq $Deployment.Hostname}) { ConfigureLicensing $($s_Licenses | Where-Object{$_.vCenter -eq $Deployment.Hostname}) $vchandle}
+			If ($s_Licenses | Where-Object {$_.vCenter -eq $Deployment.Hostname}) { ConfigureLicensing $($s_Licenses | Where-Object {$_.vCenter -eq $Deployment.Hostname}) $vchandle}
 
-			# Select-Object permissions for all vCenters or the current vCenter.
+			# Select permissions for all vCenters or the current vCenter.
 			# Create the permissions.
-			CreatePermissions $($s_Permissions | Where-Object{$_.vCenter.Split(",") -match "all|$($Deployment.Hostname)"}) $vchandle
+			CreatePermissions $($s_Permissions | Where-Object {$_.vCenter.Split(",") -match "all|$($Deployment.Hostname)"}) $vchandle
 			
 			$InstanceCertDir = $Cert_Dir + "\" + $Deployment.Hostname
 			
 			# Configure Additional Services (Network Dump, Autodeploy, TFTP)
-			foreach ($serv in $s_Services) {
+			ForEach ($serv in $s_Services) {
 				Write-Output $serv | Out-String
-				if ($serv.vCenter.split(",") -match "all|$($Deployment.Hostname)") {
-					switch ($serv.Service) {
-						AuthProxy	{ ConfigureAuthProxy $Deployment $esxihandle $s_adinfo; break}
+				If ($serv.vCenter.split(",") -match "all|$($Deployment.Hostname)") {
+					Switch ($serv.Service) {
+						AuthProxy	{ ConfigureAuthProxy $Deployment $esxihandle $s_adinfo; Break}
 						AutoDeploy	{ $vchandle | get-advancedsetting -Name vpxd.certmgmt.certs.minutesBefore | Set-AdvancedSetting -Value 1 -Confirm:$false
 									  ConfigureAutoDeploy $Deployment $esxihandle $vchandle.version
-									  If ($s_arules | Where-Object{$_.vCenter -eq $Deployment.Hostname}) { ConfigureAutoDeployRules $($s_arules | Where-Object{$_.vCenter -eq $Deployment.Hostname}) $FolderPath $vchandle}
-									  ; break
+									  If ($s_arules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) { ConfigureAutoDeployRules $($s_arules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) $FolderPath $vchandle}
+									  ; Break
 						}
-						Netdumpster	{ ConfigureNetdumpster $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle $vchandle.version; break}
-						TFTP		{ ConfigureTFTP $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle; break}
-						default {break}
+						Netdumpster	{ ConfigureNetdumpster $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle $vchandle.version; Break}
+						TFTP		{ ConfigureTFTP $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle; Break}
+						default {Break}
 					}
 				}
 			}
@@ -3029,15 +3023,15 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Config}) {
             # Configure plugins
             $commandlist = $null
             $commandlist = @()
-            $Plugins = $s_Plugins | Where-Object{$_.config -and $_.vCenter.split(",") -match "all|$($Deployment.Hostname)"}
+            $Plugins = $s_Plugins | Where-Object {$_.config -and $_.vCenter.split(",") -match "all|$($Deployment.Hostname)"}
 
 			Separatorline
 			Write-Output $Plugins | Out-String
 			Separatorline
 			
-            for ($i=0;$i -lt $Plugins.Count;$i++){
-                if ($Plugins[$i].SourceDir) {
-                    if ($commandlist) {
+            For ($i=0;$i -lt $Plugins.Count;$i++){
+                If ($Plugins[$i].SourceDir) {
+                    If ($commandlist) {
                         ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
                         $commandlist = $null
                         $commandlist = @()
@@ -3053,10 +3047,10 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Config}) {
         	        CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle $true
                 }
 
-                if ($Plugins[$i].Command) {$commandlist += $Plugins[$i].Command}
+                If ($Plugins[$i].Command) {$commandlist += $Plugins[$i].Command}
             }
 
-            if ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
+            If ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
 			Separatorline
 
@@ -3067,7 +3061,7 @@ foreach ($Deployment in $s_Deployments | Where-Object{$_.Config}) {
 		}
 
 		# Run the vami_set_hostname to set the correct FQDN in the /etc/hosts file on a vCenter with External PSC only.
-		if ($Deployment.DeployType -like "*management*") {
+		If ($Deployment.DeployType -like "*management*") {
 			$commandlist = $null
 			$commandlist = @()
 			$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
@@ -3090,9 +3084,9 @@ Write-Output "<=============== Deployment Complete ===============>" | Out-Strin
 # Stop the transcript.
 Stop-Transcript
 
-if ($s_summary.TranscriptScrub) {
+If ($s_summary.TranscriptScrub) {
 	$Transcript = Get-Content -path $OutputPath
-	foreach ($pass in $scrub) {
+	ForEach ($pass in $scrub) {
 		$Transcript = $Transcript.replace($Pass,'<-- Password Redacted -->')}
 	$Transcript | Set-Content -path $OutputPath -force -confirm:$false
 }
