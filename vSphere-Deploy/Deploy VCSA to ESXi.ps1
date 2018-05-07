@@ -379,6 +379,8 @@ function ConfigureIdentity67 ($Deployment, $ADInfo, $vihandle) {
 
 	# Add AD domain as Native Identity Source.
 	Write-Output "============ Adding AD Domain as Identity Source for SSO on vCenter Instance 6.7 ============" | Out-String
+
+	Available $("https://" + $Deployment.Hostname + "/ui/")
 	
 	Start-Sleep -Seconds 10
 
@@ -997,11 +999,15 @@ function InstallNodeRootCert ($Certpath, $Deployment, $vihandle) {
 	$commandlist 	= $null
 	$commandlist 	= @()
 	$commandlist    += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert get --id $certid --outcert /root/vcrootcert.crt --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
-	$commandlist    += "cat /root/vcrootcert.crt"
+	
+	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
-	$vcrootcert 	= $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.substring(35,1500)
+	$filelocations = $null
+	$filelocations = @()
+	$filelocations += "/root/vcrootcert.crt"
+	$filelocations += $RootCertPath
 
-	$vcrootcert | Set-Content -Path $RootCertPath
+	CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle $false
 
 	Import-Certificate -FilePath $RootCertPath -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
 
@@ -1025,6 +1031,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 			$commandlist += 'export VMWARE_CFG_DIR=/etc/vmware'
 			$commandlist += '/usr/bin/service-control --start --all --ignore'
 			$commandlist += "/opt/likewise/bin/domainjoin-cli join " + $ADInfo.ADDomain + " " + $ADInfo.ADJoinUser + " `'" + $ADInfo.ADJoinPass + "`'"
+			$commandlist += "/opt/likewise/bin/domainjoin-cli query"
 	
 			# Excute the commands in $commandlist on the vcsa.
 			ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $vihandle
@@ -1553,7 +1560,7 @@ function Use-Openssl ($OpenSSLArgs) {
 	Write-Host "exit code: " + $o.ExitCode
 }
 
-function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $VCSAParent) {
+function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $DeploymentParent) {
 	# http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vsphere.security.doc/GUID-BD70615E-BCAA-4906-8E13-67D0DBF715E4.html
 	# Copy SSL certificates to a VCSA and replace the existing ones.
 
@@ -1643,11 +1650,11 @@ function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $
 		If (Test-Path -Path "$RootCert_Dir\interm264.cer") {	
 			$commandlist += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $SslPath/interm264.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"}}
 
-	<# Add certIficate chain to TRUSTED_ROOTS of the PSC for ESXi Cert Replacement.
-	If ($pscdeployments -contains $Deployment.DeployType -and (Test-Path -Path "$RootCert_Dir\interm64.cer")) {
+	# Add certIficate chain to TRUSTED_ROOTS of the PSC for ESXi Cert Replacement.
+	# If ($pscdeployments -contains $Deployment.DeployType -and (Test-Path -Path "$RootCert_Dir\interm64.cer")) {
+	<#If ($Deployment.DeployType -eq "Infrastructure" -and (Test-Path -Path "$RootCert_Dir\interm64.cer")) {
 		$commandlist += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry create --store TRUSTED_ROOTS --alias chain.cer --cert $SslPath/chain.cer"
-	}
-#>
+	}#>
 
 	# Retrive the Old Machine Cert and save its thumbprint to a file.
 	$commandlist += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store MACHINE_SSL_CERT --alias __MACHINE_CERT --output $SslPath/old_machine.crt"
@@ -1746,7 +1753,7 @@ function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $
 	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
     # Refresh Update Manager CertIficates.
-	If ($Deployment.DeployType -ne "Infrastructure") {
+	If ($viversion -match "6.5." -and $Deployment.DeployType -ne "Infrastructure") {
     	$commandlist = $null
 		$commandlist = @()
 		# Set path for python.
@@ -1758,6 +1765,15 @@ function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $
     	$commandlist += "/usr/lib/vmware-updatemgr/bin/updatemgr-util refresh-certs"
     	$commandlist += "/usr/lib/vmware-updatemgr/bin/updatemgr-util register-vc"		
 
+
+    	# Service update
+		ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
+	}
+
+    # Refresh Update Manager CertIficates.
+	If ($viversion -match "6.7." -and $Deployment.DeployType -ne "Infrastructure") {
+
+		$script = "echo `'$Deployment.VCSARootPass`' | appliancesh com.vmware.updatemgr-util register-vc"
 
     	# Service update
 		ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
