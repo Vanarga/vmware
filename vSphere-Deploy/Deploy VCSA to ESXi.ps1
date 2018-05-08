@@ -554,6 +554,9 @@ function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 	# Active Directory variables
 	$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
 
+	if ($Deployment.Parent -eq "null") {$ldapserver = "localhost"}
+		else {$ldapserver = $Deployment.Parent}
+
 	$commandlist = $null
 	$commandlist = @()
 
@@ -563,7 +566,7 @@ function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_cma.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_cma.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_cma.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_cma.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_cma.ldif -h $ldapserver -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to License Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=LicenseService.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_la.ldif"
@@ -571,7 +574,7 @@ function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_la.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_la.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_la.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_la.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_la.ldif -h $ldapserver -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=Administrators,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_adm.ldif"
@@ -579,7 +582,7 @@ function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_adm.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_adm.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_adm.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_adm.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_adm.ldif -h $ldapserver -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to Certificate Authority Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=CAAdmins,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_caa.ldif"
@@ -587,7 +590,7 @@ function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_caa.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_caa.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_caa.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_caa.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_caa.ldif -h $ldapserver -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to Users SSO Group.
 	$commandlist += "echo -e `"dn: cn=Users,cn=Builtin,dc=$sub_domain,dc=$domain_ext`" >> groupadd_usr.ldif"
@@ -595,7 +598,7 @@ function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_usr.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_usr.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_usr.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_usr.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_usr.ldif -h $ldapserver -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Add AD vCenter Admins to System Configuration Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=SystemConfiguration.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_sca.ldif"
@@ -603,7 +606,7 @@ function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 	$commandlist += "echo -e `"add: member`" >> groupadd_sca.ldif"
 	$commandlist += "echo -e `"member: externalObjectId=$AD_admins_group_sid`" >> groupadd_sca.ldif"
 	$commandlist += "echo -e `"-`" >> groupadd_sca.ldif"
-	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h localhost -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
+	$commandlist += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h $ldapserver -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'" + $Deployment.VCSARootPass + "`'"
 			
 	# Excute the commands in $commandlist on the vcsa.
 	ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
@@ -860,7 +863,7 @@ function Deploy ($ParameterList, $OvfToolPath, $LogPath) {
 			  $ArgumentList += "--prop:guestinfo.cis.vmdir.first-instance=False"
 			  $ArgumentList += "--prop:guestinfo.cis.vmdir.replication-partner-hostname=" + $ParameterList.Parent
 		}
-		$ArgumentList += "--prop:guestinfo.cis.appliance.net.addr.family=" + $ParameterListNetFamily
+		$ArgumentList += "--prop:guestinfo.cis.appliance.net.addr.family=" + $ParameterList.NetFamily
 		$ArgumentList += "--prop:guestinfo.cis.appliance.net.addr=" + $ParameterList.IP
 		$ArgumentList += "--prop:guestinfo.cis.appliance.net.pnid=" + $ParameterList.Hostname
 		$ArgumentList += "--prop:guestinfo.cis.appliance.net.prefix=" + $ParameterList.NetPrefix
