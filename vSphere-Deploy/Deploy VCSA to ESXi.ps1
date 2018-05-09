@@ -1073,7 +1073,13 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 
 			$DefaultIdentitySource = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput
 
-			$viversion = $(ExecuteScript "vpxd -v" $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput
+			$script = "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+		
+			Write-Output $script | Out-String
+		
+			$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("`n")[5]
+		
+			Write-Output $viversion
 
 			If ($viversion -match "6.7." -and $Deployment.DeployType -ne "infrastructure" -and $DefaultIdentitySource -ne $ADInfo.ADDomain) {	
 				# Write separator line to transcript.
@@ -1576,13 +1582,11 @@ function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $
 	
 	ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
-	$commandlist = $null
-	$commandlist = @()
-	$commandlist += "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+	$script += "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
 
-	Write-Output $commandlist | Out-String
+	Write-Output $script | Out-String
 
-	$viversion = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("`n")[5]
+	$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("`n")[5]
 
 	Write-Output $viversion
 
@@ -2635,7 +2639,7 @@ New-Alias -Name OpenSSL $openssl
 ForEach ($Deployment in $s_Deployments | Where-Object {$_.Action -notmatch "null|false"}) {
 	# Skip deployment if set to null.
 
-		Write-Host "`r`n Deploying $($Deployment.Hostname) now.`r`n" -foregroundcolor cyan
+		Write-Output "=============== Starting deployment of $($Deployment.vmName) ===============" | Out-String
 	
 		# Deploy the vcsa
 		Deploy $Deployment $OvfToolPath $FolderPath
@@ -2710,6 +2714,8 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Action -notmatch "null
 
 # Replace Certificates.
 ForEach ($Deployment in $s_Deployments | Where-Object {$_.Certs}) {
+
+	Write-Output "=============== Starting replacement of Certs on $($Deployment.vmName) ===============" | Out-String
 
 	# Wait until the vcsa is available.
 	Available $("https://" + $Deployment.Hostname)
@@ -2886,7 +2892,7 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Certs}) {
 # Configure the vcsa.
 ForEach ($Deployment in $s_Deployments | Where-Object {$_.Config}) {
 
-		Write-Output "== Starting configuration of $($Deployment.vmName) ==" | Out-String
+		Write-Output "=============== Starting configuration of $($Deployment.vmName) ===============" | Out-String
 
 		Separatorline
 
