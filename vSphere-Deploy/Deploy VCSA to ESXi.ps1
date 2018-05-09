@@ -2703,7 +2703,9 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Action -notmatch "null
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
 
 		# Write separator line to transcript.
-		Separatorline	
+		Separatorline
+
+		write-host "=============== End of Deployment for $($Deployment.vmName) ===============" | Out-String
 }
 
 # Replace Certificates.
@@ -2873,6 +2875,8 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Certs}) {
 
 		# Wait until the vcsa is available.
 		Available $("https://" + $Deployment.Hostname)
+
+		write-host "=============== End of Certificate Replacement for $($Deployment.vmName) ===============" | Out-String
 	
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
@@ -3094,6 +3098,10 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Config}) {
 
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
+
+		Separatorline
+
+		write-host "=============== End of Configuration for $($Deployment.vmName) ===============" | Out-String
 }
 
 Separatorline
