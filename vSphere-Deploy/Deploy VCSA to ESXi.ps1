@@ -501,14 +501,15 @@ function ConfigureIdentity65 ($Deployment) {
 	Write-Output $ie | Out-String
 
 	Separatorline
-            
+			
     # Fill in the username and password fields with the SSO Administrator credentials.
-	$ie.document.getElementById("username").value = 'administrator@' + $Deployment.SSODomainName
-	$ie.document.getElementById("password").value = $Deployment.SSOAdminPass
+	$ie.document.documentElement.getElementsByClassName('margeTextInput')[0].value = 'administrator@' + $Deployment.SSODomainName
+	$ie.document.documentElement.getElementsByClassName('margeTextInput')[1].value = $Deployment.SSOAdminPass
 				
     # Enable the submit button and click it.
-	$ie.document.getElementById("submit").Disabled = $false
-	$ie.document.getElementById("submit").click()
+	$ie.document.documentElement.getElementsByClassName('button blue')[0].Disabled = $false
+	$ie.document.documentElement.getElementsByClassName('button blue')[0].click()
+
 	start-sleep 10
 				
     # Navigate to the add Identity Sources page for the SSO.
@@ -525,7 +526,7 @@ function ConfigureIdentity65 ($Deployment) {
 	start-sleep 1
 
     # Click the Active Directory Type Radio button.
-	$ie.document.getElementById("adType").click()
+	$ie.document.documentElement.getElementsByClassName('ng-pristine ng-untouched ng-valid')[0].click()
 
 	start-sleep 1
 			
