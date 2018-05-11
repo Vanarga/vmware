@@ -221,7 +221,8 @@ function ConfigureAutoDeploy ($Deployment, $vihandle, $vcversion) {
 		$commandlist += "export VMWARE_LOG_DIR=/var/log"
 		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
 		$commandlist += "export VMWARE_DATA_DIR=/storage"
-		$commandlist += "/usr/bin/autodeploy-register -R -a " + $Deployment.IP + " -u root -w `'" + $Deployment.VCSARootPass + "`' -p 80"
+		$commandlist += "/usr/lib/vmware-vmon/vmon-cli --stop rbd"
+		$commandlist += "/usr/bin/autodeploy-register -R -a " + $Deployment.IP + " -u Administrator@" + $Deployment.SSODomainName + " -w `'" + $Deployment.SSOAdminPass + "`' -p 80"
 
 		ExecuteScript $commandlist $Deployment.hostname "root" $Deployment.VCSARootPass $vihandle}
 
@@ -375,7 +376,7 @@ function ConfigureCertPairs ($Cert_Dir, $Deployment, $vihandle) {
 }
 
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
-function ConfigureIdentity67 ($Deployment, $ADInfo, $vihandle) {
+function ConfigureIdentity67 ($Deployment) {
 
 	# Add AD domain as Native Identity Source.
 	Write-Output "============ Adding AD Domain as Identity Source for SSO on vCenter Instance 6.7 ============" | Out-String
@@ -471,7 +472,7 @@ function ConfigureIdentity67 ($Deployment, $ADInfo, $vihandle) {
 
 
 # Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
-function ConfigureIdentity65 ($Deployment, $ADInfo, $vihandle) {
+function ConfigureIdentity65 ($Deployment) {
 
 	# Add AD domain as Native Identity Source.
 	Write-Output "============ Adding AD Domain as Identity Source for SSO on PSC Instance 6.5 ============" | Out-String
@@ -481,25 +482,23 @@ function ConfigureIdentity65 ($Deployment, $ADInfo, $vihandle) {
     # Get list of existing Internet Explorer instances.
 	$instances = Get-Process -Name iexplore -erroraction silentlycontinue
 					
+	# Create new Internet Explorer instance.
 	$ie = New-Object -com InternetExplorer.Application
 
+	# Don't make the Internet Explorer instance visible.
 	$ie.visible=$false
 
+	# Navigate to https://<fqdn of host>/psc/
 	$ie.navigate($("https://" + $Deployment.Hostname + "/psc/"))
 
+	# Wait while page finishes loading.
 	while($ie.ReadyState -ne 4) {start-sleep -m 100}
-
 	while($ie.document.ReadyState -ne "complete") {start-sleep -m 100}
 			
 	Separatorline
 
 	Write-Output "ie" | Out-String
 	Write-Output $ie | Out-String
-
-	Separatorline
-
-	Write-Output '$ie.document.getElementById("username")' | Out-String
-	Write-Output $ie.document.getElementById("username") | Out-string
 
 	Separatorline
             
@@ -517,12 +516,18 @@ function ConfigureIdentity65 ($Deployment, $ADInfo, $vihandle) {
 
 	Write-Output $ie | Out-String
 
+	start-sleep 1
+
 	# Select the Add Identity Source button and click it.
 	$ca = $ie.document.documentElement.getElementsByClassName('vui-action-label ng-binding ng-scope') | Select-Object -first 1
 	$ca.click()
 				
+	start-sleep 1
+
     # Click the Active Directory Type Radio button.
 	$ie.document.getElementById("adType").click()
+
+	start-sleep 1
 			
     # Click OK.
 	$ca = $ie.document.documentElement.getElementsByClassName('ng-binding') | Where-Object {$_.innerHTML -eq "OK"}
@@ -539,9 +544,9 @@ function ConfigureIdentity65 ($Deployment, $ADInfo, $vihandle) {
 	$ie = $null
 			
 	# Get a list of the new Internet Explorer Instances and close them, leaving the old instances running.
-	$newinstances = Get-Process -Name iexplore
+	$newinstances = Get-Process -Name iexplore -ErrorAction SilentlyContinue
 	$newinstances | Where-Object {$instances.id -notcontains $_.id} | stop-process
-			
+
 	Write-Output "============ Completed adding AD Domain as Identity Sourcefor SSO on PSC ============" | Out-String
 			
 }
@@ -554,11 +559,27 @@ function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 	# Active Directory variables
 	$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
 
+	$script += "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+
+	$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("`n")[5]
+		
+	Write-Output $viversion
+
 	if ($Deployment.Parent -eq "null") {$ldapserver = $Deployment.Hostname}
 		else {$ldapserver = $Deployment.Parent}
 
 	$commandlist = $null
 	$commandlist = @()
+	
+	# Set Default SSO Identity Source Domain
+	If ($viversion -match "6.5.") {	
+		$commandlist += "echo -e `"dn: cn=$($Deployment.SSODomainName),cn=Tenants,cn=IdentityManager,cn=Services,dc=$sub_domain,dc=$domain_ext`" >> defaultdomain.ldif"
+		$commandlist += "echo -e `"changetype: modify`" >> defaultdomain.ldif"
+		$commandlist += "echo -e `"replace: vmwSTSDefaultIdentityProvider`" >> defaultdomain.ldif"
+		$commandlist += "echo -e `"vmwSTSDefaultIdentityProvider: $($ADInfo.ADDomain)`" >> defaultdomain.ldif"
+		$commandlist += "echo -e `"-`" >> defaultdomain.ldif"
+		$commandlist += "/opt/likewise/bin/ldapmodify -f /root/defaultdomain.ldif -h $ldapserver -D `"cn=Administrator,cn=Users,dc=$sub_domain,dc=$domain_ext`" -w `'$($Deployment.VCSARootPass)`'"
+	}
 
 	# Add AD vCenter Admins to Component Administrators SSO Group.
 	$commandlist += "echo -e `"dn: cn=ComponentManager.Administrators,dc=$sub_domain,dc=$domain_ext`" >> groupadd_cma.ldif"
@@ -1085,7 +1106,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 				# Write separator line to transcript.
 				Separatorline
 
-				ConfigureIdentity67 $Deployment $ADInfo $vihandle
+				ConfigureIdentity67 $Deployment
 
 				Separatorline
 
@@ -1094,7 +1115,7 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 			ElseIf ($viversion -match "6.5." -and $pscdeployments -contains $Deployment.DeployType) {
 				Separatorline
 
-				ConfigureIdentity65 $Deployment $ADInfo $vihandle
+				ConfigureIdentity65 $Deployment
 
 				Separatorline
 
