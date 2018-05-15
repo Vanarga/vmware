@@ -554,15 +554,20 @@ function ConfigureIdentity65 ($Deployment) {
 
 function ConfigureSSOGroups ($Deployment, $ADInfo, $vihandle) {
 
+	Write-Output "============ Add AD Groups to SSO Admin Groups ============" | Out-String
+
 	$sub_domain		= $Deployment.SSODomainName.split(".")[0]
 	$domain_ext		= $Deployment.SSODomainName.split(".")[1]
 
 	# Active Directory variables
 	$AD_admins_group_sid	= (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
 
-	$script += "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+	$versionregex = '\b\d{1}\.\d{1}\.\d{1,3}\.\d{1,5}\b'
+	$script 	  = "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
 
-	$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("`n")[5]
+	Write-Output $script | Out-String
+
+	$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("") | select-string -pattern $versionregex
 		
 	Write-Output $viversion
 
@@ -1095,11 +1100,12 @@ function JoinADDomain ($Deployment, $ADInfo, $vihandle) {
 
 			$DefaultIdentitySource = $(ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput
 
-			$script = "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+			$versionregex = '\b\d{1}\.\d{1}\.\d{1,3}\.\d{1,5}\b'
+			$script 	  = "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
 		
 			Write-Output $script | Out-String
-		
-			$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("`n")[5]
+
+			$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("") | select-string -pattern $versionregex
 		
 			Write-Output $viversion
 
@@ -1604,11 +1610,12 @@ function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $
 	
 	ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle
 
-	$script += "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+	$versionregex = '\b\d{1}\.\d{1}\.\d{1,3}\.\d{1,5}\b'
+	$script 	  = "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
 
 	Write-Output $script | Out-String
 
-	$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("`n")[5]
+	$viversion = $(ExecuteScript $script $Deployment.Hostname "root" $Deployment.VCSARootPass $vihandle).Scriptoutput.Split("") | select-string -pattern $versionregex
 
 	Write-Output $viversion
 
@@ -1667,8 +1674,10 @@ function TransferCertToNode ($RootCert_Dir, $Cert_Dir, $Deployment, $vihandle, $
 	$commandlist += "service-control --stop --all"
 	# Start vmafdd,vmdird, and vmca services.
 	$commandlist += "service-control --start vmafdd"
-	$commandlist += "service-control --start vmdird"
-	$commandlist += "service-control --start vmca"
+	If ($pscdeployments -contains $Deployment.DeployType) {
+		$commandlist += "service-control --start vmdird"
+		$commandlist += "service-control --start vmca"
+	}
 
 	# Replace the root cert.
 	If ($pscdeployments -contains $Deployment.DeployType) {
