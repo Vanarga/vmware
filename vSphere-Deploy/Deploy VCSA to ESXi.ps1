@@ -431,7 +431,7 @@ function ConfigureIdentity67 ($Deployment) {
 		
 	start-sleep 1
 		
-	($ie.document.documentElement.getElementsByTagName('button') | Where-Object {$_.id -eq 'clr-tab-link-3'}).click()
+	($ie.document.documentElement.getElementsByClassName('btn btn-link nav-link nav-item') | Where-Object {$_.id -eq 'clr-tab-link-3'}).click()
 		
 	start-sleep 1
 			
