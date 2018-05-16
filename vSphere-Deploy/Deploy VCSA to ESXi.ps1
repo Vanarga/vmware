@@ -861,7 +861,7 @@ function Deploy ($ParameterList, $OvfToolPath, $LogPath) {
 	$esxiThumbPrint = $esxiCert.GetCertHashString() -replace '(..(?!$))','$1:'
 	
 	If ($parameterlist.Action -ne "--version") {
-		$ArgumentList += "--X:logFile=$LogPath\Logs\ofvtool_" + $ParameterList.vmName + "_$(get-date -format mm-dd-yyyy-HH_mm).log"
+		$ArgumentList += "--X:logFile=$LogPath\ofvtool_" + $ParameterList.vmName + "-$(get-date -format mm-dd-yyyy_HH-mm).log"
 		$ArgumentList += "--X:logLevel=verbose"
 		$ArgumentList += "--acceptAllEulas"
 		$ArgumentList += "--skipManifestCheck"
@@ -1959,8 +1959,9 @@ Write-Output $FolderPath | Out-String
 $ErrorActionPreference = "SilentlyContinue"
 Stop-Transcript | Out-Null
 $ErrorActionPreference = "Continue"
-If (!(Test-Path "$FolderPath\Logs")) {New-Item "$FolderPath\Logs" -Type Directory}
-$OutputPath = "$FolderPath\Logs\Deploy_" + $(Get-date -format "dd-MM-yyyy_HH-mm") + ".log"
+$LogPath = "$FolderPath\Logs\" + $(Get-date -format "MM-dd-yyyy_HH-mm")
+If (!(Test-Path $LogPath)) {New-Item $LogPath -Type Directory}
+$OutputPath = "$LogPath\InitialState_" + $(Get-date -format "MM-dd-yyyy_HH-mm") + ".log"
 Start-Transcript -path $OutputPath -append
 
 Separatorline
@@ -2666,85 +2667,95 @@ $RootCert_Dir		= $FolderPath + "\Certs"
 $Script:CertsWaitingForApproval = $false
 New-Alias -Name OpenSSL $openssl
 
+Stop-Transcript
+
 # Deploy the VCSA servers.
 ForEach ($Deployment in $s_Deployments | Where-Object {$_.Action -notmatch "null|false"}) {
 	# Skip deployment if set to null.
 
-		Write-Output "=============== Starting deployment of $($Deployment.vmName) ===============" | Out-String
-	
-		# Deploy the vcsa
-		Deploy $Deployment $OvfToolPath $FolderPath
+	$OutputPath = "$LogPath\Deploy-" + $Deployment.Hostname + "-" + $(Get-date -format "MM-dd-yyyy_HH-mm") + ".log"
+	Start-Transcript -path $OutputPath -append
 
-		# Write separator line to transcript.
-		Separatorline
+	Write-Output "=============== Starting deployment of $($Deployment.vmName) ===============" | Out-String
 	
-		# Create esxi credentials.
-		$esxi_secpasswd		= $null
-		$esxi_creds			= $null
-		$esxi_secpasswd		= ConvertTo-SecureString $Deployment.esxiRootPass -AsPlainText -Force
-		$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
+	# Deploy the vcsa
+	Deploy $Deployment $OvfToolPath $LogPath
+
+	# Write separator line to transcript.
+	Separatorline
 	
-		# Connect to esxi host of the deployed vcsa.
-		$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
+	# Create esxi credentials.
+	$esxi_secpasswd		= $null
+	$esxi_creds			= $null
+	$esxi_secpasswd		= ConvertTo-SecureString $Deployment.esxiRootPass -AsPlainText -Force
+	$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
+	
+	# Connect to esxi host of the deployed vcsa.
+	$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
+	
+	Separatorline
+
+	$commandlist = $null
+	$commandlist = @()
+	$commandlist += 'test -e "/var/log/firstboot/succeeded"'
+	$commandlist += 'echo $?'
+
+	Write-Output "== Firstboot process could take 10+ minutes to complete. please wait. ==" | Out-String
+
+	If (!$stopwatch) {
+		$stopwatch =  [system.diagnostics.stopwatch]::StartNew()}
+	  Else {$stopwatch.start()}
+	  
+	  While ((ExecuteScript $commandlist $Deployment.Hostname "root" $($Deployment.VCSARootPass) $esxihandle).ScriptOutput[0] -eq "1") {
+	
+	  	Start-Sleep -s 15
+	  
+	  	$elapsed = $stopwatch.Elapsed.ToString('hh\:mm\:ss')
+	  
+		Write-Progress -Activity "Completing Firstboot for $($Deployment.Hostname)" -Status "Time Elapsed $elapsed"
 		
-		Separatorline
-
-		$commandlist = $null
-		$commandlist = @()
-		$commandlist += 'test -e "/var/log/firstboot/succeeded"'
-		$commandlist += 'echo $?'
-
-		Write-Output "== Firstboot process could take 10+ minutes to complete. please wait. ==" | Out-String
-
-		If (!$stopwatch) {
-			$stopwatch =  [system.diagnostics.stopwatch]::StartNew()}
-	  	Else {$stopwatch.start()}
-	  
-	  	While ((ExecuteScript $commandlist $Deployment.Hostname "root" $($Deployment.VCSARootPass) $esxihandle).ScriptOutput[0] -eq "1") {
+		Write-Output "Time Elapsed completing Firstboot for $($Deployment.Hostname): $elapsed" | Out-String
 	
-	  		Start-Sleep -s 15
-	  
-	  		$elapsed = $stopwatch.Elapsed.ToString('hh\:mm\:ss')
-	  
-			Write-Progress -Activity "Completing Firstboot for $($Deployment.Hostname)" -Status "Time Elapsed $elapsed"
-			
-			Write-Output "Time Elapsed completing Firstboot for $($Deployment.Hostname): $elapsed" | Out-String
+	}
 	
-		}
-	
-		$stopwatch.reset()
+	$stopwatch.reset()
 
-        # Enable Jumbo Frames on eth0 if True.
-        If ($Deployment.JumboFrames) {
-            $commandlist = $null
-		    $commandlist = @()
-			$commandlist += 'echo -e "" >> /etc/systemd/network/10-eth0.network'
-			$commandlist += 'echo -e "[Link]" >> /etc/systemd/network/10-eth0.network'
-			$commandlist += 'echo -e "MTUBytes=9000" >> /etc/systemd/network/10-eth0.network'
+       # Enable Jumbo Frames on eth0 if True.
+       If ($Deployment.JumboFrames) {
+           $commandlist = $null
+	    $commandlist = @()
+		$commandlist += 'echo -e "" >> /etc/systemd/network/10-eth0.network'
+		$commandlist += 'echo -e "[Link]" >> /etc/systemd/network/10-eth0.network'
+		$commandlist += 'echo -e "MTUBytes=9000" >> /etc/systemd/network/10-eth0.network'
 
-            ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
-        }
+           ExecuteScript $commandlist $Deployment.vmName "root" $Deployment.VCSARootPass $esxihandle
+       }
 
-		Write-Output "`r`n The VCSA $($Deployment.Hostname) has been deployed and is available.`r`n" | Out-String
+	Write-Output "`r`n The VCSA $($Deployment.Hostname) has been deployed and is available.`r`n" | Out-String
 
-		# Create certificate directory if it does not exist
-		$Cert_Dir			 = $RootCert_Dir + "\" + $Deployment.SSODomainName
-		$DefaultRootCert_Dir = 	$Cert_Dir + "\" + $Deployment.Hostname + "\DefaultRootCert"
-		If (!(Test-Path $DefaultRootCert_Dir)) { New-Item $DefaultRootCert_Dir -Type Directory | Out-Null }
+	# Create certificate directory if it does not exist
+	$Cert_Dir			 = $RootCert_Dir + "\" + $Deployment.SSODomainName
+	$DefaultRootCert_Dir = 	$Cert_Dir + "\" + $Deployment.Hostname + "\DefaultRootCert"
+	If (!(Test-Path $DefaultRootCert_Dir)) { New-Item $DefaultRootCert_Dir -Type Directory | Out-Null }
 
-		InstallNodeRootCert $DefaultRootCert_Dir $Deployment $esxihandle
+	InstallNodeRootCert $DefaultRootCert_Dir $Deployment $esxihandle
 
-		# Disconnect from the vcsa deployed esxi server.
-		Disconnect-viserver -Server $esxihandle -Confirm:$false
+	# Disconnect from the vcsa deployed esxi server.
+	Disconnect-viserver -Server $esxihandle -Confirm:$false
 
-		# Write separator line to transcript.
-		Separatorline
+	# Write separator line to transcript.
+	Separatorline
 
-		write-host "=============== End of Deployment for $($Deployment.vmName) ===============" | Out-String
+	write-host "=============== End of Deployment for $($Deployment.vmName) ===============" | Out-String
+
+	Stop-Transcript
 }
 
 # Replace Certificates.
 ForEach ($Deployment in $s_Deployments | Where-Object {$_.Certs}) {
+
+	$OutputPath = "$LogPath\Certs-" + $Deployment.Hostname + "-" + $(Get-date -format "MM-dd-yyyy_HH-mm") + ".log"
+	Start-Transcript -path $OutputPath -append
 
 	Write-Output "=============== Starting replacement of Certs on $($Deployment.vmName) ===============" | Out-String
 
@@ -2918,239 +2929,249 @@ ForEach ($Deployment in $s_Deployments | Where-Object {$_.Certs}) {
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $esxihandle -Confirm:$false
 	}
+
+	Stop-Transcript
 }
 
 # Configure the vcsa.
 ForEach ($Deployment in $s_Deployments | Where-Object {$_.Config}) {
 
-		Write-Output "=============== Starting configuration of $($Deployment.vmName) ===============" | Out-String
+	$OutputPath = "$LogPath\Config-" + $Deployment.Hostname + "-" + $(Get-date -format "MM-dd-yyyy_HH-mm") + ".log"
+	Start-Transcript -path $OutputPath -append
+
+	Write-Output "=============== Starting configuration of $($Deployment.vmName) ===============" | Out-String
+
+	Separatorline
+
+	# Wait until the vcsa is available.
+	Available $("https://" + $Deployment.Hostname)
+	
+	# Create esxi credentials.
+       $esxi_secpasswd		= $null
+	$esxi_creds			= $null
+	$esxi_secpasswd		= ConvertTo-SecureString $Deployment.esxiRootPass -AsPlainText -Force
+	$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
+	
+	# Connect to esxi host of the deployed vcsa.
+	$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
+
+	Separatorline
+
+	# Join the vcsa to the windows domain.
+	JoinADDomain $Deployment $s_adinfo $esxihandle
+	
+	# if the vcsa is not a stand alone PSC, configure the vCenter.
+	If ($Deployment.DeployType -ne "infrastructure" ) {
+
+		Write-Output "== vCenter $($Deployment.vmName) configuration ==" | Out-String
 
 		Separatorline
 
-		# Wait until the vcsa is available.
-		Available $("https://" + $Deployment.Hostname)
-	
-		# Create esxi credentials.
-        $esxi_secpasswd		= $null
-		$esxi_creds			= $null
-		$esxi_secpasswd		= ConvertTo-SecureString $Deployment.esxiRootPass -AsPlainText -Force
-		$esxi_creds			= New-Object System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $esxi_secpasswd)
-	
-		# Connect to esxi host of the deployed vcsa.
-		$esxihandle = connect-viserver -server $Deployment.esxiHost -credential $esxi_creds
+		$Datacenters	= $s_sites | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"}
+		$sso_secpasswd	= ConvertTo-SecureString $($Deployment.SSOAdminPass) -AsPlainText -Force
+		$sso_creds		= New-Object System.Management.Automation.PSCredential ($("Administrator@" + $Deployment.SSODomainName), $sso_secpasswd)
 
-		Separatorline
-
-		# Join the vcsa to the windows domain.
-		JoinADDomain $Deployment $s_adinfo $esxihandle
+		# Connect to the vCenter
+		$vchandle = Connect-viserver $Deployment.Hostname -Credential $sso_creds
 		
-		# if the vcsa is not a stand alone PSC, configure the vCenter.
-		If ($Deployment.DeployType -ne "infrastructure" ) {
-
-			Write-Output "== vCenter $($Deployment.vmName) configuration ==" | Out-String
-
-			Separatorline
-
-			$Datacenters	= $s_sites | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"}
-			$sso_secpasswd	= ConvertTo-SecureString $($Deployment.SSOAdminPass) -AsPlainText -Force
-			$sso_creds		= New-Object System.Management.Automation.PSCredential ($("Administrator@" + $Deployment.SSODomainName), $sso_secpasswd)
-
-			# Connect to the vCenter
-			$vchandle = Connect-viserver $Deployment.Hostname -Credential $sso_creds
+		# Create Datacenter
+		If ($Datacenters) {
+			$Datacenters.Datacenter.ToUpper() | ForEach-Object {New-Datacenter -Location Datacenters -Name $_}
+		}
 			
-			# Create Datacenter
-			If ($Datacenters) {
-				$Datacenters.Datacenter.ToUpper() | ForEach-Object {New-Datacenter -Location Datacenters -Name $_}
-			}
-				
-			# Create Folders, Roles, and Permissions.
-			$folders = $s_folders | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"}
-			If ($folders) {
-				Write-Output "Folders:" $folders
-				CreateFolders $folders $vchandle
-			}
-
-			# if this is the first vCenter, create custom Roles.
-			$existingroles = Get-VIRole -Server $vchandle
-			$roles = $s_roles | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"} | Where-Object {$ExistingRoles -notcontains $_.Name}
-            If ($roles) {
-				Write-Output  "Roles:" $roles
-				CreateRoles $roles $vchandle
-			}	
-
-			# Create OS Customizations for the vCenter.
-			$s_Customizations | Where-Object {$_.Server -eq $Deployment.Hostname} | ForEach-Object {OSString $_}
-
-			# Create Clusters
-			ForEach ($Datacenter in $Datacenters) {
-				# Define IP Octets
-				$oct1 = $Datacenter.oct1
-				$oct2 = $Datacenter.oct2
-				$oct3 = $Datacenter.oct3
-			
-				# Create the cluster if it is defined for all vCenters or the current vCenter and the current Datacenter.
-                ($s_clusters | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)")`
-                    -and ($_.Datacenter.split(",") -match "all|$($Datacenter.Datacenter)")}).Clustername |`
-					ForEach-Object {If ($_) {New-Cluster -Location (Get-Datacenter -Server $vchandle -Name $Datacenter.Datacenter) -Name $_}}
-						
-				# Create New vDSwitch
-				# Select vdswitches if definded for all vCenters or the current vCentere and the current Datacenter.
-				$vdswitches = $s_vdswitches | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)") -and ($_.Datacenter.Split(",") -match "all|$($Datacenter.Datacenter)")}
-
-				ForEach ($vdswitch in $vdswitches) {		
-					$SwitchDatacenter	= Get-Inventory -Name $Datacenter.Datacenter
-
-					If ($vdswitch.SwitchNumber.ToString().indexof(".") -eq -1) {
-						$SwitchNumber = $vdswitch.SwitchNumber.ToString() + ".0"}
-					Else { $SwitchNumber = $vdswitch.SwitchNumber.ToString()}
-				
-					$SwitchName = $SwitchNumber + " " + $vdswitch.vDSwitchName -replace "XXX", $Datacenter.Datacenter
-				
-					# Create new vdswitch.
-					New-VDSwitch -Server $vchandle -Name $SwitchName -Location $SwitchDatacenter -Mtu $mtu -NumUplinkPorts 2 -Version $vdswitch.Version
-					
-					# Enable NIOC
-					(get-vdswitch -Server $vchandle -Name $SwitchName | get-view).EnableNetworkResourceManagement($true)
-
-					$vlanadd = $s_vlans | Where-Object {$_.Number.StartsWith($SwitchName.split(" ")[0])}
-					$vlanadd = $vlanadd | Where-Object {$_.Datacenter.split(",") -match "all|$($Datacenter.Datacenter)"}
-					$vlanadd = $vlanadd | Where-Object {$_.vCenter.split(",") -match "all|$($Deployment.Hostname)"}
-					
-					# Create Portgroups
-					ForEach ($vlan in $vlanadd) {
-					
-						$PortGroup =	$vlan.Number.padright(8," ") +`
-										$vlan.Vlan.padright(8," ") + "- " +`
-										$vlan.Network.padright(19," ") + "- " +`
-										$vlan.VlanName
-
-						$PortGroup = $PortGroup -replace "oct1", $oct1
-						$PortGroup = $PortGroup -replace "oct2", $oct2
-						$PortGroup = $PortGroup -replace "oct2", $oct3
-						
-                        If ($PortGroup.split("-")[0] -like "*trunk*") {
-                            New-VDPortgroup -Server $vchandle -VDSwitch $SwitchName -Name $PortGroup -Notes $PortGroup.split("-")[0] -VlanTrunkRange $vlan.network
-                        }
-                        Else {
-						    New-VDPortgroup -Server $vchandle -VDSwitch $SwitchName -Name $PortGroup -Notes $PortGroup.split("-")[0] -VlanId $vlan.vlan.split(" ")[1]
-                        }
-						# Set Portgroup Team policies
-						If ($PortGroup -like "*vmotion-1*") {
-							Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink1" -StandbyUplinkPort "dvUplink2"
-						}
-						If ($PortGroup -like "*vmotion-2*") {
-							Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink2" -StandbyUplinkPort "dvUplink1"
-						}
-						If ($PortGroup -notlike "*vmotion*") {
-							Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceLoadBased -EnableFailback $false
-						}
-						Else
-						{
-						#Set Traffic Shaping on vmotion portgroups for egress traffic
-						Get-VDPortgroup -Server $vchandle -VDSwitch $SwitchName | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDTrafficShapingPolicy -Server $vchandle -Direction Out| Set-VDTrafficShapingPolicy -Enabled:$true -AverageBandwidth 8589934592 -PeakBandwidth 8589934592 -BurstSize 1
-						}
-					}
-				}
-			}
-
-			# Add Licenses to vCenter.
-			If ($s_Licenses | Where-Object {$_.vCenter -eq $Deployment.Hostname}) { ConfigureLicensing $($s_Licenses | Where-Object {$_.vCenter -eq $Deployment.Hostname}) $vchandle}
-
-			# Select permissions for all vCenters or the current vCenter.
-			# Create the permissions.
-			CreatePermissions $($s_Permissions | Where-Object {$_.vCenter.Split(",") -match "all|$($Deployment.Hostname)"}) $vchandle
-			
-			$InstanceCertDir = $Cert_Dir + "\" + $Deployment.Hostname
-			
-			# Configure Additional Services (Network Dump, Autodeploy, TFTP)
-			ForEach ($serv in $s_Services) {
-				Write-Output $serv | Out-String
-				If ($serv.vCenter.split(",") -match "all|$($Deployment.Hostname)") {
-					Switch ($serv.Service) {
-						AuthProxy	{ ConfigureAuthProxy $Deployment $esxihandle $s_adinfo; Break}
-						AutoDeploy	{ $vchandle | get-advancedsetting -Name vpxd.certmgmt.certs.minutesBefore | Set-AdvancedSetting -Value 1 -Confirm:$false
-									  ConfigureAutoDeploy $Deployment $esxihandle $vchandle.version
-									  If ($s_arules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) { ConfigureAutoDeployRules $($s_arules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) $FolderPath $vchandle}
-									  ; Break
-						}
-						Netdumpster	{ ConfigureNetdumpster $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle $vchandle.version; Break}
-						TFTP		{ ConfigureTFTP $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle; Break}
-						default {Break}
-					}
-				}
-			}
-
-            # Configure plugins
-            $commandlist = $null
-            $commandlist = @()
-            $Plugins = $s_Plugins | Where-Object {$_.config -and $_.vCenter.split(",") -match "all|$($Deployment.Hostname)"}
-
-			Separatorline
-			Write-Output $Plugins | Out-String
-			Separatorline
-			
-            For ($i=0;$i -lt $Plugins.Count;$i++){
-                If ($Plugins[$i].SourceDir) {
-                    If ($commandlist) {
-                        ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
-                        $commandlist = $null
-                        $commandlist = @()
-                    }
-
-                    $filelocations = $null
-                    $filelocations = @()
-	                $filelocations += "$($FolderPath)\$($Plugins[$i].SourceDir)\$($Plugins[$i].SourceFiles)"
-                    $filelocations += $Plugins[$i].DestDir
-
-					Write-Output $filelocations | Out-String
-
-        	        CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle $true
-                }
-
-                If ($Plugins[$i].Command) {$commandlist += $Plugins[$i].Command}
-            }
-
-            If ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
-
-			Separatorline
-
-			# Disconnect from the vCenter.
-			Disconnect-viserver -server $vchandle -Confirm:$false
-
-			Separatorline
+		# Create Folders, Roles, and Permissions.
+		$folders = $s_folders | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"}
+		If ($folders) {
+			Write-Output "Folders:" $folders
+			CreateFolders $folders $vchandle
 		}
 
-		# Run the vami_set_hostname to set the correct FQDN in the /etc/hosts file on a vCenter with External PSC only.
-		If ($Deployment.DeployType -like "*management*") {
-			$commandlist = $null
-			$commandlist = @()
-			$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-			$commandlist += "export VMWARE_LOG_DIR=/var/log"
-			$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
-			$commandlist += "export VMWARE_DATA_DIR=/storage"
-			$commandlist += "/opt/vmware/share/vami/vami_set_hostname $($Deployment.Hostname)"
-			
-			ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
-        }
+		# if this is the first vCenter, create custom Roles.
+		$existingroles = Get-VIRole -Server $vchandle
+		$roles = $s_roles | Where-Object {$_.vcenter.split(",") -match "all|$($Deployment.Hostname)"} | Where-Object {$ExistingRoles -notcontains $_.Name}
+           If ($roles) {
+			Write-Output  "Roles:" $roles
+			CreateRoles $roles $vchandle
+		}	
 
-		# Disconnect from the vcsa deployed esxi server.
-		Disconnect-viserver -Server $esxihandle -Confirm:$false
+		# Create OS Customizations for the vCenter.
+		$s_Customizations | Where-Object {$_.Server -eq $Deployment.Hostname} | ForEach-Object {OSString $_}
+
+		# Create Clusters
+		ForEach ($Datacenter in $Datacenters) {
+			# Define IP Octets
+			$oct1 = $Datacenter.oct1
+			$oct2 = $Datacenter.oct2
+			$oct3 = $Datacenter.oct3
+		
+			# Create the cluster if it is defined for all vCenters or the current vCenter and the current Datacenter.
+               ($s_clusters | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)")`
+                   -and ($_.Datacenter.split(",") -match "all|$($Datacenter.Datacenter)")}).Clustername |`
+				ForEach-Object {If ($_) {New-Cluster -Location (Get-Datacenter -Server $vchandle -Name $Datacenter.Datacenter) -Name $_}}
+					
+			# Create New vDSwitch
+			# Select vdswitches if definded for all vCenters or the current vCentere and the current Datacenter.
+			$vdswitches = $s_vdswitches | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)") -and ($_.Datacenter.Split(",") -match "all|$($Datacenter.Datacenter)")}
+
+			ForEach ($vdswitch in $vdswitches) {		
+				$SwitchDatacenter	= Get-Inventory -Name $Datacenter.Datacenter
+
+				If ($vdswitch.SwitchNumber.ToString().indexof(".") -eq -1) {
+					$SwitchNumber = $vdswitch.SwitchNumber.ToString() + ".0"}
+				Else { $SwitchNumber = $vdswitch.SwitchNumber.ToString()}
+			
+				$SwitchName = $SwitchNumber + " " + $vdswitch.vDSwitchName -replace "XXX", $Datacenter.Datacenter
+			
+				# Create new vdswitch.
+				New-VDSwitch -Server $vchandle -Name $SwitchName -Location $SwitchDatacenter -Mtu $mtu -NumUplinkPorts 2 -Version $vdswitch.Version
+				
+				# Enable NIOC
+				(get-vdswitch -Server $vchandle -Name $SwitchName | get-view).EnableNetworkResourceManagement($true)
+
+				$vlanadd = $s_vlans | Where-Object {$_.Number.StartsWith($SwitchName.split(" ")[0])}
+				$vlanadd = $vlanadd | Where-Object {$_.Datacenter.split(",") -match "all|$($Datacenter.Datacenter)"}
+				$vlanadd = $vlanadd | Where-Object {$_.vCenter.split(",") -match "all|$($Deployment.Hostname)"}
+				
+				# Create Portgroups
+				ForEach ($vlan in $vlanadd) {
+				
+					$PortGroup =	$vlan.Number.padright(8," ") +`
+									$vlan.Vlan.padright(8," ") + "- " +`
+									$vlan.Network.padright(19," ") + "- " +`
+									$vlan.VlanName
+
+					$PortGroup = $PortGroup -replace "oct1", $oct1
+					$PortGroup = $PortGroup -replace "oct2", $oct2
+					$PortGroup = $PortGroup -replace "oct2", $oct3
+					
+                       If ($PortGroup.split("-")[0] -like "*trunk*") {
+                           New-VDPortgroup -Server $vchandle -VDSwitch $SwitchName -Name $PortGroup -Notes $PortGroup.split("-")[0] -VlanTrunkRange $vlan.network
+                       }
+                       Else {
+					    New-VDPortgroup -Server $vchandle -VDSwitch $SwitchName -Name $PortGroup -Notes $PortGroup.split("-")[0] -VlanId $vlan.vlan.split(" ")[1]
+                       }
+					# Set Portgroup Team policies
+					If ($PortGroup -like "*vmotion-1*") {
+						Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink1" -StandbyUplinkPort "dvUplink2"
+					}
+					If ($PortGroup -like "*vmotion-2*") {
+						Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink2" -StandbyUplinkPort "dvUplink1"
+					}
+					If ($PortGroup -notlike "*vmotion*") {
+						Get-vdportgroup -Server $vchandle | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDUplinkTeamingPolicy -Server $vchandle | Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceLoadBased -EnableFailback $false
+					}
+					Else
+					{
+					#Set Traffic Shaping on vmotion portgroups for egress traffic
+					Get-VDPortgroup -Server $vchandle -VDSwitch $SwitchName | Where-Object {$_.Name.split('%')[0] -like $PortGroup.split('/')[0]} | Get-VDTrafficShapingPolicy -Server $vchandle -Direction Out| Set-VDTrafficShapingPolicy -Enabled:$true -AverageBandwidth 8589934592 -PeakBandwidth 8589934592 -BurstSize 1
+					}
+				}
+			}
+		}
+
+		# Add Licenses to vCenter.
+		If ($s_Licenses | Where-Object {$_.vCenter -eq $Deployment.Hostname}) { ConfigureLicensing $($s_Licenses | Where-Object {$_.vCenter -eq $Deployment.Hostname}) $vchandle}
+
+		# Select permissions for all vCenters or the current vCenter.
+		# Create the permissions.
+		CreatePermissions $($s_Permissions | Where-Object {$_.vCenter.Split(",") -match "all|$($Deployment.Hostname)"}) $vchandle
+		
+		$InstanceCertDir = $Cert_Dir + "\" + $Deployment.Hostname
+		
+		# Configure Additional Services (Network Dump, Autodeploy, TFTP)
+		ForEach ($serv in $s_Services) {
+			Write-Output $serv | Out-String
+			If ($serv.vCenter.split(",") -match "all|$($Deployment.Hostname)") {
+				Switch ($serv.Service) {
+					AuthProxy	{ ConfigureAuthProxy $Deployment $esxihandle $s_adinfo; Break}
+					AutoDeploy	{ $vchandle | get-advancedsetting -Name vpxd.certmgmt.certs.minutesBefore | Set-AdvancedSetting -Value 1 -Confirm:$false
+								  ConfigureAutoDeploy $Deployment $esxihandle $vchandle.version
+								  If ($s_arules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) { ConfigureAutoDeployRules $($s_arules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) $FolderPath $vchandle}
+								  ; Break
+					}
+					Netdumpster	{ ConfigureNetdumpster $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle $vchandle.version; Break}
+					TFTP		{ ConfigureTFTP $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle; Break}
+					default {Break}
+				}
+			}
+		}
+
+           # Configure plugins
+           $commandlist = $null
+           $commandlist = @()
+           $Plugins = $s_Plugins | Where-Object {$_.config -and $_.vCenter.split(",") -match "all|$($Deployment.Hostname)"}
+
+		Separatorline
+		Write-Output $Plugins | Out-String
+		Separatorline
+		
+           For ($i=0;$i -lt $Plugins.Count;$i++){
+               If ($Plugins[$i].SourceDir) {
+                   If ($commandlist) {
+                       ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
+                       $commandlist = $null
+                       $commandlist = @()
+                   }
+
+                   $filelocations = $null
+                   $filelocations = @()
+	               $filelocations += "$($FolderPath)\$($Plugins[$i].SourceDir)\$($Plugins[$i].SourceFiles)"
+                   $filelocations += $Plugins[$i].DestDir
+
+				Write-Output $filelocations | Out-String
+
+       	        CopyFiletoServer $filelocations $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle $true
+               }
+
+               If ($Plugins[$i].Command) {$commandlist += $Plugins[$i].Command}
+           }
+
+           If ($commandlist) {ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle}
 
 		Separatorline
 
-		write-host "=============== End of Configuration for $($Deployment.vmName) ===============" | Out-String
+		# Disconnect from the vCenter.
+		Disconnect-viserver -server $vchandle -Confirm:$false
+
+		Separatorline
+
+	}
+
+	# Run the vami_set_hostname to set the correct FQDN in the /etc/hosts file on a vCenter with External PSC only.
+	If ($Deployment.DeployType -like "*management*") {
+		$commandlist = $null
+		$commandlist = @()
+		$commandlist += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+		$commandlist += "export VMWARE_LOG_DIR=/var/log"
+		$commandlist += "export VMWARE_CFG_DIR=/etc/vmware"
+		$commandlist += "export VMWARE_DATA_DIR=/storage"
+		$commandlist += "/opt/vmware/share/vami/vami_set_hostname $($Deployment.Hostname)"
+		
+		ExecuteScript $commandlist $Deployment.Hostname "root" $Deployment.VCSARootPass $esxihandle
+       }
+
+	# Disconnect from the vcsa deployed esxi server.
+	Disconnect-viserver -Server $esxihandle -Confirm:$false
+
+	Separatorline
+
+	write-host "=============== End of Configuration for $($Deployment.vmName) ===============" | Out-String
+
+	Stop-Transcript
 }
 
 Separatorline
 
 Write-Output "<=============== Deployment Complete ===============>" | Out-String
 
-# Stop the transcript.
-Stop-Transcript
+# Scrub logfiles
+$logfiles = (Get-ChildItem -Path $LogPath).FullName
 
 If ($s_summary.TranscriptScrub) {
-	$Transcript = Get-Content -path $OutputPath
-	ForEach ($pass in $scrub) {
-		$Transcript = $Transcript.replace($Pass,'<-- Password Redacted -->')}
-	$Transcript | Set-Content -path $OutputPath -force -confirm:$false
+    ForEach ($log in $logfiles) {
+        $Transcript = Get-Content -path $log
+	    ForEach ($pass in $scrub) {
+		    $Transcript = $Transcript.replace($Pass,'<-- Password Redacted -->')}
+    	$Transcript | Set-Content -path $log -force -confirm:$false
+    }
 }
