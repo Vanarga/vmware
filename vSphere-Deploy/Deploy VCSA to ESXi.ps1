@@ -861,7 +861,7 @@ function Deploy ($ParameterList, $OvfToolPath, $LogPath) {
 	$esxiThumbPrint = $esxiCert.GetCertHashString() -replace '(..(?!$))','$1:'
 	
 	If ($parameterlist.Action -ne "--version") {
-		$ArgumentList += "--X:logFile=$LogPath\ofvtool_" + $ParameterList.vmName + "-$(get-date -format mm-dd-yyyy_HH-mm).log"
+		$ArgumentList += "--X:logFile=$LogPath\ofvtool_" + $ParameterList.vmName + "-" + $(get-date -format "MM-dd-yyyy_HH-mm") + ".log"
 		$ArgumentList += "--X:logLevel=verbose"
 		$ArgumentList += "--acceptAllEulas"
 		$ArgumentList += "--skipManifestCheck"
