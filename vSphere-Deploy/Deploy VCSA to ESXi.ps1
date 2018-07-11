@@ -27,7 +27,7 @@
 	  k. Import VMHost Profile and set VMHost Profile Root Password.
 	  l. Configure Autodeploy Rules.
 	  m. Create and add Public/Private Certificates for ssh authentication without passwords.
-	  
+
 	To be done:
 	1. Reconfigure vdswitch creation for full flexibility.
 	2. Test and add functionality for multi part certificate replacement.
@@ -35,7 +35,7 @@
 	4. Test VMCA certificate deployment.
 	5. Test various other configurations of deployment.
 	6. Add prompt for credentials instead of reading from Excel?
-   
+
 .PARAMETER
    None.
 .EXAMPLE
@@ -49,13 +49,13 @@
 		5. Powershell 3+
 		6. PowerCli 5.8+
 		7. yaml for powershell plugin.
-		
+
 	Other:
 		1. The Certificate templates for VMWare must be created on the Windows CA before running the script.
 		2. vsphere-config.xlsx file.
 		3. vmware-vcsa file from the vcsa iso.
 		4. DNS entries for the vcsas must be added before runing the script.
-		
+
 .SOURCES
 	http://www.derekseaman.com/2015/02/vsphere-6-0-install-pt-1-introduction.html
 	http://orchestration.io/2014/05/19/using-powercli-and-ovftool-to-move-vms-between-vcenters/
@@ -84,10 +84,10 @@
 	https://kb.vmware.com/selfservice/search.do?cmd=displayKC&docType=kc&docTypeID=DT_KB_1_1&externalId=2121689
 	https://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=2000988
 	https://stackoverflow.com/questions/3740128/pscustomobject-to-hashtable
-	
+
 .ACKNOWLEDGEMENTS
 	I'd like to thank the following people who's blogs/scripts/help/moral support/etc. I used in to create this script.
-	
+
 	1.  Derek Seamans			- www.derekseaman.com
 	2.  William Lam				- www.virtuallyghetto.com
 	3.  Chris Greene			- orchestration.io
@@ -140,28 +140,27 @@ List:							Used:	function Dependency:
 19. RemoveNull					  Y
 20. ReplaceNull					  Y
 21. Separatorline				  Y
-22. ChainCAs					  Y
-23. CheckOpenSSL				  Y
-24. CreatePEMFiles				  Y
-25. CreateCSR					  Y
-26. CreateSolutionCSR			  Y
-27. CreateVMCACSR				  Y
-28. DisplayVMDir				  Y
-29. DownloadRoots				  Y
-30. MoveUserCerts				  Y
-31. OnlineMint					  Y
-32. OnlineMintResume			  N
-33.	SaveToYaml					  Y
-34. SaveToJson					  Y
-35.	Use-Openssl					  Y
-36.	Set-VMHostProfileExtended	  Y
-37. TransferCertToNode			  Y		ExecuteScript, CopyFiletoServer
-38. UserPEMFiles				  Y		CreatePEMFiles
-39.	VMDirRename					  Y
-40. VMCAMint					  N
-41. CDDir						  Y
-42. CreateVCSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
-43. CreatePscSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
+22. CheckOpenSSL				  Y
+23. CreatePEMFiles				  Y
+24. CreateCSR					  Y
+25. CreateSolutionCSR			  Y
+26. CreateVMCACSR				  Y
+27. DisplayVMDir				  Y
+28. DownloadRoots				  Y		Use-Openssl
+29. MoveUserCerts				  Y
+30. OnlineMint					  Y
+31. OnlineMintResume			  N
+32.	SaveToYaml					  Y
+33. SaveToJson					  Y
+34.	Use-Openssl					  Y
+35.	Set-VMHostProfileExtended	  Y
+36. TransferCertToNode			  Y		ExecuteScript, CopyFiletoServer
+37. UserPEMFiles				  Y		CreatePEMFiles
+38.	VMDirRename					  Y
+39. VMCAMint					  N
+40. CDDir						  Y
+41. CreateVCSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
+42. CreatePscSolutionCert		  Y		CreateSolutionCSR, OnlineMint, CreatePEMFiles
 
 #>
 
@@ -197,11 +196,11 @@ function Available {
 
 	$error.clear()
 	$Output = $null
-	
+
 	Write-Host "`r`n Waiting on $URL to resolve.`r`n" -foregroundcolor yellow
 	$web = New-Object Net.WebClient
-	[System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true} 
-	
+	[System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+
 	while (!$Output) {
 		try {$Output = $web.DownloadString($URL)}
 		catch {Start-Sleep -s 30}
@@ -214,15 +213,13 @@ function Available {
 	}
 }
 
-# Configure the Autodeploy Service - set certificate, set auto start, register vCenter, and start service.
+# Configure the Autodeploy Service - set auto start, register vCenter, and start service.
 function ConfigureAutoDeploy {
 	Param (
         [Parameter(Mandatory=$true, Position=0)]
 		$Deployment,
 		[Parameter(Mandatory=$true, Position=1)]
-		$VIHandle,
-		[Parameter(Mandatory=$true, Position=2)]
-		$vcversion	
+		$VIHandle
 	)
 
 	$CommandList = $null
@@ -767,9 +764,7 @@ function ConfigureNetdumpster {
 		[Parameter(Mandatory=$true, Position=2)]
 		$Password,
 		[Parameter(Mandatory=$true, Position=3)]
-		$VIHandle,
-		[Parameter(Mandatory=$true, Position=4)]
-		$vcversion
+		$VIHandle
 	)
 
 	$CommandList = $null
@@ -1348,30 +1343,6 @@ function Separatorline {
 # Certificate functions
 #
 
-function ChainCAs {
-	Param (
-		[Parameter(Mandatory=$true, Position=0)]
-		$CertDir,
-		[Parameter(Mandatory=$true, Position=1)]
-		$RootCer,
-		[Parameter(Mandatory=$true, Position=2)]
-		$IntermCer,
-		[Parameter(Mandatory=$true, Position=3)]
-		$Interm2Cer
-	)
-
-	# Chains CA files together in a PEM encoded file. Supports root CA and two subordinates.
-	# Skip if we have pending cert requests
-	If ($Script:CertsWaitingForApproval) {Return}
-	# Prompt for Root cert if it's not there yet
-	If (Test-Path $IntermCer) {
-		get-content -path $IntermCer,$RootCer | set-content -path $CertDir\chain.cer
-	}
-	If (Test-Path $Interm2Cer) {
-		get-content -path $Interm2Cer,$IntermCer,$RootCer | set-content -path $CertDir\chain.cer
-	}
-}
-
 function CheckOpenSSL {
 	Param (
 		[Parameter(Mandatory=$true, Position=0)]
@@ -1595,92 +1566,51 @@ function DownloadRoots {
 		[Parameter(Mandatory=$true, Position=0)]
 		$CertDir,
 		[Parameter(Mandatory=$true, Position=1)]
-		$RootCA,
-		[Parameter(Mandatory=$true, Position=2)]
-		$RootCer,
-		[Parameter(Mandatory=$true, Position=3)]
-		$SubCA,
-		[Parameter(Mandatory=$false, Position=4)]
-		$IntermCer,
-		[Parameter(Mandatory=$false, Position=5)]
-		$SubCA2,
-		[Parameter(Mandatory=$false, Position=6)]
-		$Interm2Cer,
-		[Parameter(Mandatory=$false, Position=7)]
-		$CADownload
+		$CertInfo
 	)
+    
+    If ($CertInfo.Username) {
+        $SecPasswd = ConvertTo-SecureString $Certinfo.Password -AsPlainText -Force
+        $Creds = New-Object System.Management.Automation.PSCredential ($CertInfo.Username, $SecPasswd)
+    }
+	
+    If ($CertInfo.SubCA2) {$CA = $CertInfo.SubCA2}
+    ElseIf ($CertInfo.SubCA1) {$CA = $CertInfo.SubCA1}
+    Else {$CA = $CertInfo.RootCA}
+	
+    If ((Test-NetConnection -ComputerName $CA -Port 443).TCPTestSucceeded) {$SSL = "https"} else {$SSL = "http"}
+    
+	$URL = $SSL + ':' + "//$($CA)/certsrv/certnew.p7b?ReqID=CACert&Renewal=1&Enc=DER"
+   
+    If ($CertInfo.Username) {
+        Invoke-WebRequest -Uri $URL -OutFile "$CertDir\certnew.p7b" -Credential $Creds
+    }
+    Else {
+        Invoke-WebRequest -Uri $URL -OutFile "$CertDir\certnew.p7b"
+    }
+    
+  	$CACerts = @()
+	
+	$P7BChain = (Use-OpenSSL "pkcs7 -inform PEM -outform PEM -in `"$CertDir\certnew.p7b`" -print_certs").split("-") | Where-Object {$_.Length -gt 0}
 
-# https://powershell.org/forums/topic/export-certificate-using-base-64-cer-format-with-powershell/
-# Download Root CA public certificate, if defined
-# if the certificate exists (root64.cer) then it won't attempt to download
-	If ($RootCA) {
-		If (!(Test-Path -Path $RootCer)) {
-			$CertThumbprint = (Get-ChildItem Cert:\LocalMachine\Root | Where-Object {$_.Subject -match $RootCA.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 1} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
-
-			$Cert = Get-Item -Path cert:\LocalMachine\root\$CertThumbprint
-			$CertFile = "$CertDir\root64.cer"
-			$Content = @(    
-				'-----BEGIN CERTIFICATE-----'
-				[System.Convert]::ToBase64String($Cert.RawData) -replace ".{64}" , "$&`r`n"
-				'-----END CERTIFICATE-----'
-			)
-			$Content | Out-File -FilePath $CertFile -Encoding ascii
-			If (!(Test-Path -Path $RootCer)) {
-				Write-Host "Root64.cer did not download. Check root CA variable, CA web services, or manually download root cert and copy to $CertDir\root64.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;Exit}
-			Write-Host "Root CA download successful." -foregroundcolor yellow
-		}
-		Else {Write-Host "Root CA file found, will not download." -ForegroundColor yellow} 
+	$Index = (0..($P7BChain.count - 1)) | Where-Object {$P7BChain[$_] -match "BEGIN CERTIFICATE"}
+	
+	ForEach ($i in $Index) {
+		$CACerts += $P7BChain[$i+1].insert($P7BChain[$i+1].length,'-----END CERTIFICATE-----').insert(0,'-----BEGIN CERTIFICATE-----')
 	}
-	$Validation = select-string -simple CERTIFICATE----- $RootCer
-	If (!$Validation) {
-		Write-Host "Invalid Root certificate format. Validate BASE64 encoding and try again. Also try decrementing RootRenewal value by 1." -foregroundcolor red; Exit}
-	# Download Subordinate CA public certificate, if defined
-	# if the certificate exists (interm64.cer) then it won't attempt to download
-	If ($SubCA) {
-		If (!(Test-Path -Path $IntermCer)) {
-            $CertThumbprint = (Get-ChildItem Cert:\LocalMachine\CA | Where-Object {$_.Subject -match $SubCA.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 256} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
 
-			$Cert = Get-Item -Path cert:\LocalMachine\CA\$CertThumbprint
-			$CertFile = "$CertDir\interm64.cer"
-			$Content = @(    
-				'-----BEGIN CERTIFICATE-----'
-				[System.Convert]::ToBase64String($Cert.RawData) -replace ".{64}" , "$&`r`n"
-				'-----END CERTIFICATE-----'
-			)
-			$Content | Out-File -FilePath $CertFile -Encoding ascii
-			If (!(Test-Path -Path $IntermCer)) {
-				Write-Host "Interm64.cer did not download. Check subordinate variable, CA web services, or manually download intermediate cert and copy to $CertDir\interm64.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;Exit}
-			Write-Host "Intermediate CA download successful." -foregroundcolor yellow
-		}
-		Else { Write-Host "Intermediate CA file found, will not download." -ForegroundColor yellow} 
+	$CACerts | Set-Content -Path "$CertDir\chain.cer" -Encoding ascii
+	
+	Switch ($CACerts.Count)
+	{
+		1	{	$CACerts[0] | Set-Content -Path "$CertDir\root64.cer"		-Encoding ascii}
 		
-		$Validation = select-string -simple CERTIFICATE----- $IntermCer
-		If (!$Validation) {
-			Write-Host "Invalid subordinate certificate format. Validate BASE64 encoding and try again. Also try decrementing SubRenewal value by 1." -foregroundcolor red; Exit}
-	}
-	# Download second-level Subordinate CA public certificate, if defined
-	# if the certificate exists (interm264.cer) then it won't attempt to download
-	If ($SubCA2) {
-		If (!(Test-Path -Path $Interm2Cer)) {
-            $CertThumbprint = (Get-ChildItem Cert:\LocalMachine\CA | Where-Object {$_.Subject -match $SubCA2.split(".")[0] -and $_.SignatureAlgorithm.FriendlyName -match 256} | Sort-Object NotAfter -Descending | Select-Object -first 1).Thumbprint
-
-			$Cert = Get-Item -Path cert:\LocalMachine\CA\$CertThumbprint
-			$CertFile = "$CertDir\interm264.cer"
-			$Content = @(    
-				'-----BEGIN CERTIFICATE-----'
-				[System.Convert]::ToBase64String($Cert.RawData) -replace ".{64}" , "$&`r`n"
-				'-----END CERTIFICATE-----'
-			)
-			$Content | Out-File -FilePath $CertFile -Encoding ascii
-			If (!(Test-Path -Path $Interm2Cer)) {
-				Write-Host "Interm264.cer did not download. Check subordinate 2 CA variable, CA web services, or manually download intermediate cert and copy to $CertDir\interm264.cer. See vExpert.me/Derek60 Part 8 for more details." -foregroundcolor red;Exit}
-			Write-Host "Second Intermediate CA download successful." -foregroundcolor yellow
-		}
-		Else { Write-Host "Second Intermediate CA file found, will not download." -ForegroundColor yellow} 
-		
-		$Validation = select-string -simple CERTIFICATE----- $IntermCer
-		If (!$Validation) {
-			Write-Host "Invalid second subordinate certificate format. Validate BASE64 encoding and try again. Also try decrementing Sub2Renewal value by 1." -foregroundcolor red; Exit}
+		2	{	$CACerts[0] | Set-Content -Path "$CertDir\interm64.cer"		-Encoding ascii
+				$CACerts[1] | Set-Content -Path "$CertDir\root64.cer"		-Encoding ascii}
+				
+		3	{	$CACerts[0] | Set-Content -Path "$CertDir\interm264.cer"	-Encoding ascii
+				$CACerts[1] | Set-Content -Path "$CertDir\interm64.cer"		-Encoding ascii
+				$CACerts[2] | Set-Content -Path "$CertDir\root64.cer"		-Encoding ascii}
 	}
 }
 
@@ -1866,6 +1796,7 @@ function Use-Openssl {
 	Write-Host "stdout: $StdOut"
 	Write-Host "stderr: $StdErr"
 	Write-Host "exit code: " + $O.ExitCode
+	Return $StdOut
 }
 
 function TransferCertToNode {
@@ -1993,7 +1924,7 @@ function TransferCertToNode {
 	$CommandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vsphere-webclient --alias vsphere-webclient"
 	$CommandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vsphere-webclient --alias vsphere-webclient --cert $SolutionPath/vsphere-webclient.cer --key $SolutionPath/vsphere-webclient.priv"
 	# Skip If server is an External PSC. - vpxd and vpxd-extension do not need to be replaced on an external PSC.
-	If ($Deployment.DeployType -ne "Infrastructure"){
+	If ($Deployment.DeployType -ne "Infrastructure") {
 		$CommandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd --alias vpxd"
 		$CommandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd --alias vpxd --cert $SolutionPath/vpxd.cer --key $SolutionPath/vpxd.priv"
 		$CommandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd-extension --alias vpxd-extension"	
@@ -2018,7 +1949,7 @@ function TransferCertToNode {
 	Separatorline
 	
 	# Retrieve unique key list relevant to the server.
-	$SolutionUsers = ($Certlist.ScriptOutput.split(".").Split("`n") | ForEach-Object {If($_[0] -eq " "){$_}} | Where-Object {$_.ToString() -like "*$($UniqueID.ScriptOutput.split("`n")[0])*"}).Trim(" ")
+	$SolutionUsers = ($Certlist.ScriptOutput.split(".").Split("`n") | ForEach-Object {If($_[0] -eq " ") {$_}} | Where-Object {$_.ToString() -like "*$($UniqueID.ScriptOutput.split("`n")[0])*"}).Trim(" ")
 
 	Separatorline
 
@@ -2047,7 +1978,7 @@ function TransferCertToNode {
 
 	Start-Sleep -Seconds 10
 
-	If ($Deployment.DeployType -ne "Infrastructure"){
+	If ($Deployment.DeployType -ne "Infrastructure") {
 		$CommandList = $null
 		$CommandList = @()
 		# Set path for python.
@@ -2325,7 +2256,7 @@ Separatorline
 
 # Check the version of Ovftool and get it's path. Search C:\program files\ and C:\Program Files (x86)\ subfolders for vmware and find the
 # Ovftool folders. Then check the version and return the first one that is version 4 or higher.
-$OvfToolPath = (Get-ChildItem (Get-ChildItem $env:ProgramFiles, ${env:ProgramFiles(x86)} -filter vmware).fullname -recurse -filter ovftool.exe | ForEach-Object {If(!((& $($_.DirectoryName + "\ovftool.exe") --version).split(" ")[2] -lt 4.0.0)){$_}} | Select-Object -first 1).DirectoryName
+$OvfToolPath = (Get-ChildItem (Get-ChildItem $env:ProgramFiles, ${env:ProgramFiles(x86)} -filter vmware).fullname -recurse -filter ovftool.exe | ForEach-Object {If(!((& $($_.DirectoryName + "\ovftool.exe") --version).split(" ")[2] -lt 4.0.0)) {$_}} | Select-Object -first 1).DirectoryName
 
 # Check ovftool version
 if (!$OvfToolPath) 
@@ -2425,29 +2356,31 @@ Switch ($Source) {
 			$Data = $null
 			
 			If ($Rows -gt 1 -and $Rows -lt $LastRow) {
-                $Data		= $WorkSheet.Range("A2","S$Rows").Value()
+                $Data		= $WorkSheet.Range("A2","U$Rows").Value()
                 $SrcCertInfo = @()
 				For ($i=1;$i -lt $Rows;$i++) {
 				    $ReadDataLine = [PSCustomObject]@{
 					    openssldir		= $Data[$i,1]
 					    RootCA			= $Data[$i,2]
 					    SubCA1			= $Data[$i,3]		
-					    SubCA2			= $Data[$i,4]
-					    CompanyName     = $Data[$i,5]
-					    OrgName		    = $Data[$i,6]
-					    OrgUnit			= $Data[$i,7]
-					    State			= $Data[$i,8]
-					    Locality		= $Data[$i,9]
-					    Country			= $Data[$i,10]
-					    Email			= $Data[$i,11]
-					    CADownload	    = $Data[$i,12]
-					    IssuingCA		= $Data[$i,13]
-					    V6Template	    = $Data[$i,14]
-					    SubTemplate	   	= $Data[$i,15]
-					    RootRenewal		= $Data[$i,16]
-					    SubRenewal1		= $Data[$i,17]
-                        SubRenewal2		= $Data[$i,18]
-                        vCenter         = $Data[$i,19]
+                        SubCA2			= $Data[$i,4]
+                        Username		= $Data[$i,5]
+                        Password		= $Data[$i,6]
+					    CompanyName     = $Data[$i,7]
+					    OrgName		    = $Data[$i,8]
+					    OrgUnit			= $Data[$i,9]
+					    State			= $Data[$i,10]
+					    Locality		= $Data[$i,11]
+					    Country			= $Data[$i,12]
+					    Email			= $Data[$i,13]
+					    CADownload	    = $Data[$i,14]
+					    IssuingCA		= $Data[$i,15]
+					    V6Template	    = $Data[$i,16]
+					    SubTemplate	   	= $Data[$i,17]
+					    RootRenewal		= $Data[$i,18]
+					    SubRenewal1		= $Data[$i,19]
+                        SubRenewal2		= $Data[$i,20]
+                        vCenter         = $Data[$i,21]
                     }
                     If ($s_Certinfo.SubCA1 -eq "null") {$s_Certinfo.SubCA1 = $null}
                     If ($s_Certinfo.SubCA2 -eq "null") {$s_Certinfo.SubCA2 = $null}
@@ -2621,7 +2554,7 @@ Switch ($Source) {
 			If ($Rows -gt 1 -and $Rows -lt $LastRow) {
 				$Data		= $WorkSheet.Range("A2","C$Rows").Value()
 				$SrcRoles	= @()
-				For ($i=1;$i -lt $Rows;$i++){
+				For ($i=1;$i -lt $Rows;$i++) {
 					$ReadDataLine = [PSCustomObject]@{
 						Name		= $Data[$i,1]
 						Privilege	= $Data[$i,2]
@@ -3097,9 +3030,6 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Certs}) {
 	# Set $CertDir
 	$CertDir 		= $FolderPath + "\Certs\" + $Deployment.SSODomainName
 	$RootCertDir	= $CertDir + "\" + $Deployment.Hostname
-	$RootCer		= $RootCertDir + "\root64.cer"
-	$IntermCer 		= $RootCertDir + "\interm64.cer" 
-	$Interm2Cer 	= $RootCertDir + "\interm264.cer" 
 
 	# Create certificate directory if it does not exist
 	If (!(Test-Path $RootCertDir)) { New-Item $RootCertDir -Type Directory | Out-Null }
@@ -3127,10 +3057,7 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Certs}) {
 		$InstanceCertDir = $CertDir + "\" + $Deployment.Hostname
 		
 		# Check for or download root certificates.
-		DownloadRoots $RootCertDir	$SrcCerts.RootCA $RootCer $SrcCerts.SubCA1 $IntermCer $SrcCerts.SubCA2 $Interm2Cer $SrcCerts.CADownload
-		
-		# Check for or create certificate chain.
-		ChainCAs $RootCertDir $RootCer $IntermCer $Interm2Cer
+		DownloadRoots $RootCertDir	$SrcCerts
 		
 		# Create the Machine cert.
 		CreateCSR machine machine_ssl.csr machine_ssl.cfg ssl_key.priv 6 $InstanceCertDir $SrcCerts
@@ -3260,6 +3187,15 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Certs}) {
 
 		# Write separator line to transcript.
 		Separatorline
+
+		# Delete all certificate files etc to clean up /root/ - exclude authorized_keys
+		$CommandList = $null
+		$CommandList = @()
+		$CommandList += 'rm -r /root/solutioncerts'
+		$CommandList += 'rm -r /root/ssl'
+		$CommandList += 'find /root/.ssh/ ! -name "authorized_keys" -type f -exec rm -rf {} \;'
+		
+		ExecuteScript $CommandList $Deployment.hostname "root" $Deployment.VCSARootPass $ESXiHandle
 		
 		write-host "=============== Restarting $($Deployment.vmName) ===============" | Out-String
 		Restart-VMGuest -VM $Deployment.vmName -Server $ESXiHandle -Confirm:$false
@@ -3268,7 +3204,7 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Certs}) {
 		Available $("https://" + $Deployment.Hostname)
 
 		write-host "=============== End of Certificate Replacement for $($Deployment.vmName) ===============" | Out-String
-	
+
 		# Disconnect from the vcsa deployed esxi server.
 		Disconnect-viserver -Server $ESXiHandle -Confirm:$false
 	}
@@ -3434,11 +3370,11 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Config}) {
 				Switch ($Serv.Service) {
 					AuthProxy	{ ConfigureAuthProxy $Deployment $ESXiHandle $($SrcADInfo | Where-Object {$_.vCenter -match "all|$($Deployment.Hostname)"}); Break}
 					AutoDeploy	{ $VCHandle | get-advancedsetting -Name vpxd.certmgmt.certs.minutesBefore | Set-AdvancedSetting -Value 1 -Confirm:$false
-								  ConfigureAutoDeploy $Deployment $ESXiHandle $VCHandle.version
+								  ConfigureAutoDeploy $Deployment $ESXiHandle
 								  If ($SrcAutoDepRules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) { ConfigureAutoDeployRules $($SrcAutoDepRules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) $FolderPath $VCHandle}
 								  ; Break
 					}
-					Netdumpster	{ ConfigureNetdumpster $Deployment.Hostname "root" $Deployment.VCSARootPass $ESXiHandle $VCHandle.version; Break}
+					Netdumpster	{ ConfigureNetdumpster $Deployment.Hostname "root" $Deployment.VCSARootPass $ESXiHandle; Break}
 					TFTP		{ ConfigureTFTP $Deployment.Hostname "root" $Deployment.VCSARootPass $ESXiHandle; Break}
 					default {Break}
 				}
@@ -3454,7 +3390,7 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Config}) {
 		Write-Output $Plugins | Out-String
 		Separatorline
 		
-           For ($i=0;$i -lt $Plugins.Count;$i++){
+           For ($i=0;$i -lt $Plugins.Count;$i++) {
                If ($Plugins[$i].SourceDir) {
                    If ($CommandList) {
                        ExecuteScript $CommandList $Deployment.Hostname "root" $Deployment.VCSARootPass $ESXiHandle
