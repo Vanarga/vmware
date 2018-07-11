@@ -3191,6 +3191,7 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Certs}) {
 		# Delete all certificate files etc to clean up /root/ - exclude authorized_keys
 		$CommandList = $null
 		$CommandList = @()
+		$CommandList += 'rm /root/vcrootcert.crt'
 		$CommandList += 'rm -r /root/solutioncerts'
 		$CommandList += 'rm -r /root/ssl'
 		$CommandList += 'find /root/.ssh/ ! -name "authorized_keys" -type f -exec rm -rf {} \;'
