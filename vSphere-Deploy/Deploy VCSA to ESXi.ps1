@@ -1580,7 +1580,7 @@ function DownloadRoots {
 	
     If ((Test-NetConnection -ComputerName $CA -Port 443).TCPTestSucceeded) {$SSL = "https"} else {$SSL = "http"}
     
-	$URL = $SSL + ':' + "//$($CA)/certsrv/certnew.p7b?ReqID=CACert&Renewal=1&Enc=DER"
+	$URL = $SSL + ':' + "//$($CA)/certsrv/certnew.p7b?ReqID=CACert&Renewal=-1&Enc=DER"
    
     If ($CertInfo.Username) {
         Invoke-WebRequest -Uri $URL -OutFile "$CertDir\certnew.p7b" -Credential $Creds
