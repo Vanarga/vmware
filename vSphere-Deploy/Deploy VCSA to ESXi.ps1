@@ -624,8 +624,8 @@ function ConfigureSSOGroups {
 		
 	Write-Output $VIVersion
 
-	if ($Deployment.Parent -eq "null") {$LDAPServer = $Deployment.Hostname}
-		else {$LDAPServer = $Deployment.Parent}
+	If ($Deployment.Parent) {$LDAPServer = $Deployment.Parent}
+		Else {$LDAPServer = $Deployment.Hostname}
 
 	$CommandList = $null
 	$CommandList = @()
