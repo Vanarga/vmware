@@ -788,9 +788,9 @@ function ConfigureTFTP {
 		$Hostname,
 		[Parameter(Mandatory=$true, Position=1)]
 		$Username,
-		[Parameter(Mandatory=$true, Position=1)]
+		[Parameter(Mandatory=$true, Position=2)]
 		$Password,
-		[Parameter(Mandatory=$true, Position=1)]
+		[Parameter(Mandatory=$true, Position=3)]
 		$VIHandle
 	)
 
@@ -936,7 +936,7 @@ function Deploy {
 		$ParameterList,
 		[Parameter(Mandatory=$true, Position=1)]
 		$OvfToolPath,
-		[Parameter(Mandatory=$true, Position=1)]
+		[Parameter(Mandatory=$true, Position=2)]
 		$LogPath
 	)
 
