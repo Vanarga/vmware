@@ -3192,6 +3192,7 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Certs}) {
 		$CommandList = $null
 		$CommandList = @()
 		$CommandList += 'rm /root/vcrootcert.crt'
+		$CommandList += 'rm /root/*.ldif'
 		$CommandList += 'rm -r /root/solutioncerts'
 		$CommandList += 'rm -r /root/ssl'
 		$CommandList += 'find /root/.ssh/ ! -name "authorized_keys" -type f -exec rm -rf {} \;'
