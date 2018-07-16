@@ -2082,9 +2082,11 @@ function TransferCertToNode {
 
           # SCP the new vCenter machine certIficate to the external PSC and register it with the VMWare Lookup Service via SSH.
               $CommandList = $null
-              $CommandList = @()
+			  $CommandList = @()
+			  $CommandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " mkdir /root/ssl"
               $CommandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' scp -oStrictHostKeyChecking=no /root/ssl/new_machine.crt root@" + $DeploymentParent.Hostname + ":/root/ssl/new_" + $Deployment.Hostname + "_machine.crt"
-              $CommandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://" + $DeploymentParent.Hostname + "/lookupservice/sdk --fingerprint $ThumbPrint --certfile /root/ssl/new_" + $Deployment.Hostname + "_machine.crt --user administrator@" + $DeploymentParent.SSODomainName + " --password `'" + $DeploymentParent.SSOAdminPass + "`'`""
+			  $CommandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://" + $DeploymentParent.Hostname + "/lookupservice/sdk --fingerprint $ThumbPrint --certfile /root/ssl/new_" + $Deployment.Hostname + "_machine.crt --user administrator@" + $DeploymentParent.SSODomainName + " --password `'" + $DeploymentParent.SSOAdminPass + "`'`""
+			  $CommandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " rm -r /root/ssl"
 
               Write-Output $CommandList | Out-String
 
