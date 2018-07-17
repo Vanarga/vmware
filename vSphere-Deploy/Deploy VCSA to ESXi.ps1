@@ -3470,7 +3470,7 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Config}) {
 		$CommandList += "export VMWARE_LOG_DIR=/var/log"
 		$CommandList += "export VMWARE_CFG_DIR=/etc/vmware"
 		$CommandList += "export VMWARE_DATA_DIR=/storage"
-		$CommandList += "/opt/vmware/share/vami/vami_set_Hostname $($Deployment.Hostname)"
+		$CommandList += "/opt/vmware/share/vami/vami_set_hostname $($Deployment.Hostname)"
 
 		ExecuteScript $CommandList $Deployment.Hostname "root" $Deployment.VCSARootPass $ESXiHandle
        }
