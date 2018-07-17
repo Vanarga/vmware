@@ -4,41 +4,41 @@
         "Principal":  "datacenter",
         "Propagate":  "acme\\helpdesk",
         "Role":  true,
-        "vCenter":  "Helpdesk - Read Only"
+        "vCenter":  true
     },
     {
         "Entity":  "CA",
         "Principal":  "datacenter",
         "Propagate":  "acme\\temps",
         "Role":  true,
-        "vCenter":  "Helpdesk - Read Only"
+        "vCenter":  true
     },
     {
         "Entity":  "Datacenters",
         "Principal":  "folder",
         "Propagate":  "acme\\reporting",
         "Role":  false,
-        "vCenter":  "Reporting"
+        "vCenter":  false
     },
     {
         "Entity":  "Datacenters",
         "Principal":  "folder",
         "Propagate":  "acme\\support",
         "Role":  true,
-        "vCenter":  "NetOps"
+        "vCenter":  true
     },
     {
         "Entity":  "Datacenters",
         "Principal":  "folder",
         "Propagate":  "acme\\domainadmins",
         "Role":  true,
-        "vCenter":  "Datacenter Managenent"
+        "vCenter":  true
     },
     {
         "Entity":  "Datacenters",
         "Principal":  "folder",
         "Propagate":  "acme\\levelthree",
         "Role":  true,
-        "vCenter":  "IT Staff"
+        "vCenter":  true
     }
 ]

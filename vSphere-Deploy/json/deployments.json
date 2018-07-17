@@ -26,7 +26,7 @@
         "SSODomainName":  "acme-vm.com",
         "SSOSiteName":  "NY",
         "SSOAdminPass":  "N0t*Password2",
-        "OVA":  "C:\\Users\\operator\\Documents\\GitHub\\vmware\\VMware-vCenter-Server-Appliance-6.5.0.5500-5318154_OVF10.ova"
+        "OVA":  "C:\\Users\\adm-mvan\\Desktop\\New folder\\VMware-vCenter-Server-Appliance-6.5.0.5500-5318154_OVF10.ova"
     },
     {
         "Action":  "deploy",
@@ -55,7 +55,7 @@
         "SSODomainName":  "acme-vm.com",
         "SSOSiteName":  "NY",
         "SSOAdminPass":  "N0t*Password2",
-        "OVA":  "C:\\Users\\operator\\Documents\\GitHub\\vmware\\VMware-vCenter-Server-Appliance-6.5.0.5500-5318154_OVF10.ova"
+        "OVA":  "C:\\Users\\adm-mvan\\Desktop\\New folder\\VMware-vCenter-Server-Appliance-6.5.0.5500-5318154_OVF10.ova"
     },
     {
         "Action":  "deploy",
@@ -84,7 +84,7 @@
         "SSODomainName":  "acme-vm.com",
         "SSOSiteName":  "NY",
         "SSOAdminPass":  "N0t*Password2",
-        "OVA":  "C:\\Users\\operator\\Documents\\GitHub\\vmware\\VMware-vCenter-Server-Appliance-6.5.0.5500-5318154_OVF10.ova"
+        "OVA":  "C:\\Users\\adm-mvan\\Desktop\\New folder\\VMware-vCenter-Server-Appliance-6.5.0.5500-5318154_OVF10.ova"
     },
     {
         "Action":  "deploy",
@@ -113,6 +113,6 @@
         "SSODomainName":  "acme-vm.com",
         "SSOSiteName":  "NY",
         "SSOAdminPass":  "N0t*Password2",
-        "OVA":  "C:\\Users\\operator\\Documents\\GitHub\\vmware\\VMware-vCenter-Server-Appliance-6.5.0.5500-5318154_OVF10.ova"
+        "OVA":  "C:\\Users\\adm-mvan\\Desktop\\New folder\\VMware-vCenter-Server-Appliance-6.5.0.5500-5318154_OVF10.ova"
     }
 ]
