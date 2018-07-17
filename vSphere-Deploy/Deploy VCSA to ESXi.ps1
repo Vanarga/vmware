@@ -3489,6 +3489,8 @@ Separatorline
 
 Write-Output "<=============== Deployment Complete ===============>" | Out-String
 
+Set-Location -Path $FolderPath
+
 # Get Certificate folders that do not have a Date/Time in their name.
 $CertFolders = (Get-Childitem -Path $($FolderPath + "\Certs") -Directory).FullName | Where-Object {$_ -notmatch '\d\d-\d\d-\d\d\d\d'}
 
