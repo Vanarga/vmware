@@ -960,7 +960,7 @@ function Deploy {
 	$ESXiThumbPrint = $ESXiCert.GetCertHashString() -replace '(..(?!$))','$1:'
 
 	If ($parameterlist.Action -ne "--version") {
-		$ArgumentList += "--X:logFile=$LogPath\ofvtool_" + $ParameterList.vmName + "-" + $(get-date -format "MM-dd-yyyy_HH-mm") + ".log"
+		$ArgumentList += "--X:logFile=$LogPath\ofvtool_" + $ParameterList.vmName + "-" + $(Get-Date -format "MM-dd-yyyy_HH-mm") + ".log"
 		$ArgumentList += "--X:logLevel=verbose"
 		$ArgumentList += "--acceptAllEulas"
 		$ArgumentList += "--skipManifestCheck"
@@ -2942,7 +2942,7 @@ If($NetAssembly)
 }
 
 # Global variables
-$PSCDeployments				= @("tiny","small","medium","large","infrastructure")
+$PSCDeployments		= @("tiny","small","medium","large","infrastructure")
 
 # Certificate variables
 # Create the RANDFILE environmental parameter for openssl to fuction properly.
@@ -3488,6 +3488,14 @@ ForEach ($Deployment in $SrcDeployments| Where-Object {$_.Config}) {
 Separatorline
 
 Write-Output "<=============== Deployment Complete ===============>" | Out-String
+
+# Get Certificate folders that do not have a Date/Time in their name.
+$CertFolders = (Get-Childitem -Path $($FolderPath + "\Certs") -Directory).FullName | Where-Object {$_ -notmatch '\d\d-\d\d-\d\d\d\d'}
+
+# Rename the folders to add Date/Time to the name.
+$CertFolders | ForEach-Object {
+	Rename-Item -Path $_ -NewName $($_ + "-" + $(Get-Date -format "MM-dd-yyyy_HH-mm"))
+}
 
 # Scrub logfiles
 $LogFiles = (Get-ChildItem -Path $LogPath).FullName
