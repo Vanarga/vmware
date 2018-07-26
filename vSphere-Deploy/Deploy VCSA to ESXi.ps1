@@ -693,6 +693,16 @@ function ConfigureSSOGroups {
 	$CommandList += "echo -e `"member: externalObjectId=$ADAdminsGroupSID`" >> groupadd_sca.ldif"
 	$CommandList += "echo -e `"-`" >> groupadd_sca.ldif"
 	$CommandList += "/opt/likewise/bin/ldapmodify -f /root/groupadd_sca.ldif -h $LDAPServer -D `"cn=Administrator,cn=Users,dc=$SubDomain,dc=$DomainExt`" -w `'" + $Deployment.VCSARootPass + "`'"
+
+	# Add AD vCenter Admins to System Configuration Administrators SSO Group.
+	$CommandList += "echo -e `"dn: cn=SystemConfiguration.BashShellAdministrators,dc=$SubDomain,dc=$DomainExt`" >> groupadd_scbsa.ldif"
+	$CommandList += "echo -e `"changetype: modify`" >> groupadd_scbsa.ldif"
+	$CommandList += "echo -e `"add: member`" >> groupadd_scbsa.ldif"
+	$CommandList += "echo -e `"member: externalObjectId=$ADAdminsGroupSID`" >> groupadd_scbsa.ldif"
+	$CommandList += "echo -e `"-`" >> groupadd_scbsa.ldif"
+	$CommandList += "/opt/likewise/bin/ldapmodify -f /root/groupadd_scbsa.ldif -h $LDAPServer -D `"cn=Administrator,cn=Users,dc=$SubDomain,dc=$DomainExt`" -w `'" + $Deployment.VCSARootPass + "`'"
+
+	# Remove all ldif files.
 	$CommandList += 'rm /root/*.ldif'
 
 	# Excute the commands in $CommandList on the vcsa.
@@ -2251,7 +2261,7 @@ If (!(Test-Path $PSPath)) {
 
 # Load Powercli Modules
 If (Get-Module -ListAvailable | Where-Object {$_.Name -match "VMware.PowerCLI"}) {
-	Import-Module VMware.PowerCLI
+	Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue
 }
 Else {
 		If (Get-Command Install-Module -ErrorAction SilentlyContinue) {
@@ -2262,7 +2272,7 @@ Else {
 }
 
 If (Get-Module -ListAvailable | Where-Object {$_.Name -match "powershell-yaml"}) {
-	Import-Module powershell-yaml
+	Import-Module powershell-yaml -ErrorAction SilentlyContinue
 }
 Else {
 		If (Get-Command Install-Module -ErrorAction SilentlyContinue) {
