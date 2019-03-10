@@ -1,4 +1,4 @@
-# Welcome to the vSphere 6.5/6.7 Deployment wiki! #
+# Welcome to the vSphere 6.5/6.7 Deployment Readme! #
 
 **7-25-2017**: Finally had some time to update the wiki, which explains in some detail what this project does. The Phase 2 page, details how the script replaces all the vCenter Certificates with a Microsoft Certificate Authority without using the VMCA or the Certificate utility on the VCSA (my only complaint about the on board Certificate utility is that it does not accept command line parameters).
 
