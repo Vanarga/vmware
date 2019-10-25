@@ -1,0 +1,104 @@
+function New-SolutionCSR {
+    <#
+    .SYNOPSIS
+		Create RSA private key and CSR for vSphere 6.0 SSL templates
+
+    .DESCRIPTION
+
+    .PARAMETER SVCDir
+
+    .PARAMETER CSRName
+
+    .PARAMETER CFGName
+
+    .PARAMETER PrivFile
+
+    .PARAMETER Flag
+
+    .PARAMETER SolutionUser
+
+    .PARAMETER CertDir
+
+	.PARAMETER Certinfor
+
+    .EXAMPLE
+        The example below shows the command line use with Parameters.
+
+        New-SolutionCSR -SVCDir < > -CSRName < > -CFGName < > -PrivFile < > -Flag < > -SolutionUser < > -CertDir < > -Certinfor < >
+
+        PS C:\> New-SolutionCSR
+
+    .NOTES
+        Author: Michael van Blijdesteijn
+        Last Edit: 2019-10-24
+        Version 1.0 - New-SolutionCSR
+    #>
+	[cmdletbinding()]
+	param (
+		[Parameter(Mandatory=$true)]
+		$SVCDir,
+		[Parameter(Mandatory=$true)]
+		$CSRName,
+		[Parameter(Mandatory=$true)]
+		$CFGName,
+		[Parameter(Mandatory=$true)]
+		$PrivFile,
+		[Parameter(Mandatory=$true)]
+		$Flag,
+		[Parameter(Mandatory=$true)]
+		$SolutionUser,
+		[Parameter(Mandatory=$true)]
+		$CertDir,
+		[Parameter(Mandatory=$true)]
+		$Certinfo
+	)
+
+	if (-not(Test-Path $CertDir\$SVCDir)) {
+		New-Item $CertDir\$SVCDir -Type Directory
+	}
+	# vSphere 5 and 6 CSR Options are different. Set according to flag type
+	# VUM 6.0 needs vSphere 5 template type
+	$commonName = $CSRName.Split(".")[0] + " " + $Certinfo.CompanyName
+	if ($Flag -eq 5) {
+		$csrOption1 = "dataEncipherment"
+	}
+	if ($Flag -eq 6) {
+		$csrOption1 = "nonRepudiation"
+	}
+	$defFQDN = $Certinfo.CompanyName
+	$machineShort = $defFQDN.Split(".")[0]
+	$machineIP = [System.Net.Dns]::GetHostAddresses("$defFQDN").IPAddressToString
+	$requestTemplate = "[ req ]
+	default_md = sha512
+	default_bits = 2048
+	default_keyfile = rui.key
+	distinguished_name = req_distinguished_name
+	encrypt_key = no
+	prompt = no
+	string_mask = nombstr
+	req_extensions = v3_req
+
+	[ v3_req ]
+	basicConstraints = CA:FALSE
+	keyUsage = digitalSignature, keyEncipherment, $csrOption1
+	subjectAltName = IP:$machineIP,DNS:$defFQDN,DNS:$machineShort
+
+	[ req_distinguished_name ]
+	countryName = $($Certinfo.Country)
+	stateOrProvinceName = $($Certinfo.State)
+	localityName = $($Certinfo.Locality)
+	0.organizationName = $($Certinfo.OrgName)
+	organizationalUnitName = $($Certinfo.OrgUnit)
+	commonName = $commonName
+	"
+	Set-Location $CertDir
+	if (-not(Test-Path $SVCDir)) {
+		new-Item Machine -Type Directory
+	}
+	# Create CSR and private key
+	$out = $requestTemplate | Out-File "$CertDir\$SVCDir\$CFGName" -Encoding default -Force
+	Invoke-OpenSSL "req -new -nodes -out `"$CertDir\$SVCDir\$CSRName`" -keyout `"$CertDir\$SVCDir\$CSRName.key`" -config `"$CertDir\$SVCDir\$CFGName`""
+	Invoke-OpenSSL "rsa -in `"$CertDir\$SVCDir\$CSRName.key`" -out `"$CertDir\$SVCDir\$PrivFile`""
+	Remove-Item $SVCDir\$CSRName.key
+    Write-Host "CSR is located at $CertDir\$SVCDir\$CSRName" -ForegroundColor Yellow
+}
