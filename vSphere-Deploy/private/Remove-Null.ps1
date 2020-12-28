@@ -1,7 +1,7 @@
 function Remove-Null {
     <#
     .SYNOPSIS
-		Replace $null values with "<null>" string in objects.
+        Replace $null values with "<null>" string in objects.
 
     .DESCRIPTION
 
@@ -19,11 +19,17 @@ function Remove-Null {
         Last Edit: 2019-10-24
         Version 1.0 - Remove-Null
     #>
-	[cmdletbinding()]
+    [cmdletbinding()]
     param (
-        [Parameter(ValueFromPipeline)]
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
         $InputObject
     )
 
-	$InputObject | ForEach-Object {$_.psobject.properties | Where-Object {-not $_.value -and $_.TypeNameOfValue -ne "System.Boolean"} | ForEach-Object {$_.value = "<null>"}}
+    $InputObject | ForEach-Object {
+        $_.psobject.properties | Where-Object {-not $_.value -and $_.TypeNameOfValue -ne "System.Boolean"} | ForEach-Object {
+            $_.value = "<null>"
+        }
+    }
 }

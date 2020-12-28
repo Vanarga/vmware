@@ -1,0 +1,39 @@
+vData.Type: clusters
+Properties:
+- ClusterName: build
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+- ClusterName: dmz
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+- ClusterName: lab
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+- ClusterName: vdi
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+- ClusterName: prod
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+- ClusterName: dev
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+- ClusterName: qa
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+- ClusterName: stag
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+- ClusterName: test
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  WorkSheet: clusters
+

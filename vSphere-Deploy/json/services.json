@@ -1,18 +1,25 @@
-[
+{
+  "vData.Type": "services",
+  "Properties": [
     {
-        "vCenter":  "all",
-        "Service":  "AuthProxy"
+      "vCenter": "all",
+      "Service": "AuthProxy",
+      "WorkSheet": "services"
     },
     {
-        "vCenter":  "all",
-        "Service":  "AutoDeploy"
+      "vCenter": "all",
+      "Service": "AutoDeploy",
+      "WorkSheet": "services"
     },
     {
-        "vCenter":  "all",
-        "Service":  "Netdumpster"
+      "vCenter": "all",
+      "Service": "Netdumpster",
+      "WorkSheet": "services"
     },
     {
-        "vCenter":  "all",
-        "Service":  "TFTP"
+      "vCenter": "all",
+      "Service": "TFTP",
+      "WorkSheet": "services"
     }
-]
+  ]
+}

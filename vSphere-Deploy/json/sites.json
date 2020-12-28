@@ -1,30 +1,37 @@
-[
+{
+  "vData.Type": "sites",
+  "Properties": [
     {
-        "Datacenter":  "ny",
-        "oct1":  "\u003cnull\u003e",
-        "oct2":  100,
-        "oct3":  "\u003cnull\u003e",
-        "vCenter":  "vcsa1.acme.com"
+      "Datacenter": "ny",
+      "Octet1": "<null>",
+      "Octet2": 100.0,
+      "Octet3": "<null>",
+      "vCenter": "vcsa1.acme.com",
+      "WorkSheet": "sites"
     },
     {
-        "Datacenter":  "ca",
-        "oct1":  "\u003cnull\u003e",
-        "oct2":  120,
-        "oct3":  "\u003cnull\u003e",
-        "vCenter":  "vcsa1.acme.com"
+      "Datacenter": "ca",
+      "Octet1": "<null>",
+      "Octet2": 120.0,
+      "Octet3": "<null>",
+      "vCenter": "vcsa1.acme.com",
+      "WorkSheet": "sites"
     },
     {
-        "Datacenter":  "uk",
-        "oct1":  "\u003cnull\u003e",
-        "oct2":  130,
-        "oct3":  "\u003cnull\u003e",
-        "vCenter":  "vcsa2.acme.com"
+      "Datacenter": "uk",
+      "Octet1": "<null>",
+      "Octet2": 130.0,
+      "Octet3": "<null>",
+      "vCenter": "vcsa2.acme.com",
+      "WorkSheet": "sites"
     },
     {
-        "Datacenter":  "nl",
-        "oct1":  "\u003cnull\u003e",
-        "oct2":  140,
-        "oct3":  "\u003cnull\u003e",
-        "vCenter":  "vcsa2.acme.com"
+      "Datacenter": "nl",
+      "Octet1": "<null>",
+      "Octet2": 140.0,
+      "Octet3": "<null>",
+      "vCenter": "vcsa2.acme.com",
+      "WorkSheet": "sites"
     }
-]
+  ]
+}

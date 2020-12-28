@@ -1,44 +1,65 @@
-[
+{
+  "vData.Type": "permissions",
+  "Properties": [
     {
-        "Entity":  "NY",
-        "Principal":  "datacenter",
-        "Propagate":  "acme\\helpdesk",
-        "Role":  true,
-        "vCenter":  true
+      "Entity": "NY",
+      "Location": "datacenter",
+      "Principal": "acme\\helpdesk",
+      "Group": true,
+      "Propagate": true,
+      "Role": "Helpdesk - Read Only",
+      "vCenter": "vcsa1.acme.com",
+      "WorkSheet": "permissions"
     },
     {
-        "Entity":  "CA",
-        "Principal":  "datacenter",
-        "Propagate":  "acme\\temps",
-        "Role":  true,
-        "vCenter":  true
+      "Entity": "CA",
+      "Location": "datacenter",
+      "Principal": "acme\\temps",
+      "Group": true,
+      "Propagate": true,
+      "Role": "Helpdesk - Read Only",
+      "vCenter": "vcsa2.acme.com",
+      "WorkSheet": "permissions"
     },
     {
-        "Entity":  "Datacenters",
-        "Principal":  "folder",
-        "Propagate":  "acme\\reporting",
-        "Role":  false,
-        "vCenter":  false
+      "Entity": "Datacenters",
+      "Location": "folder",
+      "Principal": "acme\\reporting",
+      "Group": false,
+      "Propagate": false,
+      "Role": "Reporting",
+      "vCenter": "all",
+      "WorkSheet": "permissions"
     },
     {
-        "Entity":  "Datacenters",
-        "Principal":  "folder",
-        "Propagate":  "acme\\support",
-        "Role":  true,
-        "vCenter":  true
+      "Entity": "Datacenters",
+      "Location": "folder",
+      "Principal": "acme\\support",
+      "Group": true,
+      "Propagate": true,
+      "Role": "NetOps",
+      "vCenter": "all",
+      "WorkSheet": "permissions"
     },
     {
-        "Entity":  "Datacenters",
-        "Principal":  "folder",
-        "Propagate":  "acme\\domainadmins",
-        "Role":  true,
-        "vCenter":  true
+      "Entity": "Datacenters",
+      "Location": "folder",
+      "Principal": "acme\\domainadmins",
+      "Group": true,
+      "Propagate": true,
+      "Role": "Datacenter Managenent",
+      "vCenter": "all",
+      "WorkSheet": "permissions"
     },
     {
-        "Entity":  "Datacenters",
-        "Principal":  "folder",
-        "Propagate":  "acme\\levelthree",
-        "Role":  true,
-        "vCenter":  true
+      "Entity": "Datacenters",
+      "Location": "folder",
+      "Principal": "acme\\levelthree",
+      "Group": true,
+      "Propagate": true,
+      "Role": "IT Staff",
+      "vCenter": "all",
+      "WorkSheet": "permissions"
     }
-]
+  ]
+}

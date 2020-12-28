@@ -1,11 +1,11 @@
-ad-info.yml
-autodeploy-rules.yml
-cert-info.yml
-cluster-info.yml
+adinfo.yml
+autodeployrules.yml
+certinfo.yml
+clusterinfo.yml
 deployments.yml
 folders.yml
 licenses.yml
-os-customizations.yml
+oscustomizations.yml
 permissions.yml
 plugins.yml
 roles.yml

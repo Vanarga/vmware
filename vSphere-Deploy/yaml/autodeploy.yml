@@ -1,0 +1,27 @@
+vData.Type: autodeploy
+Properties:
+- vCenter: vcsa1.acme.com
+  RuleName: Provision
+  ProfileImport: Profile.vpf
+  ProfileName: Prod
+  ProfileRootPassword: N0t*Password2
+  ProfileAnnotation: AutoDeploy Profile
+  Datacenter: ny
+  Cluster: Provision
+  SoftwareDepot: VMware-Host-Client-1.0.0-offline-bundle-3617585.zip
+  Pattern: ipv4=10.100.100.10-10.100.100.250
+  Activate: true
+  WorkSheet: autodeploy
+- vCenter: vcsa2.acme.com
+  RuleName: Provision
+  ProfileImport: Profile.vpf
+  ProfileName: Prod
+  ProfileRootPassword: N0t*Password2
+  ProfileAnnotation: AutoDeploy Profile
+  Datacenter: ca
+  Cluster: Provision
+  SoftwareDepot: VMware-Host-Client-1.0.0-offline-bundle-3617585.zip
+  Pattern: ipv4=10.120.100.10-10.120.100.250
+  Activate: true
+  WorkSheet: autodeploy
+

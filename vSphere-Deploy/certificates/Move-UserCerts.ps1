@@ -16,17 +16,18 @@ function Move-UserCerts {
         Last Edit: 2019-10-24
         Version 1.0 - Move-UserCerts
     #>
-	[cmdletbinding()]
-	
-	Get-ChildItem -Path $CertDir -filter "*.crt" | ForEach-Object {
-		$dir = $_.Basename
-		if (-not(Test-Path $CertDir\$dir)) {
-			New-Item $CertDir\$dir -Type Directory
-		}
-		Move-Item -Path $_.FullName -Destination $CertDir\$dir -Force
-	}
-	Get-ChildItem -Path $CertDir -filter "*.key" | ForEach-Object {
-		$dir = $_.Basename
-		Move-Item -Path $_.FullName -Destination $CertDir\$dir -Force
-	}
+    [cmdletbinding()]
+    param()
+
+    Get-ChildItem -Path $CertDir -Filter "*.crt" | ForEach-Object {
+        $dir = $_.Basename
+        if (-not(Test-Path -Path "$CertDir\$dir")) {
+            New-Item -Path "$CertDir\$dir" -Type Directory
+        }
+        Move-Item -Path $_.FullName -Destination "$CertDir\$dir" -Force
+    }
+    Get-ChildItem -Path $CertDir -Filter "*.key" | ForEach-Object {
+        $dir = $_.Basename
+        Move-Item -Path $_.FullName -Destination "$CertDir\$dir" -Force
+    }
 }

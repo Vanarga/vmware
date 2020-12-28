@@ -1,11 +1,11 @@
-ad-info.json
-autodeploy-rules.json
-cert-info.json
-cluster-info.json
+adinfo.json
+autodeployrules.json
+certinfo.json
+clusterinfo.json
 deployments.json
 folders.json
 licenses.json
-os-customizations.json
+oscustomizations.json
 permissions.json
 plugins.json
 roles.json

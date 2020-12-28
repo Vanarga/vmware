@@ -1,7 +1,7 @@
 function Write-SeparatorLine {
     <#
     .SYNOPSIS
-		Print a dated line to standard output.
+        Print a dated line to standard output.
 
     .DESCRIPTION
 
@@ -17,7 +17,8 @@ function Write-SeparatorLine {
         Last Edit: 2019-10-24
         Version 1.0 - Write-SeparatorLine
     #>
-	[cmdletbinding()]
-	$Date = Get-Date
-	Write-Output "`n---------------------------- $Date ----------------------------`r`n" | Out-String
+    [cmdletbinding()]
+    param()
+    $Date = Get-Date
+    Write-Output -InputObject "`n---------------------------- $Date ----------------------------`r`n" | Out-String
 }

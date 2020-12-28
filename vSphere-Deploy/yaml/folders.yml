@@ -1,115 +1,136 @@
-- Type: VM
-  vCenter: all
-  Name: build
-  Datacenter: all
+vData.Type: folders
+Properties:
+- Name: build
   Location: vm
-  Tier: 1
-- Type: VM
-  vCenter: all
-  Name: dev
+  Type: VM
   Datacenter: all
-  Location: vm
-  Tier: 1
-- Type: VM
   vCenter: all
-  Name: dmz
-  Datacenter: all
-  Location: vm
   Tier: 1
-- Type: VM
+  WorkSheet: folders
+- Name: dmz
+  Location: vm
+  Type: VM
+  Datacenter: all
   vCenter: all
-  Name: lab
-  Datacenter: all
-  Location: vm
   Tier: 1
-- Type: VM
+  WorkSheet: folders
+- Name: lab
+  Location: vm
+  Type: VM
+  Datacenter: all
   vCenter: all
-  Name: prod
-  Datacenter: all
-  Location: vm
   Tier: 1
-- Type: VM
+  WorkSheet: folders
+- Name: vdi
+  Location: vm
+  Type: VM
+  Datacenter: all
   vCenter: all
-  Name: qa
-  Datacenter: all
-  Location: vm
   Tier: 1
-- Type: VM
+  WorkSheet: folders
+- Name: prod
+  Location: vm
+  Type: VM
+  Datacenter: all
   vCenter: all
-  Name: stag
-  Datacenter: all
-  Location: vm
   Tier: 1
-- Type: VM
+  WorkSheet: folders
+- Name: dev
+  Location: vm
+  Type: VM
+  Datacenter: all
   vCenter: all
-  Name: test
-  Datacenter: all
-  Location: vm
   Tier: 1
-- Type: VM
+  WorkSheet: folders
+- Name: qa
+  Location: vm
+  Type: VM
+  Datacenter: all
   vCenter: all
-  Name: vdi
-  Datacenter: all
-  Location: vm
   Tier: 1
-- Type: VM
-  vCenter: vcsa2.acme.com
-  Name: ca staff
-  Datacenter: ca
+  WorkSheet: folders
+- Name: stag
+  Location: vm
+  Type: VM
+  Datacenter: all
+  vCenter: all
+  Tier: 1
+  WorkSheet: folders
+- Name: test
+  Location: vm
+  Type: VM
+  Datacenter: all
+  vCenter: all
+  Tier: 1
+  WorkSheet: folders
+- Name: ny staff
   Location: Prod
-  Tier: 2
-- Type: VM
-  vCenter: vcsa1.acme.com
-  Name: ny staff
+  Type: VM
   Datacenter: ny
+  vCenter: vcsa1.acme.com
+  Tier: 2
+  WorkSheet: folders
+- Name: ca staff
   Location: Prod
+  Type: VM
+  Datacenter: ca
+  vCenter: vcsa2.acme.com
   Tier: 2
-- Type: VM
-  vCenter: vcsa2.acme.com
-  Name: accounting
-  Datacenter: ca
-  Location: ca staff
-  Tier: 3
-- Type: VM
-  vCenter: vcsa1.acme.com
-  Name: accounting
-  Datacenter: ny
+  WorkSheet: folders
+- Name: accounting
   Location: ny staff
-  Tier: 3
-- Type: VM
-  vCenter: vcsa1.acme.com
-  Name: Expenses
+  Type: VM
   Datacenter: ny
-  Location: ny staff
-  Tier: 3
-- Type: VM
-  vCenter: vcsa2.acme.com
-  Name: HR
-  Datacenter: ca
-  Location: ca staff
-  Tier: 3
-- Type: VM
   vCenter: vcsa1.acme.com
-  Name: IT
-  Datacenter: ny
+  Tier: 3
+  WorkSheet: folders
+- Name: accounting
+  Location: ca staff
+  Type: VM
+  Datacenter: ca
+  vCenter: vcsa2.acme.com
+  Tier: 3
+  WorkSheet: folders
+- Name: Sales
   Location: ny staff
-  Tier: 3
-- Type: VM
-  vCenter: vcsa2.acme.com
-  Name: Marketing
-  Datacenter: ca
-  Location: ca staff
-  Tier: 3
-- Type: VM
-  vCenter: vcsa2.acme.com
-  Name: New Hires
-  Datacenter: ca
-  Location: ca staff
-  Tier: 3
-- Type: VM
+  Type: VM
+  Datacenter: ny
   vCenter: vcsa1.acme.com
-  Name: Sales
-  Datacenter: ny
-  Location: ny staff
   Tier: 3
+  WorkSheet: folders
+- Name: HR
+  Location: ca staff
+  Type: VM
+  Datacenter: ca
+  vCenter: vcsa2.acme.com
+  Tier: 3
+  WorkSheet: folders
+- Name: IT
+  Location: ny staff
+  Type: VM
+  Datacenter: ny
+  vCenter: vcsa1.acme.com
+  Tier: 3
+  WorkSheet: folders
+- Name: Marketing
+  Location: ca staff
+  Type: VM
+  Datacenter: ca
+  vCenter: vcsa2.acme.com
+  Tier: 3
+  WorkSheet: folders
+- Name: Expenses
+  Location: ny staff
+  Type: VM
+  Datacenter: ny
+  vCenter: vcsa1.acme.com
+  Tier: 3
+  WorkSheet: folders
+- Name: New Hires
+  Location: ca staff
+  Type: VM
+  Datacenter: ca
+  vCenter: vcsa2.acme.com
+  Tier: 3
+  WorkSheet: folders
 

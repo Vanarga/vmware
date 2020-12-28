@@ -1,37 +1,45 @@
-- Command: <null>
+vData.Type: Plugins
+Properties:
+- Config: true
   vCenter: vcsa1.acme.com
-  SourceFiles: '*'
   SourceDir: onyx\onyx-setup-60u2
-  Config: true
   DestDir: /root
-- Command: chmod +x ./install.sh
-  vCenter: vcsa1.acme.com
-  SourceFiles: <null>
-  SourceDir: <null>
-  Config: true
-  DestDir: <null>
-- Command: ./install.sh
-  vCenter: vcsa1.acme.com
-  SourceFiles: <null>
-  SourceDir: <null>
-  Config: true
-  DestDir: <null>
-- Command: <null>
-  vCenter: vcsa2.acme.com
   SourceFiles: '*'
+  Command: <null>
+  WorkSheet: Plugins
+- Config: true
+  vCenter: vcsa1.acme.com
+  SourceDir: <null>
+  DestDir: <null>
+  SourceFiles: <null>
+  Command: chmod +x ./install.sh
+  WorkSheet: Plugins
+- Config: true
+  vCenter: vcsa1.acme.com
+  SourceDir: <null>
+  DestDir: <null>
+  SourceFiles: <null>
+  Command: ./install.sh
+  WorkSheet: Plugins
+- Config: true
+  vCenter: vcsa2.acme.com
   SourceDir: onyx\onyx-setup-60u2
-  Config: true
   DestDir: /root
-- Command: chmod +x ./install.sh
+  SourceFiles: '*'
+  Command: <null>
+  WorkSheet: Plugins
+- Config: true
   vCenter: vcsa2.acme.com
-  SourceFiles: <null>
   SourceDir: <null>
-  Config: true
   DestDir: <null>
-- Command: ./install.sh
+  SourceFiles: <null>
+  Command: chmod +x ./install.sh
+  WorkSheet: Plugins
+- Config: true
   vCenter: vcsa2.acme.com
-  SourceFiles: <null>
   SourceDir: <null>
-  Config: true
   DestDir: <null>
+  SourceFiles: <null>
+  Command: ./install.sh
+  WorkSheet: Plugins
 

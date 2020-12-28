@@ -1,7 +1,7 @@
 function Get-URLStatus {
     <#
     .SYNOPSIS
-		Test url for TCP Port 80 Listening.
+        Test url for TCP Port 80 Listening.
 
     .DESCRIPTION
 
@@ -19,31 +19,33 @@ function Get-URLStatus {
         Last Edit: 2019-10-24
         Version 1.0 - Get-URLStatus
     #>
-	[cmdletbinding()]
+    [cmdletbinding()]
     param (
-        [Parameter(Mandatory=$true)]
-		$URL
-	)
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $URL
+    )
 
-	# Test url for TCP Port 80 Listening.
-	While (-not(Test-NetConnection -ComputerName $($URL.Split("//")[2]) -Port 80).TCPTestSucceeded) {
-		Write-Host "`r`n $URL not ready, sleeping for 30 sec.`r`n" -Foregroundcolor Cyan
-		Start-Sleep -s 30
-	}
+    # Test url for TCP Port 80 Listening.
+    While (-not(Test-NetConnection -ComputerName $($URL.Split("//")[2]) -Port 80).TCPTestSucceeded) {
+        Write-Host -Object "`r`n $URL not ready, sleeping for 30 sec.`r`n" -Foregroundcolor Cyan
+        Start-Sleep -Seconds 30
+    }
 
-	# https://stackoverflow.com/questions/46036777/unable-to-connect-to-help-content-the-server-on-which-help-content-is-stored-mi
-	[Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls, Ssl3"
+    # https://stackoverflow.com/questions/46036777/unable-to-connect-to-help-content-the-server-on-which-help-content-is-stored-mi
+    [Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls, Ssl3"
 
-	# Make sure that the url is Get-URLStatus.
-	Do {
-		$failed = $false
-		Try {
-			(Invoke-WebRequest -uri $URL -UseBasicParsing -TimeoutSec 20 -ErrorAction Ignore).StatusCode -ne 200
-		}
-		Catch {
-			$failed = $true
-			Write-Host "`r`n $URL not ready, sleeping for 30 sec.`r`n" -Foregroundcolor Cyan
-			Start-Sleep -s 30
-		}
-	} While ($failed)
+    # Make sure that the url is Get-URLStatus.
+    Do {
+        $failed = $false
+        Try {
+            (Invoke-WebRequest -uri $URL -UseBasicParsing -TimeoutSec 20 -ErrorAction Ignore).StatusCode -ne 200
+        }
+        Catch {
+            $failed = $true
+            Write-Host -Object "`r`n $URL not ready, sleeping for 30 sec.`r`n" -Foregroundcolor Cyan
+            Start-Sleep -Seconds 30
+        }
+    } While ($failed)
 }

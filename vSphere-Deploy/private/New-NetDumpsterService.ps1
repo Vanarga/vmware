@@ -1,6 +1,7 @@
 function New-NetDumpsterService {
+    <#
     .SYNOPSIS
-		Configure Network Dumpster to Auto Start and start service.
+        Configure Network Dumpster to Auto Start and start service.
 
     .DESCRIPTION
 
@@ -8,9 +9,9 @@ function New-NetDumpsterService {
 
     .PARAMETER Username
 
-	.PARAMETER Password
+    .PARAMETER Password
 
-	.PARAMETER VIHandle
+    .PARAMETER VIHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
@@ -24,28 +25,38 @@ function New-NetDumpsterService {
         Last Edit: 2019-10-24
         Version 1.0 - New-NetDumpsterService
     #>
-	[cmdletbinding()]
-	param (
-		[Parameter(Mandatory=$true)]
-		$Hostname,
-		[Parameter(Mandatory=$true)]
-		$Username,
-		[Parameter(Mandatory=$true)]
-		$Password,
-		[Parameter(Mandatory=$true)]
-		$VIHandle
-	)
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $Hostname,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        [SecureString]$Credential,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $VIHandle
+    )
 
-	$commandList = $null
-	$commandList = @()
+    $commandList = $null
+    $commandList = @()
 
-	$commandList += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-	$commandList += "export VMWARE_LOG_DIR=/var/log"
-	$commandList += "export VMWARE_CFG_DIR=/etc/vmware"
-	$commandList += "export VMWARE_DATA_DIR=/storage"
-	$commandList += "/usr/lib/vmware-vmon/vmon-cli --update netdumper --starttype AUTOMATIC"
-	$commandList += "/usr/lib/vmware-vmon/vmon-cli --start netdumper"
+    $commandList += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+    $commandList += "export VMWARE_LOG_DIR=/var/log"
+    $commandList += "export VMWARE_CFG_DIR=/etc/vmware"
+    $commandList += "export VMWARE_DATA_DIR=/storage"
+    $commandList += "/usr/lib/vmware-vmon/vmon-cli --update netdumper --starttype AUTOMATIC"
+    $commandList += "/usr/lib/vmware-vmon/vmon-cli --start netdumper"
 
-	# Service update
-	Invoke-ExecuteScript $commandList $Hostname $Username $Password $VIHandle
+    # Service update
+    $params = @{
+        Script = $commandList
+        Hostname = $Hostname
+        Credential = $Credential
+        ViHandle = $VIHandle
+    }
+    Invoke-ExecuteScript @params
 }

@@ -1,7 +1,7 @@
 function Save-Json {
     <#
     .SYNOPSIS
-		Save Object to json file.
+        Save Object to json file.
 
     .DESCRIPTION
 
@@ -21,15 +21,22 @@ function Save-Json {
         Last Edit: 2019-10-24
         Version 1.0 - Save-Json
     #>
-	[cmdletbinding()]
+    [cmdletbinding()]
     param (
-		[Parameter(Mandatory=$true)]
-		$InputObject,
-		[Parameter(Mandatory=$true)]
-		$FilePath
-	)
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $InputObject,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $FilePath
+    )
 
-	Remove-Null $InputObject
+    Remove-Null -InputObject $InputObject
 
-	$InputObject | ConvertTo-Json | Set-Content -Path $FilePath
+    $output = [ordered]@{}
+    $output["vData.Type"] = $FilePath.split('\')[-1].split('.')[0]
+    $output["Properties"] = $InputObject.Value
+    $output | ConvertTo-Json | Set-Content -Path $FilePath
 }

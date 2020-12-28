@@ -1,41 +1,51 @@
+vData.Type: vdswitches
+Properties:
 - SwitchNumber: 1
-  Version: 6.5.0
-  vCenter: all
-  Datacenter: ny,ca
   vDSwitchName: vDS-XXX-Production
-- SwitchNumber: 1.1
-  Version: 6.5.0
-  vCenter: all
   Datacenter: ny,ca
+  vCenter: all
+  Version: 6.5.0
+  WorkSheet: vdswitches
+- SwitchNumber: 1.1000000000000001
   vDSwitchName: vDS-XXX-Staging
+  Datacenter: ny,ca
+  vCenter: all
+  Version: 6.5.0
+  WorkSheet: vdswitches
 - SwitchNumber: 1.2
-  Version: 6.5.0
-  vCenter: all
-  Datacenter: ny,ca
   vDSwitchName: vDS-XXX-Testing
+  Datacenter: ny,ca
+  vCenter: all
+  Version: 6.5.0
+  WorkSheet: vdswitches
 - SwitchNumber: 1.3
-  Version: 6.5.0
-  vCenter: all
-  Datacenter: ny,ca
   vDSwitchName: vDS-XXX-Development
-- SwitchNumber: 1.4
-  Version: 6.5.0
-  vCenter: all
   Datacenter: ny,ca
+  vCenter: all
+  Version: 6.5.0
+  WorkSheet: vdswitches
+- SwitchNumber: 1.3999999999999999
   vDSwitchName: vDS-XXX-QA
+  Datacenter: ny,ca
+  vCenter: all
+  Version: 6.5.0
+  WorkSheet: vdswitches
 - SwitchNumber: 1.5
-  Version: 6.5.0
-  vCenter: all
-  Datacenter: ny,ca
   vDSwitchName: vDS-XXX-Infrastructure
-- SwitchNumber: 1.6
-  Version: 6.5.0
+  Datacenter: ny,ca
   vCenter: all
-  Datacenter: ny,ca
-  vDSwitchName: vDS-XXX-Lab
-- SwitchNumber: 9.9
   Version: 6.5.0
-  vCenter: vcsa1.acme.com
+  WorkSheet: vdswitches
+- SwitchNumber: 1.6000000000000001
+  vDSwitchName: vDS-XXX-Lab
   Datacenter: ny,ca
+  vCenter: all
+  Version: 6.5.0
+  WorkSheet: vdswitches
+- SwitchNumber: 9.9000000000000004
   vDSwitchName: vDS No UpLink Networks
+  Datacenter: ny,ca
+  vCenter: vcsa1.acme.com
+  Version: 6.5.0
+  WorkSheet: vdswitches
 
