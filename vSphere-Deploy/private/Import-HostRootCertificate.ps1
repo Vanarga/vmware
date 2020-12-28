@@ -1,13 +1,14 @@
 function Import-HostRootCertificate {
+    <#
     .SYNOPSIS
-		Download the Node self signed certificate and install it in the local trusted root certificate store.
+        Download the Node self signed certificate and install it in the local trusted root certificate store.
 
     .DESCRIPTION
 
     .PARAMETER CertPath
-	
+
     .PARAMETER Deployment
-	
+
     .PARAMETER VIHandle
 
     .EXAMPLE
@@ -22,40 +23,64 @@ function Import-HostRootCertificate {
         Last Edit: 2019-10-24
         Version 1.0 - Import-HostRootCertificate
     #>
-	[cmdletbinding()]
-	param (
-		[Parameter(Mandatory=$true)]
-		$CertPath,
-		[Parameter(Mandatory=$true)]
-		$Deployment,
-		[Parameter(Mandatory=$true)]
-		$VIHandle
-	)
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $CertPath,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $Deployment,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $VIHandle
+    )
 
-	Write-SeparatorLine
+    Write-SeparatorLine
 
-	$rootCertPath = $CertPath+ "\" + $Deployment.Hostname.Split(".")[0] + "_self_signed_root_cert.crt"
+    $rootCertPath = $CertPath+ "\" + $Deployment.Hostname.Split(".")[0] + "_self_signed_root_cert.crt"
 
-	$commandList 	= $null
-	$commandList 	= @()
-	$commandList 	+= "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert list --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`' | grep `'CN(id):`'"
+    $credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
 
-	$Certid = $(Invoke-ExecuteScript $commandList $Deployment.Hostname "root" $Deployment.VCSARootPass $VIHandle).Scriptoutput.Split("")[2]
+    $commandList = $null
+    $commandList = @()
+    $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert list --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`' | grep `'CN(id):`'"
+    $params = @{
+        Script = $commandList
+        Hostname = $Deployment.Hostname
+        Credential = $credential
+        ViHandle = $VIHandle
+    }
+    $Certid = $(Invoke-ExecuteScript @params).Scriptoutput.Split("")[2]
 
-	$commandList 	= $null
-	$commandList 	= @()
-	$commandList    += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert get --id $Certid --outcert /root/vcrootcert.crt --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+    $commandList = $null
+    $commandList = @()
+    $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert get --id $Certid --outcert /root/vcrootcert.crt --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+    $params = @{
+        Script = $commandList
+        Hostname = $Deployment.Hostname
+        Credential = $credential
+        ViHandle = $VIHandle
+    }
+    Invoke-ExecuteScript @params
 
-	Invoke-ExecuteScript $commandList $Deployment.Hostname "root" $Deployment.VCSARootPass $VIHandle
+    $filePath = $null
+    $filePath = @()
+    $filePath += "/root/vcrootcert.crt"
+    $filePath += $rootCertPath
+    $params = @{
+        Path = $filePath
+        Hostname = $Deployment.Hostname
+        Credential = $credential
+        VIHandle = $VIHandle
+        Upload = $false
+    }
+    Copy-FileToServer @params
 
-	$filePath = $null
-	$filePath = @()
-	$filePath += "/root/vcrootcert.crt"
-	$filePath += $rootCertPath
+    Import-Certificate -FilePath $rootCertPath -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
 
-	Copy-FileToServer $filePath $Deployment.Hostname "root" $Deployment.VCSARootPass $VIHandle $false
-
-	Import-Certificate -FilePath $rootCertPath -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
-
-	Write-SeparatorLine
+    Write-SeparatorLine
 }

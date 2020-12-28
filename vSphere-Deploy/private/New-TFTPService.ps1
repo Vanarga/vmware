@@ -1,14 +1,14 @@
 function New-TFTPService {
     <#
     .SYNOPSIS
-		Configure TFTP, set firewall exemption, set service to auto start, start service.
+        Configure TFTP, set firewall exemption, set service to auto start, start service.
 
     .DESCRIPTION
 
     .PARAMETER Hostname
 
     .PARAMETER Username
-	
+
     .PARAMETER Password
 
     .PARAMETER VIHandle
@@ -25,64 +25,74 @@ function New-TFTPService {
         Last Edit: 2019-10-24
         Version 1.0 - New-TFTPService
     #>
-	[cmdletbinding()]
-	param (
-		[Parameter(Mandatory=$true)]
-		$Hostname,
-		[Parameter(Mandatory=$true)]
-		$Username,
-		[Parameter(Mandatory=$true)]
-		$Password,
-		[Parameter(Mandatory=$true)]
-		$VIHandle
-	)
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $Hostname,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        [SecureString]$Credential,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $VIHandle
+    )
 
-	$commandList = $null
-	$commandList = @()
+    $commandList = $null
+    $commandList = @()
 
-	# Set Permanent Firewall Exception
-	$commandList += 'echo -e "{" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "  	\"firewall\": {" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "    	\"enable\": true," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "    	\"rules\": [" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "      	{" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"direction\": \"inbound\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"protocol\": \"tcp\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"porttype\": \"dst\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"port\": \"69\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"portoffset\": 0" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "      	}," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "      {" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"direction\": \"inbound\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"protocol\": \"udp\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"porttype\": \"dst\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"port\": \"69\"," >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "        	\"portoffset\": 0" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "      }" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "    ]" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "  }" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += 'echo -e "}" >> /etc/vmware/appliance/firewall/tftp'
-	$commandList += "echo `"#!/bin/bash`" > /tmp/tftpcmd"
-	$commandList += "echo -n `"sed -i `" >> /tmp/tftpcmd"
-	$commandList += "echo -n `'`"s/`' >> /tmp/tftpcmd"
-	$commandList += "echo -n \`'/ >> /tmp/tftpcmd"
-	$commandList += "echo -n `'\`' >> /tmp/tftpcmd"
-	$commandList += "echo -n `'`"/g`' >> /tmp/tftpcmd"
-	$commandList += "echo -n `'`"`' >> /tmp/tftpcmd"
-	$commandList += "echo -n `" /etc/vmware/appliance/firewall/tftp`" >> /tmp/tftpcmd"
-	$commandList += "chmod a+x /tmp/tftpcmd"
-	$commandList += "/tmp/tftpcmd"
-	$commandList += "rm /tmp/tftpcmd"
+    # Set Permanent Firewall Exception
+    $commandList += 'echo -e "{" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "      \"firewall\": {" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "      \"enable\": true," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "      \"rules\": [" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          {" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"direction\": \"inbound\"," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"protocol\": \"tcp\"," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"porttype\": \"dst\"," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"port\": \"69\"," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"portoffset\": 0" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          }," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "      {" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"direction\": \"inbound\"," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"protocol\": \"udp\"," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"porttype\": \"dst\"," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"port\": \"69\"," >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "          \"portoffset\": 0" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "      }" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "    ]" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "  }" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += 'echo -e "}" >> /etc/vmware/appliance/firewall/tftp'
+    $commandList += "echo `"#!/bin/bash`" > /tmp/tftpcmd"
+    $commandList += "echo -n `"sed -i `" >> /tmp/tftpcmd"
+    $commandList += "echo -n `'`"s/`' >> /tmp/tftpcmd"
+    $commandList += "echo -n \`'/ >> /tmp/tftpcmd"
+    $commandList += "echo -n `'\`' >> /tmp/tftpcmd"
+    $commandList += "echo -n `'`"/g`' >> /tmp/tftpcmd"
+    $commandList += "echo -n `'`"`' >> /tmp/tftpcmd"
+    $commandList += "echo -n `" /etc/vmware/appliance/firewall/tftp`" >> /tmp/tftpcmd"
+    $commandList += "chmod a+x /tmp/tftpcmd"
+    $commandList += "/tmp/tftpcmd"
+    $commandList += "rm /tmp/tftpcmd"
 
-	$commandList += "more /etc/vmware/appliance/firewall/tftp"
-	# Enable TFTP service.
-	$commandList += "/sbin/chkconfig atftpd on"
-	# Start TFTP service.
-	$commandList += "/etc/init.d/atftpd start"
-	$commandList += "/usr/lib/applmgmt/networking/bin/firewall-reload"
-	# Set Firewall Exception until reboot.
-	$commandList += "iptables -A port_filter -p udp -m udp --dport 69 -j ACCEPT"
+    $commandList += "more /etc/vmware/appliance/firewall/tftp"
+    # Enable TFTP service.
+    $commandList += "/sbin/chkconfig atftpd on"
+    # Start TFTP service.
+    $commandList += "/etc/init.d/atftpd start"
+    $commandList += "/usr/lib/applmgmt/networking/bin/firewall-reload"
+    # Set Firewall Exception until reboot.
+    $commandList += "iptables -A port_filter -p udp -m udp --dport 69 -j ACCEPT"
 
-	# Service update
-	Invoke-ExecuteScript $commandList $Hostname $Username $Password $VIHandle
+    # Service update
+    $params = @{
+        Script = $commandList
+        Hostname = $Hostname
+        Credential = $Credential
+        ViHandle = $VIHandle
+    }
+    Invoke-ExecuteScript @params
 }

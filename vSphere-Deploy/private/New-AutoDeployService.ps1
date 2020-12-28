@@ -1,11 +1,12 @@
 function New-AutoDeployService {
+    <#
     .SYNOPSIS
-		Configure the Autodeploy Service - set auto start, register vCenter, and start service.
+        Configure the Autodeploy Service - set auto start, register vCenter, and start service.
 
     .DESCRIPTION
 
     .PARAMETER Deployment
-	
+
     .PARAMETER VIHandle
 
     .EXAMPLE
@@ -20,43 +21,59 @@ function New-AutoDeployService {
         Last Edit: 2019-10-24
         Version 1.0 - New-AutoDeployService
     #>
-	[cmdletbinding()]
-	param (
-        [Parameter(Mandatory=$true)]
-		$Deployment,
-		[Parameter(Mandatory=$true)]
-		$VIHandle
-	)
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $Deployment,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $VIHandle
+    )
 
-	$commandList = $null
-	$commandList = @()
+    $commandList = $null
+    $commandList = @()
+    $credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
 
     # Register Autodeploy to vCenter if not changing certificates.
-	if (-not $Deployment.Certs) {
-		$commandList += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-		$commandList += "export VMWARE_LOG_DIR=/var/log"
-		$commandList += "export VMWARE_CFG_DIR=/etc/vmware"
-		$commandList += "export VMWARE_DATA_DIR=/storage"
-		$commandList += "/usr/lib/vmware-vmon/vmon-cli --stop rbd"
-		$commandList += "/usr/bin/autodeploy-register -R -a " + $Deployment.IP + " -u Administrator@" + $Deployment.SSODomainName + " -w `'" + $Deployment.SSOAdminPass + "`' -p 80"
+    if (-not $Deployment.Certs) {
+        $commandList += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+        $commandList += "export VMWARE_LOG_DIR=/var/log"
+        $commandList += "export VMWARE_CFG_DIR=/etc/vmware"
+        $commandList += "export VMWARE_DATA_DIR=/storage"
+        $commandList += "/usr/lib/vmware-vmon/vmon-cli --stop rbd"
+        $commandList += "/usr/bin/autodeploy-register -R -a " + $Deployment.IP + " -u Administrator@" + $Deployment.SSODomainName + " -w `'" + $Deployment.SSOAdminPass + "`' -p 80"
+        $params = @{
+            Script = $commandList
+            Hostname = $Deployment.Hostname
+            Credential = $credential
+            ViHandle = $VIHandle
+        }
+        Invoke-ExecuteScript @params
+    }
 
-		Invoke-ExecuteScript $commandList $Deployment.Hostname "root" $Deployment.VCSARootPass $VIHandle
-	}
+    # Set Autodeploy (rbd) startype to Automatic and restart service.
+    $commandList = $null
+    $commandList = @()
+    $commandList += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
+    $commandList += "export VMWARE_LOG_DIR=/var/log"
+    $commandList += "export VMWARE_CFG_DIR=/etc/vmware"
+    $commandList += "export VMWARE_DATA_DIR=/storage"
+    $commandList += "/usr/lib/vmware-vmon/vmon-cli --update rbd --starttype AUTOMATIC"
+    $commandList += "/usr/lib/vmware-vmon/vmon-cli --restart rbd"
 
-	# Set Autodeploy (rbd) startype to Automatic and restart service.
-	$commandList = $null
-	$commandList = @()
-	$commandList += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
-	$commandList += "export VMWARE_LOG_DIR=/var/log"
-	$commandList += "export VMWARE_CFG_DIR=/etc/vmware"
-	$commandList += "export VMWARE_DATA_DIR=/storage"
-	$commandList += "/usr/lib/vmware-vmon/vmon-cli --update rbd --starttype AUTOMATIC"
-	$commandList += "/usr/lib/vmware-vmon/vmon-cli --restart rbd"
+    # imagebuilder set startype to Automatic and restart service.
+    $commandList += "/usr/lib/vmware-vmon/vmon-cli --update imagebuilder --starttype AUTOMATIC"
+    $commandList += "/usr/lib/vmware-vmon/vmon-cli --restart imagebuilder"
 
-	# imagebuilder set startype to Automatic and restart service.
-	$commandList += "/usr/lib/vmware-vmon/vmon-cli --update imagebuilder --starttype AUTOMATIC"
-	$commandList += "/usr/lib/vmware-vmon/vmon-cli --restart imagebuilder"
-
-	# Service update
-	Invoke-ExecuteScript $commandList $Deployment.Hostname "root" $Deployment.VCSARootPass $VIHandle
+    # Service update
+    $params = @{
+        Script = $commandList
+        Hostname = $Deployment.Hostname
+        Credential = $credential
+        ViHandle = $VIHandle
+    }
+    Invoke-ExecuteScript @params
 }

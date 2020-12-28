@@ -1,7 +1,0 @@
-ADJoinPass: MyPassword1!
-ADDomain: acme.com
-ADvCenterAdmins: vc_admins
-ADvmcamUser: esxijoinad
-ADJoinUser: wcoyote
-ADvmcamPass: MyPassword2!
-

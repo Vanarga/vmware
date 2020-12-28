@@ -1,0 +1,11 @@
+vData.Type: adinfo
+Properties:
+  ADDomain: acme.com
+  ADJoinUser: wcoyote
+  ADJoinPass: MyPassword1!
+  ADvCenterAdmins: vc_admins
+  ADvmcamUser: esxijoinad
+  ADvmcamPass: MyPassword2!
+  vCenter: all
+  WorkSheet: adinfo
+

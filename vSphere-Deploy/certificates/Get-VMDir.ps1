@@ -1,7 +1,7 @@
 function Get-VMDir {
     <#
     .SYNOPSIS
-		Displays the currently used VMDir certificate via OpenSSL.
+        Displays the currently used VMDir certificate via OpenSSL.
 
     .DESCRIPTION
 
@@ -17,17 +17,21 @@ function Get-VMDir {
         Last Edit: 2019-10-24
         Version 1.0 - Get-VMDir
     #>
-	[cmdletbinding()]
-	$computerName = Get-WmiObject win32_computersystem
-	$defFQDN = "$($computerName.Name).$($computerName.Domain)".ToLower()
-	$vmDirHost = $(
-		Write-Host "Do you want to dispaly the VMDir SSL certificate of $defFQDN ?"
-		$inputFQDN = Read-Host "Press ENTER to accept or input a new FQDN"
-		if ($inputFQDN) {
-			$inputFQDN
-		} else {
-			$defFQDN
-		}
-	)
-	Invoke-OpenSSL "s_client -servername $vmDirHost -connect `"${VMDirHost}:636`""
+    [cmdletbinding()]
+    param()
+    $computerName = Get-WmiObject -Class Win32_ComputerSystem
+    $defFQDN = "$($computerName.Name).$($computerName.Domain)".ToLower()
+    $vmDirHost = $(
+        Write-Host -Object "Do you want to dispaly the VMDir SSL certificate of $defFQDN ?"
+        $inputFQDN = Read-Host "Press ENTER to accept or input a new FQDN"
+        if ($inputFQDN) {
+            $inputFQDN
+        } else {
+            $defFQDN
+        }
+    )
+    $params = @{
+        OpenSSLArgs = "s_client -servername $vmDirHost -connect `"${VMDirHost}:636`""
+    }
+    Invoke-OpenSSL @params
 }

@@ -1,26 +1,33 @@
-[
+{
+  "vData.Type": "licenses",
+  "Properties": [
     {
-        "vCenter":  "vcsa1.acme.com",
-        "LicKey":  "11111-11111-11111-11111-11111",
-        "ApplyTo":  "Datacenters",
-        "ApplyType":  "DC"
+      "vCenter": "vcsa1.acme.com",
+      "LicKey": "11111-11111-11111-11111-11111",
+      "ApplyTo": "Datacenters",
+      "ApplyType": "DC",
+      "WorkSheet": "licenses"
     },
     {
-        "vCenter":  "vcsa1.acme.com",
-        "LicKey":  "11111-11111-11111-11111-11111",
-        "ApplyTo":  "vcsa1.acme.com",
-        "ApplyType":  "VC"
+      "vCenter": "vcsa1.acme.com",
+      "LicKey": "11111-11111-11111-11111-11111",
+      "ApplyTo": "vcsa1.acme.com",
+      "ApplyType": "VC",
+      "WorkSheet": "licenses"
     },
     {
-        "vCenter":  "vcsa2.acme.com",
-        "LicKey":  "11111-11111-11111-11111-11111",
-        "ApplyTo":  "Datacenters",
-        "ApplyType":  "DC"
+      "vCenter": "vcsa2.acme.com",
+      "LicKey": "11111-11111-11111-11111-11111",
+      "ApplyTo": "Datacenters",
+      "ApplyType": "DC",
+      "WorkSheet": "licenses"
     },
     {
-        "vCenter":  "vcsa2.acme.com",
-        "LicKey":  "11111-11111-11111-11111-11111",
-        "ApplyTo":  "vcsa2.acme.com",
-        "ApplyType":  "VC"
+      "vCenter": "vcsa2.acme.com",
+      "LicKey": "11111-11111-11111-11111-11111",
+      "ApplyTo": "vcsa2.acme.com",
+      "ApplyType": "VC",
+      "WorkSheet": "licenses"
     }
-]
+  ]
+}

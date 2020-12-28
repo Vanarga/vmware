@@ -1,17 +1,23 @@
-- ApplyType: DC
+vData.Type: licenses
+Properties:
+- vCenter: vcsa1.acme.com
   LicKey: 11111-11111-11111-11111-11111
-  vCenter: vcsa1.acme.com
   ApplyTo: Datacenters
-- ApplyType: VC
+  ApplyType: DC
+  WorkSheet: licenses
+- vCenter: vcsa1.acme.com
   LicKey: 11111-11111-11111-11111-11111
-  vCenter: vcsa1.acme.com
   ApplyTo: vcsa1.acme.com
-- ApplyType: DC
+  ApplyType: VC
+  WorkSheet: licenses
+- vCenter: vcsa2.acme.com
   LicKey: 11111-11111-11111-11111-11111
-  vCenter: vcsa2.acme.com
   ApplyTo: Datacenters
-- ApplyType: VC
+  ApplyType: DC
+  WorkSheet: licenses
+- vCenter: vcsa2.acme.com
   LicKey: 11111-11111-11111-11111-11111
-  vCenter: vcsa2.acme.com
   ApplyTo: vcsa2.acme.com
+  ApplyType: VC
+  WorkSheet: licenses
 

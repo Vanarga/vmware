@@ -1,21 +1,27 @@
-- vCenter: vcsa1.acme.com
-  Datacenter: ny
-  oct3: <null>
-  oct1: <null>
-  oct2: 100
-- vCenter: vcsa1.acme.com
-  Datacenter: ca
-  oct3: <null>
-  oct1: <null>
-  oct2: 120
-- vCenter: vcsa2.acme.com
-  Datacenter: uk
-  oct3: <null>
-  oct1: <null>
-  oct2: 130
-- vCenter: vcsa2.acme.com
-  Datacenter: nl
-  oct3: <null>
-  oct1: <null>
-  oct2: 140
+vData.Type: sites
+Properties:
+- Datacenter: ny
+  Octet1: <null>
+  Octet2: 100
+  Octet3: <null>
+  vCenter: vcsa1.acme.com
+  WorkSheet: sites
+- Datacenter: ca
+  Octet1: <null>
+  Octet2: 120
+  Octet3: <null>
+  vCenter: vcsa1.acme.com
+  WorkSheet: sites
+- Datacenter: uk
+  Octet1: <null>
+  Octet2: 130
+  Octet3: <null>
+  vCenter: vcsa2.acme.com
+  WorkSheet: sites
+- Datacenter: nl
+  Octet1: <null>
+  Octet2: 140
+  Octet3: <null>
+  vCenter: vcsa2.acme.com
+  WorkSheet: sites
 

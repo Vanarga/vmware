@@ -1,11 +1,12 @@
 function New-Folders {
+    <#
     .SYNOPSIS
-		Create Folders
+        Create Folders
 
     .DESCRIPTION
 
     .PARAMETER Folders
-	
+
     .PARAMETER VIHandle
 
     .EXAMPLE
@@ -20,26 +21,29 @@ function New-Folders {
         Last Edit: 2019-10-24
         Version 1.0 - New-Folders
     #>
-	[cmdletbinding()]
-	param (
-		[Parameter(Mandatory=$true)]
-		$Folders,
-		[Parameter(Mandatory=$true)]
-		$VIHandle
-	)
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $Folders,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $VIHandle
+    )
 
     Write-SeparatorLine
 
-	foreach ($folder in $Folders) {
-		Write-Output $folder.Name | Out-String
-		foreach ($dataCenter in get-datacenter -Server $VIHandle) {
-			if ($folder.datacenter.Split(",") -match "all|$($dataCenter.name)") {
-				$folderPath = $dataCenter | Get-Folder -name $folder.Location | Where-Object {$_.Parentid -notlike "*ha*"}
-				Write-Output $folderPath | Out-String
-				New-Folder -Server $VIHandle -Name $folder.Name -Location $folderPath -Confirm:$false
-			}
-		}
-	}
-
-	Write-SeparatorLine
+    ForEach ($folder in $Folders) {
+        Write-Output -InputObject $folder.Name | Out-String
+        ForEach ($dataCenter in get-datacenter -Server $VIHandle) {
+            if ($folder.datacenter.Split(",") -match "all|$($dataCenter.name)") {
+                $folderPath = $dataCenter | Get-Folder -name $folder.Location | Where-Object {$_.Parentid -notlike "*ha*"}
+                Write-Output -InputObject $folderPath | Out-String
+                New-Folder -Server $VIHandle -Name $folder.Name -Location $folderPath -Confirm:$false
+            }
+        }
+    }
+    Write-SeparatorLine
 }

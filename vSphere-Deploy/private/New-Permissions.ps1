@@ -1,7 +1,7 @@
 function New-Permissions {
     <#
     .SYNOPSIS
-		Set Permissions
+        Set Permissions
 
     .DESCRIPTION
 
@@ -14,38 +14,41 @@ function New-Permissions {
 
         New-Permissions -VPermissions < > -VIHandle < >
 
-        PS C:\> New-Permissions 
+        PS C:\> New-Permissions
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
         Version 1.0 - New-Permissions
     #>
-	[cmdletbinding()]
-	param (
-		[Parameter(Mandatory=$true)]
-		$VPermissions,
-		[Parameter(Mandatory=$true)]
-		$VIHandle
-	)
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $VPermissions,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $VIHandle
+    )
 
-	Write-SeparatorLine
+    Write-SeparatorLine
 
-	Write-Output  "Permissions:" $VPermissions  | Out-String
+    Write-Output -InputObject "Permissions:" $VPermissions  | Out-String
 
-	foreach ($permission in $VPermissions) {
-		$entity = Get-Inventory -Name $permission.Entity | Where-Object {$_.Id -match $permission.Location}
-		if ($permission.Group) {
-			$principal = Get-VIAccount -Group -Name $permission.Principal -Server $VIHandle
-		} else {
-			$principal = Get-VIAccount -Name $permission.Principal -Server $VIHandle
-		}
+    ForEach ($permission in $VPermissions) {
+        $entity = Get-Inventory -Name $permission.Entity | Where-Object {$_.Id -match $permission.Location}
+        if ($permission.Group) {
+            $principal = Get-VIAccount -Group -Name $permission.Principal -Server $VIHandle
+        } else {
+            $principal = Get-VIAccount -Name $permission.Principal -Server $VIHandle
+        }
 
-		Write-Output "New-VIPermission -Server $VIHandle -Entity $entity -Principal $principal -Role $($permission.Role) -Propagate $([System.Convert]::ToBoolean($permission.Propagate))" | Out-String
+        Write-Output -InputObject "New-VIPermission -Server $VIHandle -Entity $entity -Principal $principal -Role $($permission.Role) -Propagate $([System.Convert]::ToBoolean($permission.Propagate))" | Out-String
 
-		New-VIPermission -Server $VIHandle -Entity $entity -Principal $principal -Role $permission.Role -Propagate $([System.Convert]::ToBoolean($permission.Propagate))
+        New-VIPermission -Server $VIHandle -Entity $entity -Principal $principal -Role $permission.Role -Propagate $([System.Convert]::ToBoolean($permission.Propagate))
 
-	}
-
-	Write-SeparatorLine
+    }
+    Write-SeparatorLine
 }

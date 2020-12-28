@@ -1,0 +1,25 @@
+vData.Type: certs
+Properties:
+  openssldir: C:\OpenSSL
+  RootCA: ca1.acme.com
+  SubCA1: ca2.acme.com
+  SubCA2: ca3.acme.com
+  Username: wcoyote
+  Password: MyPassword1!
+  CompanyName: FQDN
+  OrgName: Acme Virtual Company
+  OrgUnit: IT
+  State: New York
+  Locality: New York
+  Country: US
+  Email: vcadmins@acme.com
+  CADownload: https
+  IssuingCA: ca3\ca3.acme
+  V6Template: CertificateTemplate:vSphere6.0
+  SubTemplate: CertificateTemplate:vSphere6.0VMCA
+  RootRenewal: Renewal=0
+  SubRenewal1: Renewal=0
+  SubRenewal2: Renewal=0
+  vCenter: all
+  WorkSheet: certs
+

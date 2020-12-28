@@ -1,12 +1,12 @@
 function Add-Roles {
     <#
     .SYNOPSIS
-		Create Roles
+        Create Roles
 
     .DESCRIPTION
 
     .PARAMETER Roles
-	
+
     .PARAMETER VIHandle
 
     .EXAMPLE
@@ -21,29 +21,33 @@ function Add-Roles {
         Last Edit: 2019-10-24
         Version 1.0 - Add-Roles
     #>
-	[cmdletbinding()]
-	param (
-		[Parameter(Mandatory=$true)]
-		$Roles,
-		[Parameter(Mandatory=$true)]
-		$VIHandle
-	)
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $Roles,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
+        $VIHandle
+    )
 
-	Write-SeparatorLine
+    Write-SeparatorLine
 
-	$existingRoles = Get-ViRole -Server $VIHandle | Select-Object Name
+    $existingRoles = Get-ViRole -Server $VIHandle | Select-Object Name
 
-	$names = $($Roles | Select-Object Name -Unique) | Where-Object {$existingRoles.name -notcontains $_.name}
+    $names = $($Roles | Select-Object Name -Unique) | Where-Object {$existingRoles.name -notcontains $_.name}
 
-	Write-Output $names | Out-String
+    Write-Output -InputObject $names | Out-String
 
-	foreach ($name in $names) {
-		$vPrivilege = $Roles | Where-Object {$_.Name -like $name.Name} | Select-Object Privilege
+    foreach ($name in $names) {
+        $vPrivilege = $Roles | Where-Object {$_.Name -like $name.Name} | Select-Object Privilege
 
-		Write-Output $vPrivilege | Out-String
+        Write-Output -InputObject $vPrivilege | Out-String
 
-		New-VIRole -Server $VIHandle -Name $name.Name -Privilege (Get-VIPrivilege -Server $VIHandle | Where-Object {$vPrivilege.Privilege -like $_.id})
-	}
+        New-VIRole -Server $VIHandle -Name $name.Name -Privilege (Get-VIPrivilege -Server $VIHandle | Where-Object {$vPrivilege.Privilege -like $_.id})
+    }
 
-	Write-SeparatorLine
+    Write-SeparatorLine
 }
