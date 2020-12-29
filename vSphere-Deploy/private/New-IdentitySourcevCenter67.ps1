@@ -52,9 +52,13 @@ function New-IdentitySourcevCenter67 {
     Do {
         $ie.Navigate($uri)
 
-        while ($ie.ReadyState -ne 4) {Start-Sleep -Milliseconds 100}
+        While ($ie.ReadyState -ne 4) {
+            Start-Sleep -Milliseconds 100
+        }
 
-        while ($ie.Document.ReadyState -ne "complete") {Start-Sleep -Milliseconds 100}
+        While ($ie.Document.ReadyState -ne "complete") {
+            Start-Sleep -Milliseconds 100
+        }
 
         Write-Output -InputObject $ie.Document.url | Out-String
 

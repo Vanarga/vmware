@@ -84,5 +84,4 @@ function New-AutoDeployRule {
         # Activate the deploy rule.
         Add-DeployRule -DeployRule $rule.RuleName -ErrorAction SilentlyContinue
     }
-
 }

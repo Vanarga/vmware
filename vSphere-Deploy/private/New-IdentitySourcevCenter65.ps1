@@ -45,10 +45,10 @@ function New-IdentitySourcevCenter65 {
     $ie.Navigate($("https://" + $Deployment.Hostname + "/psc/"))
 
     # Wait while page finishes loading.
-    while($ie.ReadyState -ne 4) {
+    while ($ie.ReadyState -ne 4) {
         Start-Sleep -Milliseconds 100
     }
-    while($ie.Document.ReadyState -ne "complete") {
+    while ($ie.Document.ReadyState -ne "complete") {
         Start-Sleep -Milliseconds 100
     }
 

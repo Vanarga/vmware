@@ -28,7 +28,7 @@ function ConvertTo-OSString {
     )
 
     $os = "New-OSCustomizationSpec "
-    foreach ($i in $InputObject.PSObject.Properties) {
+    ForEach ($i in $InputObject.PSObject.Properties) {
         if ($i.Value) {
             $os = $os.insert($os.length,"-" + $i.Name + ' "' + $i.Value + '" ')}
     }
