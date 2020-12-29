@@ -12,7 +12,7 @@ This deployment includes setting up a containerized tftpd server, also running o
 ```
 [Match]
 Name=eth0
-	
+
 [Network]
 Address=<IP>/<NETMASK>
 Gateway=<GATEWAY IP>
