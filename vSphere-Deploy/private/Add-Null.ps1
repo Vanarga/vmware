@@ -21,12 +21,12 @@ function Add-Null {
         Last Edit: 2019-10-24
         Version 1.0 - Add-Null
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $InputObject
+            $InputObject
     )
 
     for ($i=0;$i -lt ($InputObject | Measure-Object).count;$i++) {

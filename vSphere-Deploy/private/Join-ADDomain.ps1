@@ -23,20 +23,20 @@ function Join-ADDomain {
         Last Edit: 2019-10-24
         Version 1.0 - Join-ADDomain
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Deployment,
+            $Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $ADInfo,
+            $ADInfo,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle
+            $VIHandle
     )
 
     $pscDeployments = @("tiny","small","medium","large","infrastructure")

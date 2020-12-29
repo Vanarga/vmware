@@ -16,8 +16,8 @@ function New-UserPEMFiles {
         Last Edit: 2019-10-24
         Version 1.0 - New-UserPEMFiles
     #>
-    [cmdletbinding()]
-    param()
+    [CmdletBinding ()]
+    Param ()
     # Creates PEM files for all solution user certificates
     Get-ChildItem -Path $CertDir -Filter "*.csr" | ForEach-Object {
         $Dir = $_.Basename

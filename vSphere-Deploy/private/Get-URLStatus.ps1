@@ -19,12 +19,12 @@ function Get-URLStatus {
         Last Edit: 2019-10-24
         Version 1.0 - Get-URLStatus
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $URL
+            $URL
     )
 
     # Test url for TCP Port 80 Listening.

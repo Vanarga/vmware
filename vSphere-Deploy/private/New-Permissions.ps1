@@ -21,16 +21,16 @@ function New-Permissions {
         Last Edit: 2019-10-24
         Version 1.0 - New-Permissions
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VPermissions,
+            $VPermissions,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle
+            $VIHandle
     )
 
     Write-SeparatorLine

@@ -23,20 +23,20 @@ function Import-HostRootCertificate {
         Last Edit: 2019-10-24
         Version 1.0 - Import-HostRootCertificate
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertPath,
+            $CertPath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Deployment,
+            $Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle
+            $VIHandle
     )
 
     Write-SeparatorLine

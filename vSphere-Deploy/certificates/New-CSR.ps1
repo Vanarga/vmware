@@ -31,8 +31,8 @@ function New-CSR {
         Last Edit: 2019-10-24
         Version 1.0 - New-CSR
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

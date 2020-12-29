@@ -29,8 +29,8 @@ function Invoke-CertificateMint {
         Last Edit: 2019-10-24
         Version 1.0 - Invoke-CertificateMint
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

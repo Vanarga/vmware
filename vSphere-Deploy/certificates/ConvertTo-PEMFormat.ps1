@@ -27,8 +27,8 @@ function ConvertTo-PEMFormat {
         Last Edit: 2019-10-24
         Version 1.0 - ConvertTo-PEMFormat
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

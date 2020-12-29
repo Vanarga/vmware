@@ -21,16 +21,16 @@ function Add-Roles {
         Last Edit: 2019-10-24
         Version 1.0 - Add-Roles
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Roles,
+            $Roles,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle
+            $VIHandle
     )
 
     Write-SeparatorLine

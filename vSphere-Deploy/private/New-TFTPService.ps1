@@ -25,20 +25,20 @@ function New-TFTPService {
         Last Edit: 2019-10-24
         Version 1.0 - New-TFTPService
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Hostname,
+            $Hostname,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [SecureString]$Credential,
+            [SecureString]$Credential,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle
+            $VIHandle
     )
 
     $commandList = $null

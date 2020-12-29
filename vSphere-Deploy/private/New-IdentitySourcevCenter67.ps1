@@ -21,16 +21,16 @@ function New-IdentitySourcevCenter67 {
         Last Edit: 2019-10-24
         Version 1.0 - New-IdentitySourcevCenter67
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Deployment,
+            $Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $ADInfo
+            $ADInfo
     )
 
     # Add AD domain as Native Identity Source.

@@ -29,20 +29,20 @@ function Copy-FileToServer {
         Last Edit: 2019-10-24
         Version 1.0 - Copy-FileToServer
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Path,
+            $Path,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Hostname,
+            $Hostname,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [SecureString]$Credential,
+            [SecureString]$Credential,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -50,7 +50,7 @@ function Copy-FileToServer {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Upload
+            $Upload
     )
 
     Write-SeparatorLine

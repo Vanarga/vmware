@@ -21,16 +21,16 @@ function New-AutoDeployService {
         Last Edit: 2019-10-24
         Version 1.0 - New-AutoDeployService
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Deployment,
+            $Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle
+            $VIHandle
     )
 
     $commandList = $null

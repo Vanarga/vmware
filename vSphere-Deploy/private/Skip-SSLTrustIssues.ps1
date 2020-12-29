@@ -21,8 +21,8 @@ function Skip-SSLTrustIssues {
         Last Edit: 2019-10-24
         Version 1.0 - Skip-SSLTrustIssues
     #>
-    [cmdletbinding()]
-    param ()
+    [CmdletBinding ()]
+    Param ()
 
     # https://blogs.technet.microsoft.com/bshukla/2010/04/12/ignoring-ssl-trust-in-powershell-system-net-webclient/
     $NetAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])

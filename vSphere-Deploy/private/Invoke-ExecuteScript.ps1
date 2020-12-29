@@ -27,24 +27,24 @@ function Invoke-ExecuteScript {
         Last Edit: 2019-10-24
         Version 1.0 - Invoke-ExecuteScript
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Script,
+            $Script,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Hostname,
+            $Hostname,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [SecureString]$Credential,
+            [SecureString]$Credential,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $ViHandle
+            $ViHandle
     )
 
     Write-SeparatorLine

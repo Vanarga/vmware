@@ -19,12 +19,12 @@ function ConvertTo-OSString {
         Last Edit: 2019-10-24
         Version 1.0 - ConvertTo-OSString
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $InputObject
+            $InputObject
     )
 
     $os = "New-OSCustomizationSpec "

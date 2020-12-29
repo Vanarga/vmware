@@ -21,12 +21,12 @@ function Root-Path {
         Last Edit: 2019-10-24
         Version 1.0 - Save-Json
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Path
+            $Path
     )
 
     if (-not [System.IO.Path]::IsPathRooted($FilePath)) {

@@ -23,20 +23,20 @@ function New-VCSADeploy {
         Last Edit: 2019-10-24
         Version 1.0 - New-VCSADeploy
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $ParameterList,
+            $ParameterList,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $OvfToolPath,
+            $OvfToolPath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $LogPath
+            $LogPath
     )
 
     $pscs = @("tiny","small","medium","large","infrastructure")
