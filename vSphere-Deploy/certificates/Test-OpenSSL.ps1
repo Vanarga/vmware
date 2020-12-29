@@ -18,8 +18,8 @@ function Test-OpenSSL {
         Last Edit: 2019-10-24
         Version 1.0 - Test-OpenSSL
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

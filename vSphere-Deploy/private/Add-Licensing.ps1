@@ -22,21 +22,21 @@ function Add-Licensing {
         Last Edit: 2019-10-24
         Version 1.0 - Add-Licensing
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Licenses,
+            $Licenses,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle
+            $VIHandle
     )
 
     Write-Output -InputObject $Licenses | Out-String
     $validLicenses = $Licenses | Where-Object {($_.psobject.properties.value | Measure-Object).Count -eq 4}
-    foreach ($license in $validLicenses) {
+    ForEach ($license in $validLicenses) {
         $licenseManager = $null
         $addLicense = $null
         $licenseType = $null

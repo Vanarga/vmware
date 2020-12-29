@@ -16,8 +16,8 @@ function Move-UserCerts {
         Last Edit: 2019-10-24
         Version 1.0 - Move-UserCerts
     #>
-    [cmdletbinding()]
-    param()
+    [CmdletBinding ()]
+    Param ()
 
     Get-ChildItem -Path $CertDir -Filter "*.crt" | ForEach-Object {
         $dir = $_.Basename

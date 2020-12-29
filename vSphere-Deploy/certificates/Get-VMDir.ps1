@@ -17,8 +17,8 @@ function Get-VMDir {
         Last Edit: 2019-10-24
         Version 1.0 - Get-VMDir
     #>
-    [cmdletbinding()]
-    param()
+    [CmdletBinding ()]
+    Param ()
     $computerName = Get-WmiObject -Class Win32_ComputerSystem
     $defFQDN = "$($computerName.Name).$($computerName.Domain)".ToLower()
     $vmDirHost = $(

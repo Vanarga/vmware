@@ -21,16 +21,16 @@ function Save-Yaml {
         Last Edit: 2019-10-24
         Version 1.0 - Save-Yaml
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $InputObject,
+            $InputObject,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $FilePath
+            $FilePath
     )
 
     Remove-Null -InputObject $InputObject

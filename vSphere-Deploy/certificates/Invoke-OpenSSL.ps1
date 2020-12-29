@@ -18,8 +18,8 @@ function Invoke-OpenSSL {
         Last Edit: 2019-10-24
         Version 1.0 - Invoke-OpenSSL
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

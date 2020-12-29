@@ -119,12 +119,19 @@
 #>
 
 # Check to see if the url is Get-URLStatus.
-Param([Parameter(Mandatory=$false)]
+Param (
+    [Parameter(Mandatory = $false,
+        ValueFromPipeline = $true,
+        ValueFromPipelineByPropertyName = $true)]
         [ValidateSet("excel","json","yaml")]
         [string]$Source = "excel",
-        [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false,
+        ValueFromPipeline = $true,
+        ValueFromPipelineByPropertyName = $true)]
         [switch]$Export,
-        [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory = $false,
+        ValueFromPipeline = $true,
+        ValueFromPipelineByPropertyName = $true)]
         [string]$FilePath
 )
 

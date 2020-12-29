@@ -21,8 +21,8 @@ function Install-OpenSSL {
         Last Edit: 2019-10-25
         Version 1.0 - Install-OpenSSL
     #>
-    [cmdletbinding()]
-    param ()
+    [CmdletBinding ()]
+    Param ()
 
     # Get list of installed Applications
     $InstalledApps = Get-ItemProperty -Path "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*", "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" | Where-Object {$_.DisplayName} | Sort-Object

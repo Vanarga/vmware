@@ -17,8 +17,8 @@ function New-VMCACSR {
         Last Edit: 2019-10-24
         Version 1.0 - New-VMCACSR
     #>
-    [cmdletbinding()]
-    param()
+    [CmdletBinding ()]
+    Param ()
     # Create RSA private key and CSR
     $ComputerName = Get-WmiObject -Class Win32_ComputerSystem
     $defFQDN = "$($ComputerName.Name).$($ComputerName.Domain)".ToLower()

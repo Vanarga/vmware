@@ -24,24 +24,24 @@ function ConvertTo-Excel {
         Last Edit: 2019-10-24
         Version 1.0 - ConvertTo-Excel
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $InputObject,
+            $InputObject,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $WorkSheet,
+            $WorkSheet,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $SheetName,
+            $SheetName,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Excelpath
+            $Excelpath
     )
 
     $myStack = New-Object -TypeName system.collections.stack

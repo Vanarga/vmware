@@ -19,12 +19,12 @@ function Import-YamlData {
         Last Edit: 2020-12-23
         Version 1.0 - Import-YamlData
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Path
+            $Path
     )
 
     # Declare an ordered hashtable.

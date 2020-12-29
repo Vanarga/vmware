@@ -21,12 +21,12 @@ function Load-Module {
         Last Edit: 2019-10-25
         Version 1.0 - Verify-Module
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $ModuleName
+            $ModuleName
     )
     if (Get-Module -ListAvailable | Where-Object {$_.Name -match $ModuleName}) {
         Import-Module -Name $ModuleName -ErrorAction SilentlyContinue

@@ -23,20 +23,20 @@ function New-AuthProxyService {
         Last Edit: 2019-10-24
         Version 1.0 - New-AuthProxyService
     #>
-    [cmdletbinding()]
-    param (
+    [CmdletBinding ()]
+    Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Deployment,
+            $Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle,
+            $VIHandle,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $ADDomain
+            $ADDomain
     )
 
     # Set Join Domain Authorization Proxy (vmcam) startype to Automatic and restart service.
