@@ -129,8 +129,8 @@ Param([Parameter(Mandatory=$false)]
 )
 
 # Get public and private function definition files.
-$certFunctions  = @( Get-ChildItem -Path $PSScriptRoot\Certificates\*.ps1 -ErrorAction SilentlyContinue )
-$privateFunctions = @( Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -ErrorAction SilentlyContinue )
+$certFunctions  = @( Get-ChildItem -Path "$PSScriptRoot\Certificates\*.ps1" -ErrorAction SilentlyContinue)
+$privateFunctions = @( Get-ChildItem -Path "$PSScriptRoot\Private\*.ps1" -ErrorAction SilentlyContinue)
 
 # Dot source the files
 ForEach ($import in @($certFunctions + $privateFunctions))
@@ -151,7 +151,7 @@ Try {
     Add-Type -AssemblyName Microsoft.Office.Interop.Excel -ErrorAction SilentlyContinue
 }
 Catch {
-    Add-Type -LiteralPath $((Get-ChildItem C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Excel\* -Recurse).FullName)
+    Add-Type -LiteralPath $((Get-ChildItem -Path "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Excel\*" -Recurse).FullName)
 }
 $xlFixedFormat = [Microsoft.Office.Interop.Excel.XlFileFormat]::xlOpenXMLWorkbook
 $excelFileName = "vsphere-configs.xlsx"
@@ -175,7 +175,7 @@ $ErrorActionPreference = "SilentlyContinue"
 Stop-Transcript | Out-Null
 $ErrorActionPreference = "Continue"
 $logPath = "$folderPath\Logs\" + $(Get-Date -Format "MM-dd-yyyy_HH-mm")
-if (-not(Test-Path $logPath)) {
+if (-not(Test-Path -Path $logPath)) {
     New-Item -Path $logPath -Type Directory
 }
 $OutputPath = "$logPath\InitialState_" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
@@ -196,7 +196,7 @@ Write-SeparatorLine
 
 # Check the version of Ovftool and get it's path. Search C:\program files\ and C:\Program Files (x86)\ subfolders for vmware and find the
 # Ovftool folders. Then check the version and return the first one that is version 4 or higher.
-$OvfToolPath = (Get-ChildItem (Get-ChildItem -Path $env:ProgramFiles, ${env:ProgramFiles(x86)} -Filter vmware).Fullname -Recurse -Filter ovftool.exe | `
+$OvfToolPath = (Get-ChildItem -Path (Get-ChildItem -Path $env:ProgramFiles, ${env:ProgramFiles(x86)} -Filter vmware).Fullname -Recurse -Filter ovftool.exe | `
     ForEach-Object {
         if (-not((& $($_.DirectoryName + "\ovftool.exe") --version).Split(" ")[2] -lt 4.0.0))
             {$_}
@@ -219,17 +219,17 @@ switch ($Source) {
             # Source Excel Path
             $ExcelFilePathSrc = "$folderPath\$excelFileName"
             $configData = Import-ExcelData -Path $ExcelFilePathSrc
-        }
+    }
 
     'json' {
             $Json_Dir = $folderPath + "\Json"
             $configData = Import-JsonData -Path $Json_Dir
-        }
+    }
 
     'yaml' {
             $Yaml_Dir = $folderPath + "\Yaml"
             $configData = Import-YamlData -Path $Yaml_Dir
-        }
+    }
 }
 
 $configData | ForEach-Object {
@@ -446,7 +446,7 @@ ForEach ($Deployment in $configData.Deployments | Where-Object {$_.Action}) {
     $CertDir = $folderPath + "\Certs\" + $Deployment.SSODomainName
     $DefaultRootCertDir = $CertDir + "\" + $Deployment.Hostname + "\DefaultRootCert"
 
-    if (-not(Test-Path $DefaultRootCertDir)) {
+    if (-not(Test-Path -Path $DefaultRootCertDir)) {
         New-Item -Path $DefaultRootCertDir -Type Directory | Out-Null
     }
 
@@ -495,7 +495,7 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
     $RootCertDir = $CertDir + "\" + $Deployment.Hostname
 
     # Create certificate directory if it does not exist
-    if (-not(Test-Path $RootCertDir)) {
+    if (-not(Test-Path -Path $RootCertDir)) {
         New-Item -Path $RootCertDir -Type Directory | Out-Null
     }
 
@@ -508,7 +508,7 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
         $ESXiSecPasswd = $null
         $ESXiCreds = $null
         $ESXiSecPasswd = ConvertTo-SecureString -String $Deployment.esxiRootPass -AsPlainText -Force
-        $ESXiCreds = New-Object -TypeName System.Management.Automation.PSCredential ($Deployment.esxiRootUser, $ESXiSecPasswd)
+        $ESXiCreds = New-Object -TypeName System.Management.Automation.PSCredential($Deployment.esxiRootUser, $ESXiSecPasswd)
 
         # Connect to esxi host of the deployed vcsa.
         $ESXiHandle = Connect-VIServer -Server $Deployment.esxiHost -Credential $ESXiCreds
@@ -594,10 +594,10 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
         Set-Location -Path $folderPath
 
         $SSOParent = $null
-        $SSOParent = $configData.Deployments| Where-Object {$Deployment.Parent -eq $_.Hostname}
+        $SSOParent = $configData.Deployments | Where-Object {$Deployment.Parent -eq $_.Hostname}
 
         # Create the Solution User Certs - 2 for External PSC, 4 for all other deployments.
-        if ($Deployment.DeployType -eq "infrastructure" ) {
+        if ($Deployment.DeployType -eq "infrastructure") {
             $params = @{
                 $SVCDir = "Solution"
                 $CSRName = "machine.csr"
@@ -1032,7 +1032,7 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Config}) {
     Join-ADDomain @params
 
     # if the vcsa is not a stand alone PSC, configure the vCenter.
-    if ($Deployment.DeployType -ne "infrastructure" ) {
+    if ($Deployment.DeployType -ne "infrastructure") {
 
         Write-Output -InputObject "== vCenter $($Deployment.vmName) configuration ==" | Out-String
 
@@ -1223,21 +1223,22 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Config}) {
                         New-AuthProxyService @params
                         break
                     }
-                    AutoDeploy { $VCHandle | Get-AdvancedSetting -Name vpxd.certmgmt.certs.minutesBefore | Set-AdvancedSetting -Value 1 -Confirm:$false
-                                  $params = @{
-                                      Deployment = $Deployment
-                                      VIHandle = $ESXiHandle
-                                  }
-                                  New-AutoDeployService @params
-                                  if ($configData.AutoDepRules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) {
-                                      $params = @{
-                                          Rules = $configData.AutoDepRules | Where-Object {$_.vCenter -eq $Deployment.Hostname}
-                                          Path = $folderPath
-                                          VIHandle = $VCHandle
-                                      }
-                                      New-AutoDeployRule @params
-                                  }
-                                  break
+                    AutoDeploy {
+                        $VCHandle | Get-AdvancedSetting -Name vpxd.certmgmt.certs.minutesBefore | Set-AdvancedSetting -Value 1 -Confirm:$false
+                        $params = @{
+                            Deployment = $Deployment
+                            VIHandle = $ESXiHandle
+                        }
+                        New-AutoDeployService @params
+                        if ($configData.AutoDepRules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) {
+                            $params = @{
+                                Rules = $configData.AutoDepRules | Where-Object {$_.vCenter -eq $Deployment.Hostname}
+                                Path = $folderPath
+                                VIHandle = $VCHandle
+                            }
+                            New-AutoDeployRule @params
+                        }
+                        break
                     }
                     Netdumpster {
                         $params = @{

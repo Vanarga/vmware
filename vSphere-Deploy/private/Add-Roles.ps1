@@ -41,7 +41,7 @@ function Add-Roles {
 
     Write-Output -InputObject $names | Out-String
 
-    foreach ($name in $names) {
+    ForEach ($name in $names) {
         $vPrivilege = $Roles | Where-Object {$_.Name -like $name.Name} | Select-Object Privilege
 
         Write-Output -InputObject $vPrivilege | Out-String

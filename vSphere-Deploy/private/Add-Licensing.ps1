@@ -71,7 +71,7 @@ function Add-Licensing {
                  FO { $viContainer = Get-Folder -Server $VIHandle -Name $license.ApplyTo.Split(",")[$i] -Type "HostAndCluster"; break}
                  default { $viContainer = $null; break}
                }
-               Write-Output  -InputObject $viContainer | Out-String
+               Write-Output -InputObject $viContainer | Out-String
                if ($viContainer) {
                    $licenseData = New-Object -TypeName VMware.VimAutomation.License.Types.LicenseData
                    $LicenseKeyEntry = New-Object -TypeName Vmware.VimAutomation.License.Types.LicenseKeyEntry
