@@ -26,11 +26,11 @@ function Invoke-CertificateMintResume {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $SVCDir,
+        $servicePath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertFile
+        $certFile
     )
 
     # initialize objects to use for external processes
@@ -43,16 +43,16 @@ function Invoke-CertificateMintResume {
     $process.StartInfo = $psi
     $script:certsWaitingForApproval = $false
     # skip if there's no requestid.txt file
-    if (-not(Test-Path -Path "$CertDir\$SVCDir\requestid.txt")) {continue}
-    $reqID = Get-Content -Path "$CertDir\$SVCDir\requestid.txt"
-    Write-Verbose -Message "Found RequestId: $reqID for $SVCDir"
+    if (-not(Test-Path -Path "$certPath\$servicePath\requestid.txt")) {continue}
+    $reqID = Get-Content -Path "$certPath\$servicePath\requestid.txt"
+    Write-Verbose -Message "Found RequestId: $reqID for $servicePath"
     # retrieve the signed certificate
     $psi.FileName = "certreq.exe"
-    $psi.Arguments = @("-retrieve -f -config `"$IssuingCA`" $reqID `"$CertDir\$SVCDir\$CertFile`"")
-    Write-Host -Object "Downloading the signed $SVCDir certificate..." -ForegroundColor Yellow
+    $psi.Arguments = @("-retrieve -f -config `"$issuingCA`" $reqID `"$certPath\$servicePath\$certFile`"")
+    Write-Host -Object "Downloading the signed $servicePath certificate..." -ForegroundColor Yellow
     [void]$Process.Start()
     $cmdOut = $process.StandardOutput.ReadToEnd()
-    if (-not(Test-Path -Path "$CertDir\$SVCDir\$CertFile")) {
+    if (-not(Test-Path -Path "$certPath\$servicePath\$certFile")) {
         # it's not there, so check if the request is still pending
         if ($cmdOut.Trim() -like "*request is pending*") {
             $script:certsWaitingForApproval = $true

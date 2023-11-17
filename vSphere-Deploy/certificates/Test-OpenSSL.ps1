@@ -23,10 +23,10 @@ function Test-OpenSSL {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $OpenSSL
+        $openSSL
     )
 
-    if (-not(Test-Path -Path $OpenSSL)) {
+    if (-not(Test-Path -Path $openSSL)) {
         Throw "Openssl required, unable to download, please install manually. Use latest OpenSSL 1.0.2."; Exit
     }
 }

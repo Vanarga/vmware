@@ -19,14 +19,14 @@ function New-UserPEMFiles {
     [CmdletBinding ()]
     Param ()
     # Creates PEM files for all solution user certificates
-    Get-ChildItem -Path $CertDir -Filter "*.csr" | ForEach-Object {
-        $Dir = $_.Basename
+    Get-ChildItem -Path $certPath -Filter "*.csr" | ForEach-Object {
+        $path = $_.Basename
         $params = @{
-            SVCDir = $Dir
-            CertFile = "$Dir.crt"
-            CerFile = "$Dir.cer"
-            CertDir = ""
-            InstanceCertDir = ""
+            servicePath = $path
+            certFile = "$path.crt"
+            cerFile = "$path.cer"
+            certPath = ""
+            instanceCertPath = ""
         }
         ConvertTo-PEMFormat @params
     }

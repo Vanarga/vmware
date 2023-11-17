@@ -23,7 +23,7 @@ function Invoke-OpenSSL {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $OpenSSLArgs
+        $openSSLArgs
     )
 
     $openSSLInfo = $null
@@ -33,7 +33,7 @@ function Invoke-OpenSSL {
     $openSSLInfo.RedirectStandardError = $true
     $openSSLInfo.RedirectStandardOutput = $true
     $openSSLInfo.UseShellExecute = $false
-    $openSSLInfo.Arguments = $OpenSSLArgs
+    $openSSLInfo.Arguments = $openSSLArgs
     $processDiag = New-Object -TypeName System.Diagnostics.Process
     $processDiag.StartInfo = $openSSLInfo
     $processDiag.Start() | Out-Null

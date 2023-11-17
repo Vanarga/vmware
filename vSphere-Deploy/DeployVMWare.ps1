@@ -124,15 +124,15 @@ Param (
         ValueFromPipeline = $true,
         ValueFromPipelineByPropertyName = $true)]
         [ValidateSet("excel","json","yaml")]
-        [string]$Source = "excel",
+        [string]$source = "excel",
     [Parameter(Mandatory = $false,
         ValueFromPipeline = $true,
         ValueFromPipelineByPropertyName = $true)]
-        [switch]$Export,
+        [switch]$export,
     [Parameter(Mandatory = $false,
         ValueFromPipeline = $true,
         ValueFromPipelineByPropertyName = $true)]
-        [string]$FilePath
+        [string]$filePath
 )
 
 # Get public and private function definition files.
@@ -143,7 +143,7 @@ $privateFunctions = @( Get-ChildItem -Path "$PSScriptRoot\Private\*.ps1" -ErrorA
 ForEach ($import in @($certFunctions + $privateFunctions))
 {
     Try {
-        Write-Verbose -Message "Importing $($Import.FullName)"
+        Write-Verbose -Message "Importing $($import.FullName)"
         . $import.fullname
     }
     Catch {
@@ -163,15 +163,15 @@ Catch {
 $xlFixedFormat = [Microsoft.Office.Interop.Excel.XlFileFormat]::xlOpenXMLWorkbook
 $excelFileName = "vsphere-configs.xlsx"
 
-if (-not $FilePath) {
+if (-not $filePath) {
     $folderPath = $pwd.path.ToString()
 } else {
-    $FilePath = Root-Path -Path $FilePath
+    $filePath = Root-Path -Path $filePath
 }
 
-if ($Source -eq "excel" -and $FilePath) {
-    $excelFileName  = $FilePath.Split("\")[$FilePath.Split("\").count -1]
-    $folderPath     = $FilePath.Substring(0,$FilePath.Lastindexof("\"))
+if ($source -eq "excel" -and $filePath) {
+    $excelFileName  = $filePath.Split("\")[$filePath.Split("\").count -1]
+    $folderPath     = $filePath.Substring(0,$filePath.Lastindexof("\"))
 }
 
 # PSScriptRoot does not have a trailing "\"
@@ -185,8 +185,8 @@ $logPath = "$folderPath\Logs\" + $(Get-Date -Format "MM-dd-yyyy_HH-mm")
 if (-not(Test-Path -Path $logPath)) {
     New-Item -Path $logPath -Type Directory
 }
-$OutputPath = "$logPath\InitialState_" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
-Start-Transcript -Path $OutputPath -Append
+$outputPath = "$logPath\InitialState_" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
+Start-Transcript -Path $outputPath -Append
 
 Write-SeparatorLine
 
@@ -203,14 +203,14 @@ Write-SeparatorLine
 
 # Check the version of Ovftool and get it's path. Search C:\program files\ and C:\Program Files (x86)\ subfolders for vmware and find the
 # Ovftool folders. Then check the version and return the first one that is version 4 or higher.
-$OvfToolPath = (Get-ChildItem -Path (Get-ChildItem -Path $env:ProgramFiles, ${env:ProgramFiles(x86)} -Filter vmware).Fullname -Recurse -Filter ovftool.exe | `
+$ovfToolPath = (Get-ChildItem -Path (Get-ChildItem -Path $env:ProgramFiles, ${env:ProgramFiles(x86)} -Filter vmware).Fullname -Recurse -Filter ovftool.exe | `
     ForEach-Object {
         if (-not((& $($_.DirectoryName + "\ovftool.exe") --version).Split(" ")[2] -lt 4.0.0))
             {$_}
     } | Select-Object -First 1).DirectoryName
 
 # Check ovftool version
-if (-not $OvfToolPath) {
+if (-not $ovfToolPath) {
     Write-Host -Object "Script requires installation of ovftool 4.0.0 or newer";
     exit
 } else {
@@ -220,22 +220,22 @@ if (-not $OvfToolPath) {
 # ---------------------  Load Parameters from Excel ------------------------------
 
 ### Load from Excel
-switch ($Source) {
+switch ($source) {
     'excel' {
             Import-Module -Name pwshExcel
             # Source Excel Path
-            $ExcelFilePathSrc = "$folderPath\$excelFileName"
-            $configData = Import-ExcelData -Path $ExcelFilePathSrc
+            $excelFilePathSrc = "$folderPath\$excelFileName"
+            $configData = Import-ExcelData -Path $excelFilePathSrc
     }
 
     'json' {
-            $Json_Dir = $folderPath + "\Json"
-            $configData = Import-JsonData -Path $Json_Dir
+            $jsonPath = $folderPath + "\Json"
+            $configData = Import-JsonData -Path $jsonPath
     }
 
     'yaml' {
-            $Yaml_Dir = $folderPath + "\Yaml"
-            $configData = Import-YamlData -Path $Yaml_Dir
+            $yamlPath = $folderPath + "\Yaml"
+            $configData = Import-YamlData -Path $yamlPath
     }
 }
 
@@ -246,85 +246,85 @@ $configData | ForEach-Object {
 
 # Password Scrub array for redacting passwords from Transcript.
 if ($configData.Summary.TranscriptScrub) {
-    $Scrub = @()
-    $Scrub += $configData.ADInfo.ADJoinPass
-    $Scrub += $configData.ADInfo.ADvmcamPass
-    $Scrub += $configData.AutoDepRules.ProfileRootPassword
-    $Scrub += $configData.OSCustomizations.AdminPassword
-    $Scrub += $configData.OSCustomizations.DomainPassword
-    $Scrub += $configData.Deployments.VCSARootPass
-    $Scrub += $configData.Deployments.esxiRootPass
-    $Scrub += $configData.Deployments.SSOAdminPass
+    $scrub = @()
+    $scrub += $configData.ADInfo.ADJoinPass
+    $scrub += $configData.ADInfo.ADvmcamPass
+    $scrub += $configData.AutoDepRules.ProfileRootPassword
+    $scrub += $configData.OSCustomizations.AdminPassword
+    $scrub += $configData.OSCustomizations.DomainPassword
+    $scrub += $configData.Deployments.VCSARootPass
+    $scrub += $configData.Deployments.esxiRootPass
+    $scrub += $configData.Deployments.SSOAdminPass
 }
 
 ### Save to Excel
-if ($Source -ne "excel" -and $Export.IsPresent) {
-    $ExcelFilePathDst = "$folderPath\$excelFileName"
-    if (Test-Path -Path $ExcelFilePathDst) {
-        Remove-Item -Path $ExcelFilePathDst -Confirm:$false -Force
+if ($source -ne "excel" -and $export.IsPresent) {
+    $excelFilePathDst = "$folderPath\$excelFileName"
+    if (Test-Path -Path $excelFilePathDst) {
+        Remove-Item -Path $excelFilePathDst -Confirm:$false -Force
     }
 
-    $ObjExcelDst = New-Object -ComObject Excel.Application
-    $ObjExcelDst.Visible = $false
-    $WorkBookDst = $ObjExcelDst.Workbooks.Add()
-    $WorkSheetcount = 16 - ($WorkBookDst.worksheets | Measure-Object).Count
+    $objExcelDst = New-Object -ComObject Excel.Application
+    $objExcelDst.Visible = $false
+    $workbookDst = $objExcelDst.Workbooks.Add()
+    $worksheetCount = 16 - ($workbookDst.worksheets | Measure-Object).Count
 
     # http://www.planetcobalt.net/sdb/vba2psh.shtml
     $def = [Type]::Missing
-    $null = $ObjExcelDst.Worksheets.Add($def,$def,$WorkSheetcount,$def)
+    $null = $objExcelDst.Worksheets.Add($def,$def,$worksheetCount,$def)
 
     $sheetNum = (3..1) + (4..16) | ForEach-Object {"Sheet$_"}
     for ($i=0;$i -lt 16;$i++) {
         $params = @{
-            InputObject = $configData.($configData.GetEnumerator().Name[$i])
-            Worksheet = Get-WorkSheet -Workbook $WorkBookDst -SheetName $sheetNum[$i]
-            SheetName = $configData.GetEnumerator().Name[$i]
-            Excelpath = $ExcelFilePathDst
+            inputObject = $configData.($configData.GetEnumerator().Name[$i])
+            worksheet = Get-WorkSheet -Workbook $workbookDst -SheetName $sheetNum[$i]
+            sheetName = $configData.GetEnumerator().Name[$i]
+            excelPath = $excelFilePathDst
         }
         Write-Output -InputObject $params | Out-String
         ConvertTo-Excel @params
     }
 
-    $ObjExcelDst.DisplayAlerts = $False
-    $ObjExcelDst.ActiveWorkbook.SaveAs($ExcelFilePathDst,$xlFixedFormat)
-    $WorkBookDst.Close($false)
-    $ObjExcelDst.Quit()
+    $objExcelDst.DisplayAlerts = $False
+    $objExcelDst.ActiveWorkbook.SaveAs($excelFilePathDst,$xlFixedFormat)
+    $workbookDst.Close($false)
+    $objExcelDst.Quit()
 
     [System.GC]::Collect()
     [System.GC]::WaitForPendingFinalizers()
 
-    [void][System.Runtime.Interopservices.Marshal]::FinalReleaseComObject($WorkBookDst)
-    [void][System.Runtime.Interopservices.Marshal]::FinalReleaseComObject($ObjExcelDst)
+    [void][System.Runtime.Interopservices.Marshal]::FinalReleaseComObject($workbookDst)
+    [void][System.Runtime.Interopservices.Marshal]::FinalReleaseComObject($objExcelDst)
 }
 
 ### Save to Json
-if ($Source -ne "json" -and $Export.IsPresent) {
+if ($source -ne "json" -and $export.IsPresent) {
     if (-not(Test-Path -Path "$folderPath\Json")) {
         New-Item -Path "$folderPath\Json" -Type Directory
     }
     $configData.GetEnumerator() | ForEach-Object {
-        Save-Json -InputObject $_ -FilePath "$folderPath\json\$($_.Key).json"
+        Save-Json -InputObject $_ -filePath "$folderPath\json\$($_.Key).json"
     }
 }
 
 ### Save to Yaml
-if ($Source -ne "yaml" -and $Export.IsPresent) {
+if ($source -ne "yaml" -and $export.IsPresent) {
     if (-not(Test-Path -Path "$folderPath\Yaml")) {
         New-Item -Path "$folderPath\Yaml" -Type Directory
     }
 
     # Change commas to ":" Colon for Vlan Network Properties.
     for ($i=0;$i -lt ($configData.VLANS | Measure-Object).count;$i++) {
-        $configData.VLANS[$i].psobject.properties | Where-Object {if ($_.name -eq "network") {$commacorrect = $_.value -replace ",",':'; $_.value = $commacorrect}}
+        $configData.VLANS[$i].psobject.properties | Where-Object {if ($_.name -eq "network") {$commaCorrect = $_.value -replace ",",':'; $_.value = $commaCorrect}}
     }
 
     $configData.GetEnumerator() | ForEach-Object {
-        Save-Yaml -InputObject $_ -FilePath "$folderPath\yaml\$($_.Key).yml"
+        Save-Yaml -InputObject $_ -filePath "$folderPath\yaml\$($_.Key).yml"
     }
 
     # Change ":" Colon to commas for Vlan Network Properties.
     for ($i=0;$i -lt ($configData.VLANS | Measure-Object).count;$i++) {
-        $configData.VLANS[$i].psobject.properties | Where-Object {if ($_.name -eq "network") {$commacorrect = $_.value -replace ":",','; $_.value = $commacorrect}}
+        $configData.VLANS[$i].psobject.properties | Where-Object {if ($_.name -eq "network") {$commaCorrect = $_.value -replace ":",','; $_.value = $commaCorrect}}
     }
 
 }
@@ -353,19 +353,19 @@ New-Alias -Name OpenSSL -Value $OpenSSL
 Stop-Transcript
 
 # Deploy the VCSA servers.
-ForEach ($Deployment in $configData.Deployments | Where-Object {$_.Action}) {
+ForEach ($deployment in $configData.Deployments | Where-Object {$_.Action}) {
     # Skip deployment if set to null.
 
-    $OutputPath = "$logPath\Deploy-" + $Deployment.Hostname + "-" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
-    Start-Transcript -Path $OutputPath -Append
+    $outputPath = "$logPath\Deploy-" + $deployment.Hostname + "-" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
+    Start-Transcript -Path $outputPath -Append
 
-    Write-Output -InputObject "=============== Starting deployment of $($Deployment.vmName) ===============" | Out-String
+    Write-Output -InputObject "=============== Starting deployment of $($deployment.vmName) ===============" | Out-String
 
     # Deploy the vcsa
     $params = @{
-        ParameterList = $Deployment
-        OvfToolPath = $OvfToolPath
-        LogPath = $logPath
+        parameterList = $deployment
+        ovfToolPath = $ovfToolPath
+        logPath = $logPath
     }
     New-VCSADeploy @params
 
@@ -373,65 +373,65 @@ ForEach ($Deployment in $configData.Deployments | Where-Object {$_.Action}) {
     Write-SeparatorLine
 
     # Create esxi credentials.
-    $ESXiSecPasswd = $null
-    $ESXiCreds = $null
-    $ESXiSecPasswd = ConvertTo-SecureString -String $Deployment.esxiRootPass -AsPlainText -Force
-    $ESXiCreds = New-Object -TypeName System.Management.Automation.PSCredential($Deployment.esxiRootUser, $ESXiSecPasswd)
+    $esxiSecPasswd = $null
+    $esxiCreds = $null
+    $esxiSecPasswd = ConvertTo-SecureString -String $deployment.esxiRootPass -AsPlainText -Force
+    $esxiCreds = New-Object -TypeName System.Management.Automation.PSCredential($deployment.esxiRootUser, $esxiSecPasswd)
 
     # Connect to esxi host of the deployed vcsa.
     $params = @{
-        Server = $Deployment.esxiHost
-        Credential = $ESXiCreds
+        server = $deployment.esxiHost
+        credential = $esxiCreds
     }
-    $ESXiHandle = Connect-VIServer @params
+    $esxiHandle = Connect-VIServer @params
 
     Write-SeparatorLine
 
     Write-Output -InputObject "== Firstboot process could take 10+ minutes to complete. please wait. ==" | Out-String
 
-    if (-not $StopWatch) {
-        $StopWatch =  [system.diagnostics.stopwatch]::StartNew()
+    if (-not $stopWatch) {
+        $stopWatch =  [system.diagnostics.stopwatch]::StartNew()
     } else {
-        $StopWatch.start()
+        $stopWatch.start()
     }
 
-    $VCSACredential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
+    $vcsaCredential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $deployment.VCSARootPass -AsPlainText -Force))
     $params = @{
-        Script = 'find /var/log/firstboot/ -type f \( -name "succeeded" -o -name "failed" \)'
-        Hostname = $Deployment.Hostname
-        Credential = $VCSACredential
-        ViHandle = $ESXiHandle
+        script = 'find /var/log/firstboot/ -type f \( -name "succeeded" -o -name "failed" \)'
+        hostname = $deployment.Hostname
+        credential = $vcsaCredential
+        viHandle = $esxiHandle
     }
-    $Firstboot = (Invoke-ExecuteScript @params).ScriptOutput
+    $firstBoot = (Invoke-ExecuteScript @params).ScriptOutput
 
-    While (-not $Firstboot) {
+    While (-not $firstBoot) {
 
         Start-Sleep -Seconds 15
 
-        $Elapsed = $StopWatch.Elapsed.ToString('hh\:mm\:ss')
+        $elapsed = $stopWatch.Elapsed.ToString('hh\:mm\:ss')
 
-        Write-Progress -Activity "Completing Firstboot for $($Deployment.Hostname)" -Status "Time Elapsed $Elapsed"
+        Write-Progress -Activity "Completing Firstboot for $($deployment.Hostname)" -Status "Time Elapsed $elapsed"
 
-        Write-Output -InputObject "Time Elapsed completing Firstboot for $($Deployment.Hostname): $Elapsed" | Out-String
+        Write-Output -InputObject "Time Elapsed completing Firstboot for $($deployment.Hostname): $elapsed" | Out-String
 
         $params = @{
-            Script = $script
-            Hostname = $Deployment.Hostname
-            Credential = $VCSACredential
-            ViHandle = $ESXiHandle
+            script = $script
+            hostname = $deployment.Hostname
+            credential = $vcsaCredential
+            viHandle = $esxiHandle
         }
-        $Firstboot = (Invoke-ExecuteScript @params).ScriptOutput
+        $firstBoot = (Invoke-ExecuteScript @params).ScriptOutput
     }
 
-    $StopWatch.reset()
+    $stopWatch.reset()
 
-    if ($Firstboot -like "*failed*") {
-        Write-Output -InputObject "Deployment of " + $Deployment.Hostname + " Failed. Exiting Script." | Out-String
+    if ($firstBoot -like "*failed*") {
+        Write-Output -InputObject "Deployment of " + $deployment.Hostname + " Failed. Exiting Script." | Out-String
         break
     }
 
     # Enable Jumbo Frames on eth0 if True.
-    if ($Deployment.JumboFrames) {
+    if ($deployment.JumboFrames) {
         $commandList = $null
         $commandList = @()
         $commandList += 'echo -e "" >> /etc/systemd/network/10-eth0.network'
@@ -439,126 +439,126 @@ ForEach ($Deployment in $configData.Deployments | Where-Object {$_.Action}) {
         $commandList += 'echo -e "MTUBytes=9000" >> /etc/systemd/network/10-eth0.network'
 
         $params = @{
-            Script = $commandList
-            Hostname = $Deployment.vmName
-            Credential = $VCSACredential
-            ViHandle = $ESXiHandle
+            script = $commandList
+            hostname = $deployment.vmName
+            credential = $vcsaCredential
+            viHandle = $esxiHandle
         }
         Invoke-ExecuteScript @params
     }
 
-    Write-Output -InputObject "`r`n The VCSA $($Deployment.Hostname) has been deployed and is Get-URLStatus.`r`n" | Out-String
+    Write-Output -InputObject "`r`n The VCSA $($deployment.Hostname) has been deployed and is Get-URLStatus.`r`n" | Out-String
 
     # Create certificate directory if it does not exist
-    $CertDir = $folderPath + "\Certs\" + $Deployment.SSODomainName
-    $DefaultRootCertDir = $CertDir + "\" + $Deployment.Hostname + "\DefaultRootCert"
+    $certPath = $folderPath + "\Certs\" + $deployment.SSODomainName
+    $defaultRootCertPath = $certPath + "\" + $deployment.Hostname + "\DefaultRootCert"
 
-    if (-not(Test-Path -Path $DefaultRootCertDir)) {
-        New-Item -Path $DefaultRootCertDir -Type Directory | Out-Null
+    if (-not(Test-Path -Path $defaultRootCertPath)) {
+        New-Item -Path $defaultRootCertPath -Type Directory | Out-Null
     }
 
-    Write-Host -Object "=============== Configure Certificate pair on $($Deployment.vmName) ===============" | Out-String
+    Write-Host -Object "=============== Configure Certificate pair on $($deployment.vmName) ===============" | Out-String
     $params = @{
-        CertDir = $CertDir
-        Deployment = $Deployment
-        VIHandle = $ESXiHandle
+        certPath = $certPath
+        deployment = $deployment
+        viHandle = $esxiHandle
     }
     New-CertificatePair @params
 
     # Import the vCenter self signed certificate into the local trusted root certificate store.
     $params = @{
-        CertPath = $DefaultRootCertDir
-        Deployment = $Deployment
-        VIHandle = $ESXiHandle
+        certPath = $defaultRootCertPath
+        deployment = $deployment
+        viHandle = $esxiHandle
     }
     Import-HostRootCertificate @params
     # Disconnect from the vcsa deployed esxi server.
-    Disconnect-VIServer -Server $ESXiHandle -Confirm:$false
+    Disconnect-VIServer -Server $esxiHandle -Confirm:$false
 
     # Write separator line to transcript.
     Write-SeparatorLine
 
-    Write-Host -Object "=============== End of Deployment for $($Deployment.vmName) ===============" | Out-String
+    Write-Host -Object "=============== End of Deployment for $($deployment.vmName) ===============" | Out-String
 
     Stop-Transcript
 }
 
 # Replace Certificates.
-ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
+ForEach ($deployment in $configData.Deployments| Where-Object {$_.Certs}) {
 
-    $OutputPath = "$logPath\Certs-" + $Deployment.Hostname + "-" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
-    Start-Transcript -Path $OutputPath -Append
+    $outputPath = "$logPath\Certs-" + $deployment.Hostname + "-" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
+    Start-Transcript -Path $outputPath -Append
 
-    Write-Output -InputObject "=============== Starting replacement of Certs on $($Deployment.vmName) ===============" | Out-String
+    Write-Output -InputObject "=============== Starting replacement of Certs on $($deployment.vmName) ===============" | Out-String
 
     # Wait until the vcsa is Get-URLStatus.
     $params = @{
-        URL = "https://" + $Deployment.Hostname
+        url = "https://" + $deployment.Hostname
     }
     Get-URLStatus @params
 
-    # Set $CertDir
-    $CertDir = $folderPath + "\Certs\" + $Deployment.SSODomainName
-    $RootCertDir = $CertDir + "\" + $Deployment.Hostname
+    # Set $certPath
+    $certPath = $folderPath + "\Certs\" + $deployment.SSODomainName
+    $rootCertPath = $certPath + "\" + $deployment.Hostname
 
     # Create certificate directory if it does not exist
-    if (-not(Test-Path -Path $RootCertDir)) {
-        New-Item -Path $RootCertDir -Type Directory | Out-Null
+    if (-not(Test-Path -Path $rootCertPath)) {
+        New-Item -Path $rootCertPath -Type Directory | Out-Null
     }
 
-    $configData.Certs = $configData.CertInfo | Where-Object {$_.vCenter -match "all|$($Deployment.Hostname)"}
+    $configData.Certs = $configData.certInfo | Where-Object {$_.vCenter -match "all|$($deployment.Hostname)"}
 
     Write-Output -InputObject $configData.Certs | Out-String
 
     if ($configData.Certs) {
         # Create esxi credentials.
-        $ESXiSecPasswd = $null
-        $ESXiCreds = $null
-        $ESXiSecPasswd = ConvertTo-SecureString -String $Deployment.esxiRootPass -AsPlainText -Force
-        $ESXiCreds = New-Object -TypeName System.Management.Automation.PSCredential($Deployment.esxiRootUser, $ESXiSecPasswd)
+        $esxiSecPasswd = $null
+        $esxiCreds = $null
+        $esxiSecPasswd = ConvertTo-SecureString -String $deployment.esxiRootPass -AsPlainText -Force
+        $esxiCreds = New-Object -TypeName System.Management.Automation.PSCredential($deployment.esxiRootUser, $esxiSecPasswd)
 
         # Connect to esxi host of the deployed vcsa.
-        $ESXiHandle = Connect-VIServer -Server $Deployment.esxiHost -Credential $ESXiCreds
+        $esxiHandle = Connect-VIServer -Server $deployment.esxiHost -Credential $esxiCreds
 
         # Change the Placeholder (FQDN) from the certs tab to the FQDN of the vcsa.
-        $configData.Certs.CompanyName = $Deployment.Hostname
+        $configData.Certs.CompanyName = $deployment.Hostname
 
-        # $InstanceCertDir is the script location plus cert folder and Hostname eg. C:\Script\Certs\SSODomain\vm-host1.companyname.com\
-        $InstanceCertDir = $CertDir + "\" + $Deployment.Hostname
+        # $instanceCertPath is the script location plus cert folder and Hostname eg. C:\Script\Certs\SSODomain\vm-host1.companyname.com\
+        $instanceCertPath = $certPath + "\" + $deployment.Hostname
 
         # Check for or download root certificates.
         $params = @{
-            CertDir = $RootCertDir
-            CertInfo = $configData.Certs
+            certPath = $rootCertPath
+            certInfo = $configData.Certs
         }
         Import-RootCertificate @params
 
         # Create the Machine cert.
         $params = @{
-            SVCDir = "machine"
-            CSRName = "machine_ssl.csr"
-            CFGName = "machine_ssl.cfg"
-            PrivFile = "ssl_key.priv"
-            Flag = 6
-            CertDir = $InstanceCertDir
-            CertInfo = $configData.Certs
+            servicePath = "machine"
+            csrFilename = "machine_ssl.csr"
+            configName = "machine_ssl.cfg"
+            privFile = "ssl_key.priv"
+            flag = 6
+            certPath = $instanceCertPath
+            certInfo = $configData.Certs
         }
         New-CSR @params
         $params = @{
-            SVCDir = "machine"
-            CSRFile = "machine_ssl.csr"
-            CertFile = "new_machine.crt"
-            Template = $configData.Certs.V6Template
-            CertDir = $InstanceCertDir
-            IssuingCA = $configData.Certs.IssuingCA
+            servicePath = "machine"
+            csrFile = "machine_ssl.csr"
+            certFile = "new_machine.crt"
+            template = $configData.Certs.V6template
+            certPath = $instanceCertPath
+            issuingCA = $configData.Certs.issuingCA
         }
         Invoke-CertificateMint @params
         $params = @{
-            SVCDir = "machine"
-            CertFile = "new_machine.crt"
-            CerFile = "new_machine.cer"
-            CertDir = $RootCertDir
-            InstanceCertDir = $InstanceCertDir
+            servicePath = "machine"
+            certFile = "new_machine.crt"
+            cerFile = "new_machine.cer"
+            certPath = $rootCertPath
+            instanceCertPath = $instanceCertPath
         }
         ConvertTo-PEMFormat @params
 
@@ -567,238 +567,238 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
 
         # Create the VMDir cert.
         $params = @{
-            SVCDir = "VMDir"
-            CSRName = "VMDir.csr"
-            CFGName = "VMDir.cfg"
-            PrivFile = "VMDir.priv"
-            Flag = 6
-            CertDir = $InstanceCertDir
-            CertInfo = $configData.Certs
+            servicePath = "VMDir"
+            csrFilename = "VMDir.csr"
+            configName = "VMDir.cfg"
+            privFile = "VMDir.priv"
+            flag = 6
+            certPath = $instanceCertPath
+            certInfo = $configData.Certs
         }
         New-CSR @params
         $params = @{
-            SVCDir = "VMDir"
-            CSRFile = "VMDir.csr"
-            CertFile = "VMDir.crt"
-            Template = $configData.Certs.V6Template
-            CertDir = $InstanceCertDir
-            IssuingCA = $configData.Certs.IssuingCA
+            servicePath = "VMDir"
+            csrFile = "VMDir.csr"
+            certFile = "VMDir.crt"
+            template = $configData.Certs.V6template
+            certPath = $instanceCertPath
+            issuingCA = $configData.Certs.issuingCA
         }
         Invoke-CertificateMint @params
         $params = @{
-            SVCDir = "VMDir"
-            CertFile = "VMDir.crt"
-            CerFile = "VMDir.cer"
-            CertDir = $RootCertDir
-            InstanceCertDir = $InstanceCertDir
+            servicePath = "VMDir"
+            certFile = "VMDir.crt"
+            cerFile = "VMDir.cer"
+            certPath = $rootCertPath
+            instanceCertPath = $instanceCertPath
         }
         ConvertTo-PEMFormat @params
 
         # Rename the VMDir cert for use on a VMSA.
-        Rename-VMDir -CertDir $InstanceCertDir
+        Rename-VMDir -CertPath $instanceCertPath
 
         # Change back to the script root folder.
         Set-Location -Path $folderPath
 
-        $SSOParent = $null
-        $SSOParent = $configData.Deployments | Where-Object {$Deployment.Parent -eq $_.Hostname}
+        $ssoParent = $null
+        $ssoParent = $configData.Deployments | Where-Object {$deployment.Parent -eq $_.Hostname}
 
         # Create the Solution User Certs - 2 for External PSC, 4 for all other deployments.
-        if ($Deployment.DeployType -eq "infrastructure") {
+        if ($deployment.DeployType -eq "infrastructure") {
             $params = @{
-                $SVCDir = "Solution"
-                $CSRName = "machine.csr"
-                $CFGName = "machine.cfg"
-                $PrivFile = "machine.priv"
-                $Flag = 6
-                $SolutionUser = "machine"
-                $CertDir = $InstanceCertDir
-                $Certinfo = $configData.Certs
+                servicePath = "Solution"
+                csrFilename = "machine.csr"
+                configName = "machine.cfg"
+                privFile = "machine.priv"
+                flag = 6
+                solutionUser = "machine"
+                certPath = $instanceCertPath
+                certInfo = $configData.Certs
             }
             New-SolutionCSR @params
             $params = @{
-                $SVCDir = "Solution"
-                $CSRName = "vsphere-webclient.csr"
-                $CFGName = "vsphere-webclient.cfg"
-                $PrivFile = "vsphere-webclient.priv"
-                $Flag = 6
-                $SolutionUser = "vsphere-webclient"
-                $CertDir = $InstanceCertDir
-                $Certinfo = $configData.Certs
+                servicePath = "Solution"
+                csrFilename = "vsphere-webclient.csr"
+                configName = "vsphere-webclient.cfg"
+                privFile = "vsphere-webclient.priv"
+                flag = 6
+                solutionUser = "vsphere-webclient"
+                certPath = $instanceCertPath
+                certInfo = $configData.Certs
             }
             New-SolutionCSR @params
             $params = @{
-                SVCDir = "Solution"
-                CSRFile = "machine.csr"
-                CertFile = "machine.crt"
-                Template = $configData.Certs.V6Template
-                CertDir = $InstanceCertDir
-                IssuingCA = $configData.Certs.IssuingCA
+                servicePath = "Solution"
+                csrFile = "machine.csr"
+                certFile = "machine.crt"
+                template = $configData.Certs.V6template
+                certPath = $instanceCertPath
+                issuingCA = $configData.Certs.issuingCA
             }
             Invoke-CertificateMint @params
             $params = @{
-                SVCDir = "Solution"
-                CSRFile = "vsphere-webclient.csr"
-                CertFile = "vsphere-webclient.crt"
-                Template = $configData.Certs.V6Template
-                CertDir = $InstanceCertDir
-                IssuingCA = $configData.Certs.IssuingCA
+                servicePath = "Solution"
+                csrFile = "vsphere-webclient.csr"
+                certFile = "vsphere-webclient.crt"
+                template = $configData.Certs.V6template
+                certPath = $instanceCertPath
+                issuingCA = $configData.Certs.issuingCA
             }
             Invoke-CertificateMint @params
             $params = @{
-                SVCDir = "Solution"
-                CertFile = "machine.crt"
-                CerFile = "machine.cer"
-                CertDir = $RootCertDir
-                InstanceCertDir = $InstanceCertDir
+                servicePath = "Solution"
+                certFile = "machine.crt"
+                cerFile = "machine.cer"
+                certPath = $rootCertPath
+                instanceCertPath = $instanceCertPath
             }
             ConvertTo-PEMFormat @params
             $params = @{
-                SVCDir = "Solution"
-                CertFile = "vsphere-webclient.crt"
-                CerFile = "vsphere-webclient.cer"
-                CertDir = $RootCertDir
-                InstanceCertDir = $InstanceCertDir
+                servicePath = "Solution"
+                certFile = "vsphere-webclient.crt"
+                cerFile = "vsphere-webclient.cer"
+                certPath = $rootCertPath
+                instanceCertPath = $instanceCertPath
             }
             ConvertTo-PEMFormat @params
 
             Write-SeparatorLine
             # Copy Cert files to vcsa Node and deploy them.
             $params = @{
-                RootCertDir = $RootCertDir
-                CertDir = $CertDir
-                Deployment = $Deployment
-                VIHandle = $ESXiHandle
-                DeploymentParent = $SSOParent
+                rootcertPath = $rootCertPath
+                certPath = $certPath
+                deployment = $deployment
+                viHandle = $esxiHandle
+                deploymentParent = $ssoParent
             }
             Copy-CertificateToHost @params
         } else {
             $params = @{
-                $SVCDir = "Solution"
-                $CSRName = "vpxd.csr"
-                $CFGName = "vpxd.cfg"
-                $PrivFile = "vpxd.priv"
-                $Flag = 6
-                $SolutionUser = "vpxd"
-                $CertDir = $InstanceCertDir
-                $Certinfo = $configData.Certs
+                servicePath = "Solution"
+                csrFilename = "vpxd.csr"
+                configName = "vpxd.cfg"
+                privFile = "vpxd.priv"
+                flag = 6
+                solutionUser = "vpxd"
+                certPath = $instanceCertPath
+                certInfo = $configData.Certs
             }
             New-SolutionCSR @params
             $params = @{
-                $SVCDir = "Solution"
-                $CSRName = "vpxd-extension.csr"
-                $CFGName = "vpxd-extension.cfg"
-                $PrivFile = "vpxd-extension.priv"
-                $Flag = 6
-                $SolutionUser = "vpxd-extension"
-                $CertDir = $InstanceCertDir
-                $Certinfo = $configData.Certs
+                servicePath = "Solution"
+                csrFilename = "vpxd-extension.csr"
+                configName = "vpxd-extension.cfg"
+                privFile = "vpxd-extension.priv"
+                flag = 6
+                solutionUser = "vpxd-extension"
+                certPath = $instanceCertPath
+                certInfo = $configData.Certs
             }
             New-SolutionCSR @params
             $params = @{
-                $SVCDir = "Solution"
-                $CSRName = "machine.csr"
-                $CFGName = "machine.cfg"
-                $PrivFile = "machine.priv"
-                $Flag = 6
-                $SolutionUser = "machine"
-                $CertDir = $InstanceCertDir
-                $Certinfo = $configData.Certs
+                servicePath = "Solution"
+                csrFilename = "machine.csr"
+                configName = "machine.cfg"
+                privFile = "machine.priv"
+                flag = 6
+                solutionUser = "machine"
+                certPath = $instanceCertPath
+                certInfo = $configData.Certs
             }
             New-SolutionCSR @params
             $params = @{
-                $SVCDir = "Solution"
-                $CSRName = "vsphere-webclient.csr"
-                $CFGName = "vsphere-webclient.cfg"
-                $PrivFile = "vsphere-webclient.priv"
-                $Flag = 6
-                $SolutionUser = "vsphere-webclient"
-                $CertDir = $InstanceCertDir
-                $Certinfo = $configData.Certs
+                servicePath = "Solution"
+                csrFilename = "vsphere-webclient.csr"
+                configName = "vsphere-webclient.cfg"
+                privFile = "vsphere-webclient.priv"
+                flag = 6
+                solutionUser = "vsphere-webclient"
+                certPath = $instanceCertPath
+                certInfo = $configData.Certs
             }
             New-SolutionCSR @params
             $params = @{
-                SVCDir = "Solution"
-                CSRFile = "vpxd.csr"
-                CertFile = "vpxd.crt"
-                Template = $configData.Certs.V6Template
-                CertDir = $InstanceCertDir
-                IssuingCA = $configData.Certs.IssuingCA
+                servicePath = "Solution"
+                csrFile = "vpxd.csr"
+                certFile = "vpxd.crt"
+                template = $configData.Certs.V6template
+                certPath = $instanceCertPath
+                issuingCA = $configData.Certs.issuingCA
             }
             Invoke-CertificateMint @params
             $params = @{
-                SVCDir = "Solution"
-                CSRFile = "vpxd-extension.csr"
-                CertFile = "vpxd-extension.crt"
-                Template = $configData.Certs.V6Template
-                CertDir = $InstanceCertDir
-                IssuingCA = $configData.Certs.IssuingCA
+                servicePath = "Solution"
+                csrFile = "vpxd-extension.csr"
+                certFile = "vpxd-extension.crt"
+                template = $configData.Certs.V6template
+                certPath = $instanceCertPath
+                issuingCA = $configData.Certs.issuingCA
             }
             Invoke-CertificateMint @params
             $params = @{
-                SVCDir = "Solution"
-                CSRFile = "machine.csr"
-                CertFile = "machine.crt"
-                Template = $configData.Certs.V6Template
-                CertDir = $InstanceCertDir
-                IssuingCA = $configData.Certs.IssuingCA
+                servicePath = "Solution"
+                csrFile = "machine.csr"
+                certFile = "machine.crt"
+                template = $configData.Certs.V6template
+                certPath = $instanceCertPath
+                issuingCA = $configData.Certs.issuingCA
             }
             Invoke-CertificateMint @params
             $params = @{
-                SVCDir = "Solution"
-                CSRFile = "vsphere-webclient.csr"
+                servicePath = "Solution"
+                csrFile = "vsphere-webclient.csr"
                 CertFile = "vsphere-webclient.crt"
-                Template = $configData.Certs.V6Template
-                CertDir = $InstanceCertDir
-                IssuingCA = $configData.Certs.IssuingCA
+                template = $configData.Certs.V6template
+                certPath = $instanceCertPath
+                issuingCA = $configData.Certs.issuingCA
             }
             Invoke-CertificateMint @params
             $params = @{
-                SVCDir = "Solution"
-                CertFile = "vpxd.crt"
-                CerFile = "vpxd.cer"
-                CertDir = $RootCertDir
-                InstanceCertDir = $InstanceCertDir
+                servicePath = "Solution"
+                certFile = "vpxd.crt"
+                cerFile = "vpxd.cer"
+                certPath = $rootCertPath
+                instanceCertPath = $instanceCertPath
             }
             ConvertTo-PEMFormat @params
             $params = @{
-                SVCDir = "Solution"
-                CertFile = "vpxd-extension.crt"
-                CerFile = "vpxd-extension.cer"
-                CertDir = $RootCertDir
-                InstanceCertDir = $InstanceCertDir
+                servicePath = "Solution"
+                certFile = "vpxd-extension.crt"
+                cerFile = "vpxd-extension.cer"
+                certPath = $rootCertPath
+                instanceCertPath = $instanceCertPath
             }
             ConvertTo-PEMFormat @params
             $params = @{
-                SVCDir = "Solution"
-                CertFile = "machine.crt"
-                CerFile = "machine.cer"
-                CertDir = $RootCertDir
-                InstanceCertDir = $InstanceCertDir
+                servicePath = "Solution"
+                certFile = "machine.crt"
+                cerFile = "machine.cer"
+                certPath = $rootCertPath
+                instanceCertPath = $instanceCertPath
             }
             ConvertTo-PEMFormat @params
             $params = @{
-                SVCDir = "Solution"
-                CertFile = "vsphere-webclient.crt"
-                CerFile = "vsphere-webclient.cer"
-                CertDir = $RootCertDir
-                InstanceCertDir = $InstanceCertDir
+                servicePath = "Solution"
+                certFile = "vsphere-webclient.crt"
+                cerFile = "vsphere-webclient.cer"
+                certPath = $rootCertPath
+                instanceCertPath = $instanceCertPath
             }
             ConvertTo-PEMFormat @params
 
             Write-SeparatorLine
             # Copy Cert files to vcsa Node and deploy them.
             $params = @{
-                RootCertDir = $RootCertDir
-                CertDir = $CertDir
-                Deployment = $Deployment
-                VIHandle = $ESXiHandle
-                DeploymentParent = $SSOParent
+                rootCertPath = $rootCertPath
+                certPath = $certPath
+                deployment = $deployment
+                viHandle = $esxiHandle
+                deploymentParent = $ssoParent
             }
             Copy-CertificateToHost @params
             # Configure Autodeploy and replace the solution user certificates, and update the thumbprint to the new machine ssl thumbprint.
             # https://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=2000988
-            if (($configData.Services | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)") -and $_.Service -eq "AutoDeploy"}).Service) {
+            if (($configData.Services | Where-Object {($_.vCenter.Split(",") -match "all|$($deployment.Hostname)") -and $_.Service -eq "AutoDeploy"}).Service) {
                 $commandList = $null
                 $commandList = @()
                 # Set path for python.
@@ -810,18 +810,18 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
                 $commandList += "/usr/lib/vmware-vmon/vmon-cli --update rbd --starttype AUTOMATIC"
                 $commandList += "/usr/lib/vmware-vmon/vmon-cli --restart rbd"
                 # Replace the solution user cert for Autodeploy.
-                $commandList += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.rbd -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($Deployment.Hostname) -u administrator@$($Deployment.SSODomainName) -p `'$($Deployment.SSOAdminPass)`'"
+                $commandList += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.rbd -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($deployment.Hostname) -u administrator@$($deployment.SSODomainName) -p `'$($deployment.SSOAdminPass)`'"
                 # Configure imagebuilder and start the service.
                 $commandList += "/usr/lib/vmware-vmon/vmon-cli --update imagebuilder --starttype AUTOMATIC"
                 $commandList += "/usr/lib/vmware-vmon/vmon-cli --restart imagebuilder"
                 # Replace the imagebuilder solution user cert.
-                $commandList += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.imagebuilder -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($Deployment.Hostname) -u administrator@$($Deployment.SSODomainName) -p `'$($Deployment.SSOAdminPass)`'"
+                $commandList += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.imagebuilder -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s $($deployment.Hostname) -u administrator@$($deployment.SSODomainName) -p `'$($deployment.SSOAdminPass)`'"
 
                 $params = @{
-                    Script = $commandList
-                    Hostname = $Deployment.Hostname
-                    Credential = $VCSACredential
-                    ViHandle = $ESXiHandle
+                    script = $commandList
+                    hostname = $deployment.Hostname
+                    credential = $vcsaCredential
+                    viHandle = $esxiHandle
                 }
                 Invoke-ExecuteScript @params
 
@@ -831,13 +831,13 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
                 $commandList += "openssl x509 -in /root/ssl/new_machine.crt -noout -sha1 -fingerprint"
 
                 $params = @{
-                    Script = $commandList
-                    Hostname = $Deployment.Hostname
-                    Credential = $VCSACredential
-                    ViHandle = $ESXiHandle
+                    script = $commandList
+                    hostname = $deployment.Hostname
+                    credential = $vcsaCredential
+                    viHandle = $esxiHandle
                 }
-                $newthumbprint = $(Invoke-ExecuteScript @params).Scriptoutput.Split("=",2)[1]
-                $newthumbprint = $newthumbprint -replace "`t|`n|`r",""
+                $newThumbprint = $(Invoke-ExecuteScript @params).Scriptoutput.Split("=",2)[1]
+                $newThumbprint = $newThumbprint -replace "`t|`n|`r",""
                 # Replace the autodeploy cert thumbprint.
                 $commandList = $null
                 $commandList = @()
@@ -849,51 +849,51 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
                 # Stop the autodeploy service.
                 $commandList += "/usr/bin/service-control --stop vmware-rbd-watchdog"
                 # Replace the thumbprint.
-                $commandList += "autodeploy-register -R -a " + $Deployment.Hostname + " -u Administrator@" + $Deployment.SSODomainName + " -w `'" + $Deployment.SSOAdminPass + "`' -s `"/etc/vmware-rbd/autodeploy-setup.xml`" -f -T $newthumbprint"
+                $commandList += "autodeploy-register -R -a " + $deployment.Hostname + " -u Administrator@" + $deployment.SSODomainName + " -w `'" + $deployment.SSOAdminPass + "`' -s `"/etc/vmware-rbd/autodeploy-setup.xml`" -f -T $newThumbprint"
                 # Start the autodeploy service.
                 $commandList += "/usr/bin/service-control --start vmware-rbd-watchdog"
                 $params = @{
-                    Script = $commandList
-                    Hostname = $Deployment.Hostname
-                    Credential = $VCSACredential
-                    ViHandle = $ESXiHandle
+                    script = $commandList
+                    hostname = $deployment.Hostname
+                    credential = $vcsaCredential
+                    viHandle = $esxiHandle
                 }
                 Invoke-ExecuteScript @params
             }
-            if (($configData.Services | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)") -and $_.Service -eq "AuthProxy"}).Service) {
+            if (($configData.Services | Where-Object {($_.vCenter.Split(",") -match "all|$($deployment.Hostname)") -and $_.Service -eq "AuthProxy"}).Service) {
                 # Create Authorization Proxy Server Certificates.
                 $params = @{
-                    SVCDir = "authproxy"
-                    CSRName = "authproxy.csr"
-                    CFGName = "authproxy.cfg"
-                    PrivFile = "authproxy.priv"
-                    Flag = 6
-                    CertDir = $InstanceCertDir
-                    CertInfo = $configData.Certs
+                    servicePath = "authproxy"
+                    csrFilename = "authproxy.csr"
+                    configName = "authproxy.cfg"
+                    privFile = "authproxy.priv"
+                    flag = 6
+                    certPath = $instanceCertPath
+                    certInfo = $configData.Certs
                 }
                 New-CSR @params
                 $params = @{
-                    SVCDir = "authproxy"
-                    CSRFile = "authproxy.csr"
-                    CertFile = "authproxy.crt"
-                    Template = $configData.Certs.V6Template
-                    CertDir = $InstanceCertDir
-                    IssuingCA = $configData.Certs.IssuingCA
+                    servicePath = "authproxy"
+                    csrFile = "authproxy.csr"
+                    certFile = "authproxy.crt"
+                    template = $configData.Certs.V6template
+                    certPath = $instanceCertPath
+                    issuingCA = $configData.Certs.issuingCA
                 }
                 Invoke-CertificateMint @params
                 # Copy the Authorization Proxy Certs to the vCenter.
-                $FileLocations = $null
-                $FileLocations = @()
-                $FileLocations += "$InstanceCertDir\authproxy\authproxy.priv"
-                $FileLocations += "/var/lib/vmware/vmcam/ssl/authproxy.key"
-                $FileLocations += "$InstanceCertDir\authproxy\authproxy.crt"
-                $FileLocations += "/var/lib/vmware/vmcam/ssl/authproxy.crt"
+                $fileLocations = $null
+                $fileLocations = @()
+                $fileLocations += "$instanceCertPath\authproxy\authproxy.priv"
+                $fileLocations += "/var/lib/vmware/vmcam/ssl/authproxy.key"
+                $fileLocations += "$instanceCertPath\authproxy\authproxy.crt"
+                $fileLocations += "/var/lib/vmware/vmcam/ssl/authproxy.crt"
                 $params = @{
-                    Path = $FileLocations
-                    Hostname = $Deployment.Hostname
-                    Credential = $VCSACredential
-                    VIHandle = $VIHandle
-                    Upload = $true
+                    path = $fileLocations
+                    hostname = $deployment.Hostname
+                    credential = $vcsaCredential
+                    viHandle = $viHandle
+                    upload = $true
                 }
                 Copy-FileToServer @params
                 # Set Join Domain Authorization Proxy (vmcam) startype to Automatic and restart service.
@@ -905,7 +905,7 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
                 $commandList += "export VMWARE_DATA_DIR=/storage"
                 $commandList += "/usr/lib/vmware-vmon/vmon-cli --update vmcam --starttype AUTOMATIC"
                 $commandList += "/usr/lib/vmware-vmon/vmon-cli --restart vmcam"
-                $commandList += "/usr/lib/vmware-vmcam/bin/camregister --unregister -a " + $Deployment.Hostname + " -u Administrator@" + $Deployment.SSODomainName + " -p `'" + $Deployment.SSOAdminPass + "`'"
+                $commandList += "/usr/lib/vmware-vmcam/bin/camregister --unregister -a " + $deployment.Hostname + " -u Administrator@" + $deployment.SSODomainName + " -p `'" + $deployment.SSOAdminPass + "`'"
                 $commandList += "/usr/bin/service-control --stop vmcam"
                 $commandList += "mv /var/lib/vmware/vmcam/ssl/rui.crt /var/lib/vmware/vmcam/ssl/rui.crt.bak"
                 $commandList += "mv /var/lib/vmware/vmcam/ssl/rui.key /var/lib/vmware/vmcam/ssl/rui.key.bak"
@@ -914,13 +914,13 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
                 $commandList += "chmod 600 /var/lib/vmware/vmcam/ssl/rui.crt"
                 $commandList += "chmod 600 /var/lib/vmware/vmcam/ssl/rui.key"
                 $commandList += "/usr/lib/vmware-vmon/vmon-cli --restart vmcam"
-                $commandList += "/usr/lib/vmware-vmcam/bin/camregister --register -a " + $Deployment.Hostname + " -u Administrator@" + $Deployment.SSODomainName + " -p `'" + $Deployment.SSOAdminPass + "`' -c /var/lib/vmware/vmcam/ssl/rui.crt -k /var/lib/vmware/vmcam/ssl/rui.key"
+                $commandList += "/usr/lib/vmware-vmcam/bin/camregister --register -a " + $deployment.Hostname + " -u Administrator@" + $deployment.SSODomainName + " -p `'" + $deployment.SSOAdminPass + "`' -c /var/lib/vmware/vmcam/ssl/rui.crt -k /var/lib/vmware/vmcam/ssl/rui.key"
                 # Service update
                 $params = @{
-                    Script = $commandList
-                    Hostname = $Deployment.Hostname
-                    Credential = $VCSACredential
-                    ViHandle = $ESXiHandle
+                    script = $commandList
+                    hostname = $deployment.Hostname
+                    credential = $vcsaCredential
+                    viHandle = $esxiHandle
                 }
                 Invoke-ExecuteScript @params
             }
@@ -928,11 +928,11 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
 
         Write-SeparatorLine
 
-        Write-Host -Object "=============== Configure Certificate pair on $($Deployment.vmName) ===============" | Out-String
+        Write-Host -Object "=============== Configure Certificate pair on $($deployment.vmName) ===============" | Out-String
         $params = @{
-            CertDir = $CertDir
-            Deployment = $Deployment
-            VIHandle = $ESXiHandle
+            certPath = $certPath
+            deployment = $deployment
+            viHandle = $esxiHandle
         }
         New-CertificatePair @params
 
@@ -947,33 +947,33 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
         $commandList += 'rm -r /root/ssl'
         $commandList += 'find /root/.ssh/ ! -name "authorized_keys" -type f -exec rm -rf {} \;'
         $params = @{
-            Script = $commandList
-            Hostname = $Deployment.Hostname
-            Credential = $VCSACredential
-            ViHandle = $ESXiHandle
+            script = $commandList
+            hostname = $deployment.Hostname
+            credential = $vcsaCredential
+            viHandle = $esxiHandle
         }
         Invoke-ExecuteScript @params
 
-        Write-Host -Object "=============== Restarting $($Deployment.vmName) ===============" | Out-String
+        Write-Host -Object "=============== Restarting $($deployment.vmName) ===============" | Out-String
         $params = @{
-            VM = $Deployment.vmName
-            Server = $ESXiHandle
-            Confirm = $false
+            vm = $deployment.vmName
+            server = $esxiHandle
+            confirm = $false
         }
         Restart-VMGuest @params
 
         # Wait until the vcsa is Get-URLStatus.
         $params = @{
-            URL = "https://" + $Deployment.Hostname
+            url = "https://" + $deployment.Hostname
         }
         Get-URLStatus @params
 
-        Write-Host -Object "=============== End of Certificate Replacement for $($Deployment.vmName) ===============" | Out-String
+        Write-Host -Object "=============== End of Certificate Replacement for $($deployment.vmName) ===============" | Out-String
 
         # Disconnect from the vcsa deployed esxi server.
         $params = @{
-            Server = $ESXiHandle
-            Confirm = $false
+            server = $esxiHandle
+            confirm = $false
         }
         Disconnect-VIServer @params
     }
@@ -981,140 +981,140 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Certs}) {
 }
 
 # Configure the vcsa.
-ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Config}) {
+ForEach ($deployment in $configData.Deployments| Where-Object {$_.Config}) {
 
-    $OutputPath = "$logPath\Config-" + $Deployment.Hostname + "-" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
-    Start-Transcript -Path $OutputPath -Append
+    $outputPath = "$logPath\Config-" + $deployment.Hostname + "-" + $(Get-Date -Format "MM-dd-yyyy_HH-mm") + ".log"
+    Start-Transcript -Path $outputPath -Append
 
-    # Set $CertDir
-    $CertDir = $folderPath + "\Certs\" + $Deployment.SSODomainName
-    $RootCertDir = $CertDir + "\" + $Deployment.Hostname
+    # Set $certPath
+    $certPath = $folderPath + "\Certs\" + $deployment.SSODomainName
+    $rootCertPath = $certPath + "\" + $deployment.Hostname
 
     # Create certificate directory if it does not exist
-    if (-not(Test-Path -Path $RootCertDir)) {
-        New-Item -Path $RootCertDir -Type Directory | Out-Null
+    if (-not(Test-Path -Path $rootCertPath)) {
+        New-Item -Path $rootCertPath -Type Directory | Out-Null
     }
 
-    Write-Output -InputObject "=============== Starting configuration of $($Deployment.vmName) ===============" | Out-String
+    Write-Output -InputObject "=============== Starting configuration of $($deployment.vmName) ===============" | Out-String
 
     Write-SeparatorLine
 
     # Wait until the vcsa is Get-URLStatus.
     $params = @{
-        URL = "https://" + $Deployment.Hostname
+        url = "https://" + $deployment.Hostname
     }
     Get-URLStatus @params
 
     # Create esxi credentials.
-    $ESXiSecPasswd = $null
-    $ESXiCreds = $null
-    $ESXiSecPasswd = ConvertTo-SecureString -String $Deployment.esxiRootPass -AsPlainText -Force
-    $ESXiCreds = New-Object -TypeName System.Management.Automation.PSCredential($Deployment.esxiRootUser, $ESXiSecPasswd)
+    $esxiSecPasswd = $null
+    $esxiCreds = $null
+    $esxiSecPasswd = ConvertTo-SecureString -String $deployment.esxiRootPass -AsPlainText -Force
+    $esxiCreds = New-Object -TypeName System.Management.Automation.PSCredential($deployment.esxiRootUser, $esxiSecPasswd)
 
     # Connect to esxi host of the deployed vcsa.
     $params = @{
-        Server = $Deployment.esxiHost
-        Credential = $ESXiCreds
+        server = $deployment.esxiHost
+        credential = $esxiCreds
     }
-    $ESXiHandle = Connect-VIServer @params
+    $esxiHandle = Connect-VIServer @params
 
-    Write-Host -Object "=============== Configure Certificate pair on $($Deployment.vmName) ===============" | Out-String
+    Write-Host -Object "=============== Configure Certificate pair on $($deployment.vmName) ===============" | Out-String
     $params = @{
-        CertDir = $CertDir
-        Deployment = $Deployment
-        VIHandle = $ESXiHandle
+        certPath = $certPath
+        deployment = $deployment
+        viHandle = $esxiHandle
     }
     New-CertificatePair @params
 
     Write-SeparatorLine
 
-    Write-Output -InputObject $($configData.ADInfo | Where-Object {$configData.ADInfo.vCenter -match "all|$($Deployment.Hostname)"}) | Out-String
+    Write-Output -InputObject $($configData.ADInfo | Where-Object {$configData.ADInfo.vCenter -match "all|$($deployment.Hostname)"}) | Out-String
 
     # Join the vcsa to the windows domain.
     $params = @{
-        Deployment = $Deployment
-        ADinfo = $configData.ADInfo | Where-Object {$configData.ADInfo.vCenter -match "all|$($Deployment.Hostname)"}
-        VIHandle = $ESXiHandle
+        deployment = $deployment
+        adInfo = $configData.ADInfo | Where-Object {$configData.ADInfo.vCenter -match "all|$($deployment.Hostname)"}
+        viHandle = $esxiHandle
     }
     Join-ADDomain @params
 
     # if the vcsa is not a stand alone PSC, configure the vCenter.
-    if ($Deployment.DeployType -ne "infrastructure") {
+    if ($deployment.DeployType -ne "infrastructure") {
 
-        Write-Output -InputObject "== vCenter $($Deployment.vmName) configuration ==" | Out-String
+        Write-Output -InputObject "== vCenter $($deployment.vmName) configuration ==" | Out-String
 
         Write-SeparatorLine
 
-        $Datacenters = $configData.Sites | Where-Object {$_.vcenter.Split(",") -match "all|$($Deployment.Hostname)"}
-        $SSOSecPasswd = ConvertTo-SecureString -String $($Deployment.SSOAdminPass) -AsPlainText -Force
-        $SSOCreds = New-Object -TypeName System.Management.Automation.PSCredential ($("Administrator@" + $Deployment.SSODomainName), $SSOSecPasswd)
+        $datacenters = $configData.Sites | Where-Object {$_.vcenter.Split(",") -match "all|$($deployment.Hostname)"}
+        $ssoSecPasswd = ConvertTo-SecureString -String $($deployment.SSOAdminPass) -AsPlainText -Force
+        $ssoCreds = New-Object -TypeName System.Management.Automation.PSCredential ($("Administrator@" + $deployment.SSODomainName), $ssoSecPasswd)
 
         # Connect to the vCenter
         $params = @{
-            Server = $Deployment.Hostname
-            Credential = $SSOCreds
+            server = $deployment.Hostname
+            credential = $ssoCreds
         }
-        $VCHandle = Connect-VIServer @params
+        $vcHandle = Connect-VIServer @params
 
         # Create Datacenter
-        if ($Datacenters) {
-            $Datacenters.Datacenter.ToUpper() | ForEach-Object {New-Datacenter -Location Datacenters -Name $_}
+        if ($datacenters) {
+            $datacenters.Datacenter.ToUpper() | ForEach-Object {New-Datacenter -Location Datacenters -Name $_}
         }
 
         # Create Folders, Roles, and Permissions.
-        $Folders = $configData.Folders | Where-Object {$_.vcenter.Split(",") -match "all|$($Deployment.Hostname)"}
-        if ($Folders) {
-            Write-Output -InputObject "Folders:" $Folders
+        $folders = $configData.Folders | Where-Object {$_.vcenter.Split(",") -match "all|$($deployment.Hostname)"}
+        if ($folders) {
+            Write-Output -InputObject "Folders:" $folders
             $params = @{
-                Folder = $Folders
-                VIHandle = $VIHandle
+                folder = $folders
+                viHandle = $viHandle
             }
             New-Folders @params
         }
 
         # if this is the first vCenter, create custom Roles.
-        $existingroles = Get-VIRole -Server $VCHandle
-        $Roles = $configData.Roles | Where-Object {$_.vcenter.Split(",") -match "all|$($Deployment.Hostname)"} | Where-Object {$ExistingRoles -notcontains $_.Name}
-           if ($Roles) {
-            Write-Output -InputObject "Roles:" $Roles
+        $existingRoles = Get-VIRole -Server $vcHandle
+        $roles = $configData.Roles | Where-Object {$_.vcenter.Split(",") -match "all|$($deployment.Hostname)"} | Where-Object {$existingRoles -notcontains $_.Name}
+           if ($roles) {
+            Write-Output -InputObject "Roles:" $roles
             $params = @{
-                Roles = $Roles
-                VIHandle = $VCHandle
+                roles = $roles
+                viHandle = $vcHandle
             }
             Add-Roles @params
         }
 
         # Create OS Customizations for the vCenter.
-        $configData.OSCustomizations | Where-Object {$_.vCenter -eq $Deployment.Hostname} | ForEach-Object {ConvertTo-OSString -InputObject $_}
+        $configData.OSCustomizations | Where-Object {$_.vCenter -eq $deployment.Hostname} | ForEach-Object {ConvertTo-OSString -InputObject $_}
 
         # Create Clusters
-        ForEach ($Datacenter in $Datacenters) {
+        ForEach ($datacenter in $datacenters) {
             # Define IP Octets
-            $Octet1 = $Datacenter.octet1
-            $Octet2 = $Datacenter.octet2
-            $Octet3 = $Datacenter.octet3
+            $octet1 = $datacenter.octet1
+            $octet2 = $datacenter.octet2
+            $octet3 = $datacenter.octet3
 
             # Create the cluster if it is defined for all vCenters or the current vCenter and the current Datacenter.
-               ($configData.Clusters | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)")`
-                   -and ($_.Datacenter.Split(",") -match "all|$($Datacenter.Datacenter)")}).Clustername |`
-                ForEach-Object {if ($_) {New-Cluster -Location (Get-Datacenter -Server $VCHandle -Name $Datacenter.Datacenter) -Name $_}}
+               ($configData.Clusters | Where-Object {($_.vCenter.Split(",") -match "all|$($deployment.Hostname)")`
+                   -and ($_.Datacenter.Split(",") -match "all|$($datacenter.Datacenter)")}).Clustername |`
+                ForEach-Object {if ($_) {New-Cluster -Location (Get-Datacenter -Server $vcHandle -Name $datacenter.Datacenter) -Name $_}}
 
             # Create New vDSwitch
             # Select vdswitches if definded for all vCenters or the current vCentere and the current Datacenter.
-            $VDSwitches = $configData.VDSwitches | Where-Object {($_.vCenter.Split(",") -match "all|$($Deployment.Hostname)") -and ($_.Datacenter.Split(",") -match "all|$($Datacenter.Datacenter)")}
+            $vdSwitches = $configData.VDSwitches | Where-Object {($_.vCenter.Split(",") -match "all|$($deployment.Hostname)") -and ($_.Datacenter.Split(",") -match "all|$($datacenter.Datacenter)")}
 
-            ForEach ($VDSwitch in $VDSwitches) {
-                $SwitchDatacenter = Get-Inventory -Name $Datacenter.Datacenter
+            ForEach ($vdSwitch in $vdSwitches) {
+                $switchDatacenter = Get-Inventory -Name $datacenter.Datacenter
 
-                if ($VDSwitch.SwitchNumber.ToString().indexof(".") -eq -1) {
-                    $SwitchNumber = $VDSwitch.SwitchNumber.ToString() + ".0"
+                if ($vdSwitch.SwitchNumber.ToString().indexof(".") -eq -1) {
+                    $switchNumber = $vdSwitch.SwitchNumber.ToString() + ".0"
                 } else {
-                    $SwitchNumber = $VDSwitch.SwitchNumber.ToString()
+                    $switchNumber = $vdSwitch.SwitchNumber.ToString()
                 }
 
-                $SwitchName = $SwitchNumber + " " + $VDSwitch.vDSwitchName -replace "XXX", $Datacenter.Datacenter
+                $switchName = $switchNumber + " " + $vdSwitch.vDSwitchName -replace "XXX", $datacenter.Datacenter
 
-                if ($VDSwitch.JumboFrames) {
+                if ($vdSwitch.JumboFrames) {
                     $mtu = 9000
                 } else {
                     $mtu = 1500
@@ -1122,79 +1122,79 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Config}) {
 
                 # Create new vdswitch.
                 $params = @{
-                    Server = $VCHandle
-                    Name = $SwitchName
-                    Location = $SwitchDatacenter
-                    Mtu = $mtu
-                    NumUplinkPorts = 2
-                    Version = $VDSwitch.Version
+                    server = $vcHandle
+                    name = $switchName
+                    location = $switchDatacenter
+                    mtu = $mtu
+                    numUplinkPorts = 2
+                    version = $vdSwitch.Version
                 }
                 New-VDSwitch @params
 
                 # Enable NIOC
                 $params = @{
-                    Server = $VCHandle
-                    Name = $SwitchName
+                    server = $vcHandle
+                    name = $switchName
                 }
                 (Get-vDSwitch @params | Get-View).EnableNetworkResourceManagement($true)
 
-                $VLANAdd = $configData.VLANS | Where-Object {$_.Number.StartsWith($SwitchName.Split(" ")[0])}
-                $VLANAdd = $VLANAdd | Where-Object {$_.Datacenter.Split(",") -match "all|$($Datacenter.Datacenter)"}
-                $VLANAdd = $VLANAdd | Where-Object {$_.vCenter.Split(",") -match "all|$($Deployment.Hostname)"}
+                $vlanAdd = $configData.VLANS | Where-Object {$_.Number.StartsWith($switchName.Split(" ")[0])}
+                $vlanAdd = $vlanAdd | Where-Object {$_.Datacenter.Split(",") -match "all|$($datacenter.Datacenter)"}
+                $vlanAdd = $vlanAdd | Where-Object {$_.vCenter.Split(",") -match "all|$($deployment.Hostname)"}
 
                 # Create Portgroups
-                ForEach ($VLAN in $VLANAdd) {
+                ForEach ($vlan in $vlanAdd) {
 
-                    $PortGroup = $VLAN.Number.padright(8," ") +`
-                                 $VLAN.Vlan.padright(8," ") + "- " +`
-                                 $VLAN.Network.padright(19," ") + "- " +`
-                                 $VLAN.VlanName
+                    $portGroup = $vlan.Number.padright(8," ") +`
+                                 $vlan.Vlan.padright(8," ") + "- " +`
+                                 $vlan.Network.padright(19," ") + "- " +`
+                                 $vlan.VlanName
 
-                    $PortGroup = $PortGroup -replace "octet1", $Octet1
-                    $PortGroup = $PortGroup -replace "octet2", $Octet2
-                    $PortGroup = $PortGroup -replace "octet2", $Octet3
+                    $portGroup = $portGroup -replace "octet1", $octet1
+                    $portGroup = $portGroup -replace "octet2", $octet2
+                    $portGroup = $portGroup -replace "octet2", $octet3
 
-                    if ($PortGroup.Split("-")[0] -like "*trunk*") {
+                    if ($portGroup.Split("-")[0] -like "*trunk*") {
                         $params = @{
-                            Server = $VCHandle
-                            VDSwitch = $SwitchName
-                            Name = $PortGroup
-                            Notes = $PortGroup.Split("-")[0]
-                            VlanTrunkRange = $VLAN.network
+                            server = $vcHandle
+                            vdSwitch = $switchName
+                            name = $portGroup
+                            notes = $portGroup.Split("-")[0]
+                            vlanTrunkRange = $vlan.network
                         }
                         New-VDPortgroup @params
                     } else {
                         $params = @{
-                            Server = $VCHandle
-                            VDSwitch = $SwitchName
-                            Name = $PortGroup
-                            Notes = $PortGroup.Split("-")[1]
+                            server = $vcHandle
+                            vdSwitch = $switchName
+                            name = $portGroup
+                            notes = $portGroup.Split("-")[1]
                         }
                         New-VDPortgroup @params
                     }
                     # Set Portgroup Team policies
-                    if ($PortGroup -like "*vmotion-1*") {
-                        Get-vdportgroup -Server $VCHandle | `
-                            Where-Object {$_.Name.Split('%')[0] -like $PortGroup.Split('/')[0]} | `
-                            Get-VDUplinkTeamingPolicy -Server $VCHandle | `
+                    if ($portGroup -like "*vmotion-1*") {
+                        Get-vdportgroup -Server $vcHandle | `
+                            Where-Object {$_.Name.Split('%')[0] -like $portGroup.Split('/')[0]} | `
+                            Get-VDUplinkTeamingPolicy -Server $vcHandle | `
                             Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink1" -StandbyUplinkPort "dvUplink2"
                     }
-                    if ($PortGroup -like "*vmotion-2*") {
-                        Get-vdportgroup -Server $VCHandle | `
-                            Where-Object {$_.Name.Split('%')[0] -like $PortGroup.Split('/')[0]} | `
-                            Get-VDUplinkTeamingPolicy -Server $VCHandle | `
+                    if ($portGroup -like "*vmotion-2*") {
+                        Get-vdportgroup -Server $vcHandle | `
+                            Where-Object {$_.Name.Split('%')[0] -like $portGroup.Split('/')[0]} | `
+                            Get-VDUplinkTeamingPolicy -Server $vcHandle | `
                             Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceSrcId -EnableFailback $true -ActiveUplinkPort "dvUplink2" -StandbyUplinkPort "dvUplink1"
                     }
-                    if ($PortGroup -notlike "*vmotion*") {
-                        Get-vdportgroup -Server $VCHandle | `
-                            Where-Object {$_.Name.Split('%')[0] -like $PortGroup.Split('/')[0]} | `
-                            Get-VDUplinkTeamingPolicy -Server $VCHandle | `
+                    if ($portGroup -notlike "*vmotion*") {
+                        Get-vdportgroup -Server $vcHandle | `
+                            Where-Object {$_.Name.Split('%')[0] -like $portGroup.Split('/')[0]} | `
+                            Get-VDUplinkTeamingPolicy -Server $vcHandle | `
                             Set-VDUplinkTeamingPolicy -LoadBalancingPolicy LoadBalanceLoadBased -EnableFailback $false
                     } else {
                         #Set Traffic Shaping on vmotion portgroups for egress traffic
-                        Get-VDPortgroup -Server $VCHandle -VDSwitch $SwitchName | `
-                            Where-Object {$_.Name.Split('%')[0] -like $PortGroup.Split('/')[0]} | `
-                            Get-VDTrafficShapingPolicy -Server $VCHandle -Direction Out | `
+                        Get-VDPortgroup -Server $vcHandle -VDSwitch $switchName | `
+                            Where-Object {$_.Name.Split('%')[0] -like $portGroup.Split('/')[0]} | `
+                            Get-VDTrafficShapingPolicy -Server $vcHandle -Direction Out | `
                             Set-VDTrafficShapingPolicy -Enabled:$true -AverageBandwidth 8589934592 -PeakBandwidth 8589934592 -BurstSize 1
                     }
                 }
@@ -1202,65 +1202,65 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Config}) {
         }
 
         # Add Licenses to vCenter.
-        if ($configData.Licenses | Where-Object {$_.vCenter -eq $Deployment.Hostname}) {
-            Add-Licensing -Licenses $($configData.Licenses | Where-Object {$_.vCenter -eq $Deployment.Hostname}) -VIHandle $VCHandle
+        if ($configData.Licenses | Where-Object {$_.vCenter -eq $deployment.Hostname}) {
+            Add-Licensing -Licenses $($configData.Licenses | Where-Object {$_.vCenter -eq $deployment.Hostname}) -VIHandle $vcHandle
         }
 
         # Select permissions for all vCenters or the current vCenter.
         # Create the permissions.
         $params = @{
-            VPermissions = $configData.Permissions | Where-Object {$_.vCenter.Split(",") -match "all|$($Deployment.Hostname)"}
-            VIHandle = $VCHandle
+            vPermissions = $configData.Permissions | Where-Object {$_.vCenter.Split(",") -match "all|$($deployment.Hostname)"}
+            viHandle = $vcHandle
         }
         New-Permissions @params
 
-        $InstanceCertDir = $CertDir + "\" + $Deployment.Hostname
+        $instanceCertPath = $certPath + "\" + $deployment.Hostname
 
         # Configure Additional Services (Network Dump, Autodeploy, TFTP)
-        ForEach ($Serv in $configData.Services) {
-            Write-Output -InputObject $Serv | Out-String
-            if ($Serv.vCenter.Split(",") -match "all|$($Deployment.Hostname)") {
-                switch ($Serv.Service) {
-                    AuthProxy {
+        ForEach ($serv in $configData.Services) {
+            Write-Output -InputObject $serv | Out-String
+            if ($serv.vCenter.Split(",") -match "all|$($deployment.Hostname)") {
+                switch ($serv.Service) {
+                    "AuthProxy" {
                         $params = {
-                            Deployment = $Deployment
-                            VIHandle = $ESXiHandle
-                            ADDomain = $configData.ADInfo | Where-Object {$_.vCenter -match "all|$($Deployment.Hostname)"}
+                            deployment = $deployment
+                            viHandle = $esxiHandle
+                            adDomain = $configData.ADInfo | Where-Object {$_.vCenter -match "all|$($deployment.Hostname)"}
                         }
                         New-AuthProxyService @params
                         break
                     }
-                    AutoDeploy {
-                        $VCHandle | Get-AdvancedSetting -Name vpxd.certmgmt.certs.minutesBefore | Set-AdvancedSetting -Value 1 -Confirm:$false
+                    "AutoDeploy" {
+                        $vcHandle | Get-AdvancedSetting -Name vpxd.certmgmt.certs.minutesBefore | Set-AdvancedSetting -Value 1 -Confirm:$false
                         $params = @{
-                            Deployment = $Deployment
-                            VIHandle = $ESXiHandle
+                            Deployment = $deployment
+                            VIHandle = $esxiHandle
                         }
                         New-AutoDeployService @params
-                        if ($configData.AutoDepRules | Where-Object {$_.vCenter -eq $Deployment.Hostname}) {
+                        if ($configData.AutoDepRules | Where-Object {$_.vCenter -eq $deployment.Hostname}) {
                             $params = @{
-                                Rules = $configData.AutoDepRules | Where-Object {$_.vCenter -eq $Deployment.Hostname}
-                                Path = $folderPath
-                                VIHandle = $VCHandle
+                                rules = $configData.AutoDepRules | Where-Object {$_.vCenter -eq $deployment.Hostname}
+                                path = $folderPath
+                                viHandle = $vcHandle
                             }
                             New-AutoDeployRule @params
                         }
                         break
                     }
-                    Netdumpster {
+                    "Netdumpster" {
                         $params = @{
-                            Hostname = $Deployment.Hostname
-                            Credential = $VCSACredential
-                            VIHandle = $ESXiHandle
+                            hostname = $deployment.Hostname
+                            credential = $vcsaCredential
+                            viHandle = $esxiHandle
                         }
                         New-NetDumpsterService @params
                         break
                     }
-                    TFTP {
+                    "TFTP" {
                         $params = @{
-                            Hostname = $Deployment.Hostname
-                            Credential = $VCSACredential
-                            VIHandle = $ESXiHandle
+                            hostname = $deployment.Hostname
+                            credential = $vcsaCredential
+                            viHandle = $esxiHandle
                         }
                         New-TFTPService @params
                         break
@@ -1275,50 +1275,50 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Config}) {
         # Configure plugins
         $commandList = $null
         $commandList = @()
-        $Plugins = $configData.Plugins | Where-Object {$_.config -and $_.vCenter.Split(",") -match "all|$($Deployment.Hostname)"}
+        $plugins = $configData.Plugins | Where-Object {$_.config -and $_.vCenter.Split(",") -match "all|$($deployment.Hostname)"}
 
         Write-SeparatorLine
-        Write-Output -InputObject $Plugins | Out-String
+        Write-Output -InputObject $plugins | Out-String
         Write-SeparatorLine
 
-        for ($i=0;$i -lt $Plugins.Count;$i++) {
-            if ($Plugins[$i].SourceDir) {
+        for ($i=0;$i -lt $plugins.Count;$i++) {
+            if ($plugins[$i].SourceDir) {
                 if ($commandList) {
                     $params = @{
-                        Script = $commandList
-                        Hostname = $Deployment.Hostname
-                        Credential = $VCSACredential
-                        ViHandle = $ESXiHandle
+                        script = $commandList
+                        hostname = $deployment.Hostname
+                        credential = $vcsaCredential
+                        viHandle = $esxiHandle
                     }
                     Invoke-ExecuteScript @params
                     $commandList = $null
                     $commandList = @()
                 }
-                $FileLocations = $null
-                $FileLocations = @()
-                $FileLocations += "$($folderPath)\$($Plugins[$i].SourceDir)\$($Plugins[$i].SourceFiles)"
-                $FileLocations += $Plugins[$i].DestDir
-                Write-Output -InputObject $FileLocations | Out-String
+                $fileLocations = $null
+                $fileLocations = @()
+                $fileLocations += "$($folderPath)\$($plugins[$i].SourceDir)\$($plugins[$i].SourceFiles)"
+                $fileLocations += $plugins[$i].DestDir
+                Write-Output -InputObject $fileLocations | Out-String
                 $params = @{
-                    Path = $FileLocations
-                    Hostname = $Deployment.Hostname
-                    Credential = $VCSACredential
-                    VIHandle = $VIHandle
-                    Upload = $true
+                    path = $fileLocations
+                    hostname = $deployment.Hostname
+                    credential = $vcsaCredential
+                    VIHandle = $viHandle
+                    upload = $true
                 }
                 Copy-FileToServer @params
             }
-            if ($Plugins[$i].Command) {
-                $commandList += $Plugins[$i].Command
+            if ($plugins[$i].Command) {
+                $commandList += $plugins[$i].Command
             }
         }
 
         if ($commandList) {
             $params = @{
-                Script = $commandList
-                Hostname = $Deployment.Hostname
-                Credential = $VCSACredential
-                ViHandle = $ESXiHandle
+                script = $commandList
+                hostname = $deployment.Hostname
+                credential = $vcsaCredential
+                viHandle = $esxiHandle
             }
             Invoke-ExecuteScript @params
         }
@@ -1327,52 +1327,52 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Config}) {
 
         Write-Output -InputObject "Adding Build Cluster Alarm" | Out-String
 
-        $DC = $Deployment.Hostname.Split(".")[1]
+        $dc = $deployment.Hostname.Split(".")[1]
 
-        $AlarmMgr = Get-View AlarmManager
-        $entity = Get-Datacenter -Name $DC -Server $VCHandle | Get-Cluster -Name "build" | Get-View
+        $alarmMgr = Get-View AlarmManager
+        $entity = Get-Datacenter -Name $dc -Server $vcHandle | Get-Cluster -Name "build" | Get-View
 
         # AlarmSpec
-        $Alarm = New-Object -TypeName VMware.Vim.AlarmSpec
-        $Alarm.Name = "1. Configure New Esxi Host"
-        $Alarm.Description = "Configure a New Esxi Host added to the vCenter"
-        $Alarm.Enabled = $TRUE
+        $alarm = New-Object -TypeName VMware.Vim.AlarmSpec
+        $alarm.Name = "1. Configure New Esxi Host"
+        $alarm.Description = "Configure a New Esxi Host added to the vCenter"
+        $alarm.Enabled = $TRUE
 
-        $Alarm.action = New-Object -TypeName VMware.Vim.GroupAlarmAction
+        $alarm.action = New-Object -TypeName VMware.Vim.GroupAlarmAction
 
-        $Trigger = New-Object -TypeName VMware.Vim.AlarmTriggeringAction
-        $Trigger.action = New-Object VMware.Vim.RunScriptAction
-        $Trigger.action.Script = "/root/esxconf.sh {targetName}"
+        $trigger = New-Object -TypeName VMware.Vim.AlarmTriggeringAction
+        $trigger.action = New-Object VMware.Vim.RunScriptAction
+        $trigger.action.Script = "/root/esxconf.sh {targetName}"
 
         # Transition a - yellow --> red
-        $Transa = New-Object -TypeName VMware.Vim.AlarmTriggeringActionTransitionSpec
-        $Transa.StartState = "yellow"
-        $Transa.FinalState = "red"
+        $transA = New-Object -TypeName VMware.Vim.AlarmTriggeringActionTransitionSpec
+        $transA.StartState = "yellow"
+        $transA.FinalState = "red"
 
-        $Trigger.TransitionSpecs = $Transa
+        $trigger.TransitionSpecs = $transA
 
-        $Alarm.action = $Trigger
+        $alarm.action = $trigger
 
-        $Expression = New-Object -TypeName VMware.Vim.EventAlarmExpression
-        $Expression.EventType = "EventEx"
-        $Expression.eventTypeId = "vim.event.HostConnectedEvent"
-        $Expression.objectType = "HostSystem"
-        $Expression.status = "red"
+        $expression = New-Object -TypeName VMware.Vim.EventAlarmExpression
+        $expression.EventType = "EventEx"
+        $expression.eventTypeId = "vim.event.HostConnectedEvent"
+        $expression.objectType = "HostSystem"
+        $expression.status = "red"
 
-        $Alarm.expression = New-Object -TypeName VMware.Vim.OrAlarmExpression
-        $Alarm.expression.expression = $Expression
+        $alarm.expression = New-Object -TypeName VMware.Vim.OrAlarmExpression
+        $alarm.expression.expression = $expression
 
-        $Alarm.setting = New-Object -TypeName VMware.Vim.AlarmSetting
-        $Alarm.setting.reportingFrequency = 0
-        $Alarm.setting.toleranceRange = 0
+        $alarm.setting = New-Object -TypeName VMware.Vim.AlarmSetting
+        $alarm.setting.reportingFrequency = 0
+        $alarm.setting.toleranceRange = 0
 
         # Create alarm.
-        $AlarmMgr.CreateAlarm($entity.MoRef, $Alarm)
+        $alarmMgr.CreateAlarm($entity.MoRef, $alarm)
 
         # Disconnect from the vCenter.
         $params = @{
-            Server = $VCHandle
-            Confirm = $false
+            server = $vcHandle
+            confirm = $false
         }
         Disconnect-VIServer @params
 
@@ -1380,33 +1380,33 @@ ForEach ($Deployment in $configData.Deployments| Where-Object {$_.Config}) {
     }
 
     # Run the vami_set_Hostname to set the correct FQDN in the /etc/hosts file on a vCenter with External PSC only.
-    if ($Deployment.DeployType -like "*management*") {
+    if ($deployment.DeployType -like "*management*") {
         $commandList = $null
         $commandList = @()
         $commandList += "export VMWARE_PYTHON_PATH=/usr/lib/vmware/site-packages"
         $commandList += "export VMWARE_LOG_DIR=/var/log"
         $commandList += "export VMWARE_CFG_DIR=/etc/vmware"
         $commandList += "export VMWARE_DATA_DIR=/storage"
-        $commandList += "/opt/vmware/share/vami/vami_set_hostname $($Deployment.Hostname)"
+        $commandList += "/opt/vmware/share/vami/vami_set_hostname $($deployment.Hostname)"
         $params = @{
-            Script = $commandList
-            Hostname = $Deployment.Hostname
-            Credential = $VCSACredential
-            ViHandle = $ESXiHandle
+            script = $commandList
+            hostname = $deployment.Hostname
+            credential = $vcsaCredential
+            viHandle = $esxiHandle
         }
         Invoke-ExecuteScript @params
     }
 
     # Disconnect from the vcsa deployed esxi server.
     $params = @{
-        Server = $ESXiHandle
-        Confirm = $false
+        server = $esxiHandle
+        confirm = $false
     }
     Disconnect-VIServer @params
 
     Write-SeparatorLine
 
-    Write-Host -Object "=============== End of Configuration for $($Deployment.vmName) ===============" | Out-String
+    Write-Host -Object "=============== End of Configuration for $($deployment.vmName) ===============" | Out-String
 
     Stop-Transcript
 }
@@ -1418,22 +1418,22 @@ Write-Output -InputObject "<=============== Deployment Complete ===============>
 Set-Location -Path $folderPath
 
 # Get Certificate folders that do not have a Date/Time in their name.
-$CertFolders = (Get-Childitem -Path $($folderPath + "\Certs") -Directory).FullName | Where-Object {$_ -notmatch '\d\d-\d\d-\d\d\d\d'}
+$certFolders = (Get-Childitem -Path $($folderPath + "\Certs") -Directory).FullName | Where-Object {$_ -notmatch '\d\d-\d\d-\d\d\d\d'}
 
 # Rename the folders to add Date/Time to the name.
-$CertFolders | ForEach-Object {
+$certFolders | ForEach-Object {
     Rename-Item -Path $_ -NewName $($_ + "-" + $(Get-Date -Format "MM-dd-yyyy_HH-mm"))
 }
 
 # Scrub logfiles
-$LogFiles = (Get-ChildItem -Path $logPath).FullName
+$logFiles = (Get-ChildItem -Path $logPath).FullName
 
 if ($configData.Summary.TranscriptScrub) {
-    ForEach ($Log in $LogFiles) {
-        $Transcript = Get-Content -Path $Log
-        ForEach ($Pass in $Scrub) {
-            $Transcript = $Transcript.replace($Pass,'<-- Password Redacted -->')
+    ForEach ($log in $logFiles) {
+        $transcript = Get-Content -Path $log
+        ForEach ($Pass in $scrub) {
+            $transcript = $transcript.replace($Pass,'<-- Password Redacted -->')
         }
-        $Transcript | Set-Content -Path $Log -Force -Confirm:$false
+        $transcript | Set-Content -Path $log -Force -Confirm:$false
     }
 }

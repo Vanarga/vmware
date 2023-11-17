@@ -1,24 +1,28 @@
 function Copy-CertificateToHost {
     <#
     .SYNOPSIS
-        Create PEM file for supplied certificate
+        Copy the certificate to the host.
 
     .DESCRIPTION
 
-    .PARAMETER RootCertDir
+    .PARAMETER rootCertPath
 
-    .PARAMETER CertDir
+    .PARAMETER certPath
 
-    .PARAMETER Deployment
+    .PARAMETER deployment
 
-    .PARAMETER VIHandle
+    .PARAMETER viHandle
 
-    .PARAMETER DeploymentParent
+    .PARAMETER deploymentParent
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Copy-CertificateToHost -RootCertDir < > -CertDir < > -Deployment < > -VIHandle < > -DeploymentParent < >
+        Copy-CertificateToHost -rootCertPath < >
+                               -certPath < >
+                               -deployment < >
+                               -viHandle < >
+                               -deploymentParent < >
 
         PS C:\> Copy-CertificateToHost
 
@@ -32,23 +36,23 @@ function Copy-CertificateToHost {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $RootCertDir,
+        $rootCertPath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertDir,
+        $certPath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Deployment,
+        $deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle,
+        $viHandle,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $DeploymentParent
+        $deploymentParent
     )
 
     # http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vsphere.security.doc/GUID-BD70615E-BCAA-4906-8E13-67D0DBF715E4.html
@@ -56,25 +60,25 @@ function Copy-CertificateToHost {
 
     $pscDeployments = @("tiny","small","medium","large","infrastructure")
 
-    $certPath = "$CertDir\" + $Deployment.Hostname
-    $Credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
+    $certPath = "$certPath\" + $deployment.Hostname
+    $credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $deployment.VCSARootPass -AsPlainText -Force))
     $sslPath = "/root/ssl"
     $solutionPath = "/root/solutioncerts"
     $params = @{
-        Script = "mkdir $sslPath;mkdir $solutionPath"
-        Hostname = $Deployment.Hostname
-        Credential = $Credential
-        ViHandle = $VIHandle
+        script = "mkdir $sslPath;mkdir $solutionPath"
+        hostname = $deployment.Hostname
+        credential = $credential
+        viHandle = $viHandle
     }
     Invoke-ExecuteScript @params
 
     $versionRegex = '\b\d{1}\.\d{1}\.\d{1,3}\.\d{1,5}\b'
 
     $params = @{
-        Script = "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
-        Hostname = $Deployment.Hostname
-        Credential = $Credential
-        ViHandle = $VIHandle
+        script = "echo `'" + $deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
+        hostname = $deployment.Hostname
+        credential = $credential
+        viHandle = $viHandle
     }
     Write-Output $params.Script | Out-String
     $viVersion = $(Invoke-ExecuteScript @params).Scriptoutput.Split("") | Select-String -pattern $versionRegex
@@ -89,21 +93,21 @@ function Copy-CertificateToHost {
     $filePath += "$sslPath/new_machine.cer"
     $filePath += "$certPath\machine\ssl_key.priv"
     $filePath += "$sslPath/ssl_key.priv"
-    if ($pscDeployments -contains $Deployment.DeployType) {
-        if (Test-Path -Path "$RootCertDir\root64.cer") {
-            $filePath += "$RootCertDir\root64.cer"
+    if ($pscDeployments -contains $deployment.DeployType) {
+        if (Test-Path -Path "$rootCertPath\root64.cer") {
+            $filePath += "$rootCertPath\root64.cer"
             $filePath += "$sslPath/root64.cer"
         }
-        if (Test-Path -Path "$RootCertDir\interm64.cer") {
-            $filePath += "$RootCertDir\interm64.cer"
+        if (Test-Path -Path "$rootCertPath\interm64.cer") {
+            $filePath += "$rootCertPath\interm64.cer"
             $filePath += "$sslPath/interm64.cer"
         }
-        if (Test-Path -Path "$RootCertDir\interm264.cer") {
-            $filePath += "$RootCertDir\interm264.cer"
+        if (Test-Path -Path "$rootCertPath\interm264.cer") {
+            $filePath += "$rootCertPath\interm264.cer"
             $filePath += "$sslPath/interm264.cer"}
         }
-    if (Test-Path -Path "$RootCertDir\interm64.cer") {
-        $filePath += "$RootCertDir\chain.cer"
+    if (Test-Path -Path "$rootCertPath\interm64.cer") {
+        $filePath += "$rootCertPath\chain.cer"
         $filePath += "$sslPath/chain.cer"
     }
     $filePath += "$certPath\solution\machine.cer"
@@ -114,7 +118,7 @@ function Copy-CertificateToHost {
     $filePath += "$solutionPath/vsphere-webclient.cer"
     $filePath += "$certPath\solution\vsphere-webclient.priv"
     $filePath += "$solutionPath/vsphere-webclient.priv"
-    if ($Deployment.DeployType -ne "Infrastructure") {
+    if ($deployment.DeployType -ne "Infrastructure") {
         $filePath += "$certPath\solution\vpxd.cer"
         $filePath += "$solutionPath/vpxd.cer"
         $filePath += "$certPath\solution\vpxd.priv"
@@ -126,10 +130,10 @@ function Copy-CertificateToHost {
     }
     $params = @{
         Path = $filepath
-        Hostname = $Deployment.Hostname
-        Credential = $Credential
-        VIHandle = $VIHandle
-        Upload = $true
+        hostname = $deployment.Hostname
+        credential = $credential
+        viHandle = $viHandle
+        upload = $true
     }
     Copy-FileToServer @params
 
@@ -145,27 +149,27 @@ function Copy-CertificateToHost {
     $commandList += "service-control --stop --all"
     # Start vmafdd,vmdird, and vmca services.
     $commandList += "service-control --start vmafdd"
-    if ($pscDeployments -contains $Deployment.DeployType) {
+    if ($pscDeployments -contains $deployment.DeployType) {
         $commandList += "service-control --start vmdird"
         $commandList += "service-control --start vmca"
     }
 
     # Replace the root cert.
-    if ($pscDeployments -contains $Deployment.DeployType) {
-        if (Test-Path -Path "$RootCertDir\root64.cer") {
-            $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $sslPath/root64.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+    if ($pscDeployments -contains $deployment.DeployType) {
+        if (Test-Path -Path "$rootCertPath\root64.cer") {
+            $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $sslPath/root64.cer --login `'administrator@" + $deployment.SSODomainName + "`' --password `'" + $deployment.SSOAdminPass + "`'"
         }
-        if (Test-Path -Path "$RootCertDir\interm64.cer") {
-            $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $sslPath/interm64.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+        if (Test-Path -Path "$rootCertPath\interm64.cer") {
+            $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $sslPath/interm64.cer --login `'administrator@" + $deployment.SSODomainName + "`' --password `'" + $deployment.SSOAdminPass + "`'"
         }
-        if (Test-Path -Path "$RootCertDir\interm264.cer") {
-            $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $sslPath/interm264.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+        if (Test-Path -Path "$rootCertPath\interm264.cer") {
+            $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli trustedcert publish --cert $sslPath/interm264.cer --login `'administrator@" + $deployment.SSODomainName + "`' --password `'" + $deployment.SSOAdminPass + "`'"
         }
     }
 
     # Add certIficate chain to TRUSTED_ROOTS of the PSC for ESXi Cert Replacement.
-    # if ($pscDeployments -contains $Deployment.DeployType -and (Test-Path -Path "$RootCertDir\interm64.cer")) {
-    <#if ($Deployment.DeployType -eq "Infrastructure" -and (Test-Path -Path "$RootCertDir\interm64.cer")) {
+    # if ($pscDeployments -contains $deployment.DeployType -and (Test-Path -Path "$rootCertPath\interm64.cer")) {
+    <#if ($deployment.DeployType -eq "Infrastructure" -and (Test-Path -Path "$rootCertPath\interm64.cer")) {
         $commandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry create --store TRUSTED_ROOTS --alias chain.cer --cert $sslPath/chain.cer"
     }#>
 
@@ -177,10 +181,10 @@ function Copy-CertificateToHost {
     $commandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store MACHINE_SSL_CERT --alias __MACHINE_CERT"
     $commandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store MACHINE_SSL_CERT --alias __MACHINE_CERT --cert $sslPath/new_machine.cer --key $sslPath/ssl_key.priv"
     $params = @{
-        Script = $commandList
-        Hostname = $Deployment.Hostname
-        Credential = $Credential
-        ViHandle = $VIHandle
+        script = $commandList
+        hostname = $deployment.Hostname
+        credential = $credential
+        viHandle = $viHandle
     }
     Invoke-ExecuteScript @params
 
@@ -189,39 +193,39 @@ function Copy-CertificateToHost {
     $commandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vsphere-webclient --alias vsphere-webclient"
     $commandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vsphere-webclient --alias vsphere-webclient --cert $solutionPath/vsphere-webclient.cer --key $solutionPath/vsphere-webclient.priv"
     # Skip If server is an External PSC. - vpxd and vpxd-extension do not need to be replaced on an external PSC.
-    if ($Deployment.DeployType -ne "Infrastructure") {
+    if ($deployment.DeployType -ne "Infrastructure") {
         $commandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd --alias vpxd"
         $commandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd --alias vpxd --cert $solutionPath/vpxd.cer --key $solutionPath/vpxd.priv"
         $commandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd-extension --alias vpxd-extension"
         $commandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd-extension --alias vpxd-extension --cert $solutionPath/vpxd-extension.cer --key $solutionPath/vpxd-extension.priv"
     }
     $params = @{
-        Script = $commandList
-        Hostname = $Deployment.Hostname
-        Credential = $Credential
-        ViHandle = $VIHandle
+        script = $commandList
+        hostname = $deployment.Hostname
+        credential = $credential
+        viHandle = $viHandle
     }
     Invoke-ExecuteScript @params
 
     $commandList = $null
     $commandList = @()
     $commandList += "/usr/lib/vmware-vmafd/bin/vmafd-cli get-machine-id --server-name localhost"
-    $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli service list --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+    $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli service list --login `'administrator@" + $deployment.SSODomainName + "`' --password `'" + $deployment.SSOAdminPass + "`'"
 
     $params = @{
-        ScriptText = $commandList[0]
-        VM = $Deployment.Hostname
-        GuestUser = "root"
-        GuestPassword = $Deployment.VCSARootPass
-        Server = $VIHandle
+        scriptText = $commandList[0]
+        vm = $deployment.Hostname
+        guestUser = "root"
+        guestPassword = $deployment.VCSARootPass
+        server = $viHandle
     }
     $uniqueID = Invoke-VMScript @params
     $params = @{
-        ScriptText = $commandList[1]
-        VM = $Deployment.Hostname
-        GuestUser = "root"
-        GuestPassword = $Deployment.VCSARootPass
-        Server = $VIHandle
+        scriptText = $commandList[1]
+        vm = $deployment.Hostname
+        guestUser = "root"
+        guestPassword = $deployment.VCSARootPass
+        server = $viHandle
     }
     $certList = Invoke-VMScript @params
 
@@ -244,10 +248,10 @@ function Copy-CertificateToHost {
     $commandList = $null
     $commandList = @()
 
-    $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $solutionUsers[1] + " --cert $solutionPath/vsphere-webclient.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
-    if ($Deployment.DeployType -ne "Infrastructure") {
-        $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $solutionUsers[2] + " --cert $solutionPath/vpxd.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
-        $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $solutionUsers[3] + " --cert $solutionPath/vpxd-extension.cer --login `'administrator@" + $Deployment.SSODomainName + "`' --password `'" + $Deployment.SSOAdminPass + "`'"
+    $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $solutionUsers[1] + " --cert $solutionPath/vsphere-webclient.cer --login `'administrator@" + $deployment.SSODomainName + "`' --password `'" + $deployment.SSOAdminPass + "`'"
+    if ($deployment.DeployType -ne "Infrastructure") {
+        $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $solutionUsers[2] + " --cert $solutionPath/vpxd.cer --login `'administrator@" + $deployment.SSODomainName + "`' --password `'" + $deployment.SSOAdminPass + "`'"
+        $commandList += "/usr/lib/vmware-vmafd/bin/dir-cli service update --name " + $solutionUsers[3] + " --cert $solutionPath/vpxd-extension.cer --login `'administrator@" + $deployment.SSODomainName + "`' --password `'" + $deployment.SSOAdminPass + "`'"
     }
 
     # Set path for python.
@@ -260,16 +264,16 @@ function Copy-CertificateToHost {
 
     # Service update
     $params = @{
-        Script = $commandList
-        Hostname = $Deployment.Hostname
-        Credential = $Credential
-        ViHandle = $VIHandle
+        script = $commandList
+        hostname = $deployment.Hostname
+        credential = $credential
+        viHandle = $viHandle
     }
     Invoke-ExecuteScript @params
 
     Start-Sleep -Seconds 10
 
-    if ($Deployment.DeployType -ne "Infrastructure") {
+    if ($deployment.DeployType -ne "Infrastructure") {
         $commandList = $null
         $commandList = @()
         # Set path for python.
@@ -280,16 +284,16 @@ function Copy-CertificateToHost {
         # Replace EAM Solution User Cert.
         $commandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getcert --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.crt"
         $commandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry getkey --store vpxd-extension --alias vpxd-extension --output /root/solutioncerts/vpxd-extension.key"
-        $commandList += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.vim.eam -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s " + $Deployment.Hostname + " -u administrator@" + $Deployment.SSODomainName + " -p `'" + $Deployment.SSOAdminPass + "`'"
+        $commandList += "/usr/bin/python /usr/lib/vmware-vpx/scripts/updateExtensionCertInVC.py -e com.vmware.vim.eam -c /root/solutioncerts/vpxd-extension.crt -k /root/solutioncerts/vpxd-extension.key -s " + $deployment.Hostname + " -u administrator@" + $deployment.SSODomainName + " -p `'" + $deployment.SSOAdminPass + "`'"
         $commandList += '/usr/bin/service-control --stop vmware-eam'
         $commandList += '/usr/bin/service-control --start vmware-eam'
 
         # Service update
         $params = @{
-            Script = $commandList
-            Hostname = $Deployment.Hostname
-            Credential = $Credential
-            ViHandle = $VIHandle
+            script = $commandList
+            hostname = $deployment.Hostname
+            credential = $credential
+            viHandle = $viHandle
         }
         Invoke-ExecuteScript @params
     }
@@ -301,15 +305,15 @@ function Copy-CertificateToHost {
 
     # Service update
     $params = @{
-        Script = $commandList
-        Hostname = $Deployment.Hostname
-        Credential = $Credential
-        ViHandle = $VIHandle
+        script = $commandList
+        hostname = $deployment.Hostname
+        credential = $credential
+        viHandle = $viHandle
     }
     Invoke-ExecuteScript @params
 
     # Refresh Update Manager CertIficates.
-    if ($viVersion -match "6.5." -and $Deployment.DeployType -ne "Infrastructure") {
+    if ($viVersion -match "6.5." -and $deployment.DeployType -ne "Infrastructure") {
         $commandList = $null
         $commandList = @()
         # Set path for python.
@@ -323,44 +327,44 @@ function Copy-CertificateToHost {
 
         # Service update
         $params = @{
-            Script = $commandList
-            Hostname = $Deployment.Hostname
-            Credential = $Credential
-            ViHandle = $VIHandle
+            script = $commandList
+            hostname = $deployment.Hostname
+            credential = $credential
+            viHandle = $viHandle
         }
         Invoke-ExecuteScript @params
     }
 
     # Refresh Update Manager CertIficates.
-    if ($viVersion -match "6.7." -and $Deployment.DeployType -ne "Infrastructure") {
+    if ($viVersion -match "6.7." -and $deployment.DeployType -ne "Infrastructure") {
 
         # Service update
         $params = @{
-            Script = "echo `'$Deployment.VCSARootPass`' | appliancesh com.vmware.updatemgr-util register-vc"
-            Hostname = $Deployment.Hostname
-            Credential = $Credential
-            ViHandle = $VIHandle
+            script = "echo `'$deployment.VCSARootPass`' | appliancesh com.vmware.updatemgr-util register-vc"
+            hostname = $deployment.Hostname
+            credential = $credential
+            viHandle = $viHandle
         }
         Invoke-ExecuteScript @params
     }
 
-    # Assign the original machine certIficate thumbprint to $thumbPrint and remove the carriage return.
+    # Assign the original machine certIficate thumbprint to $thumbprint and remove the carriage return.
     # Change the shell to Bash to enable scp and retrieve the original machine certIficate thumbprint.
     $commandList = $null
     $commandList = @()
     $commandList += "chsh -s /bin/bash"
     $commandList += "cat /root/ssl/thumbprint.txt"
     $params = @{
-        Script = $commandList
-        Hostname = $Deployment.Hostname
-        Credential = $Credential
-        ViHandle = $VIHandle
+        script = $commandList
+        hostname = $deployment.Hostname
+        credential = $credential
+        viHandle = $viHandle
     }
-    $thumbPrint = $(Invoke-ExecuteScript @params).Scriptoutput.Split("=",2)[1]
-    $thumbPrint = $thumbPrint -replace "`t|`n|`r",""
+    $thumbprint = $(Invoke-ExecuteScript @params).Scriptoutput.Split("=",2)[1]
+    $thumbprint = $thumbprint -replace "`t|`n|`r",""
 
     # Register new certIficates with VMWare Lookup Service - KB2121701 and KB2121689.
-    if ($pscDeployments -contains $Deployment.DeployType) {
+    if ($pscDeployments -contains $deployment.DeployType) {
         # Register the new machine thumbprint with the lookup service.
         $commandList = $null
         $commandList = @()
@@ -371,33 +375,33 @@ function Copy-CertificateToHost {
         $commandList += "export VMWARE_DATA_DIR=/storage"
         $commandList += "export VMWARE_JAVA_HOME=/usr/java/jre-vmware"
         # Register the new machine thumprint.
-        $commandList += "python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://" + $Deployment.Hostname + "/lookupservice/sdk --fingerprint $thumbPrint --certfile /root/ssl/new_machine.crt --user administrator@" + $Deployment.SSODomainName + " --password `'" + $Deployment.SSOAdminPass + "`'"
+        $commandList += "python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://" + $deployment.Hostname + "/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_machine.crt --user administrator@" + $deployment.SSODomainName + " --password `'" + $deployment.SSOAdminPass + "`'"
 
         Write-Output $commandList | Out-String
         $params = @{
-            Script = $commandList
-            Hostname = $Deployment.Hostname
-            Credential = $Credential
-            ViHandle = $VIHandle
+            script = $commandList
+            hostname = $deployment.Hostname
+            credential = $credential
+            viHandle = $viHandle
         }
         Invoke-ExecuteScript @params
     } else {
         # If the VCSA vCenter does not have an embedded PSC Register its Machine CertIficate with the External PSC.
-        Write-Output $DeploymentParent | Out-String
+        Write-Output $deploymentParent | Out-String
         # SCP the new vCenter machine certIficate to the external PSC and register it with the VMWare Lookup Service via SSH.
         $commandList = $null
         $commandList = @()
-        $commandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " mkdir /root/ssl"
-        $commandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' scp -oStrictHostKeyChecking=no /root/ssl/new_machine.crt root@" + $DeploymentParent.Hostname + ":/root/ssl/new_" + $Deployment.Hostname + "_machine.crt"
-        $commandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://" + $DeploymentParent.Hostname + "/lookupservice/sdk --fingerprint $thumbPrint --certfile /root/ssl/new_" + $Deployment.Hostname + "_machine.crt --user administrator@" + $DeploymentParent.SSODomainName + " --password `'" + $DeploymentParent.SSOAdminPass + "`'`""
-        $commandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " rm -r /root/ssl"
+        $commandList += "sshpass -p `'" + $deploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $deploymentParent.Hostname + " mkdir /root/ssl"
+        $commandList += "sshpass -p `'" + $deploymentParent.VCSARootPass + "`' scp -oStrictHostKeyChecking=no /root/ssl/new_machine.crt root@" + $deploymentParent.Hostname + ":/root/ssl/new_" + $deployment.Hostname + "_machine.crt"
+        $commandList += "sshpass -p `'" + $deploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $deploymentParent.Hostname + " `"python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://" + $deploymentParent.Hostname + "/lookupservice/sdk --fingerprint $thumbprint --certfile /root/ssl/new_" + $deployment.Hostname + "_machine.crt --user administrator@" + $deploymentParent.SSODomainName + " --password `'" + $deploymentParent.SSOAdminPass + "`'`""
+        $commandList += "sshpass -p `'" + $deploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $deploymentParent.Hostname + " rm -r /root/ssl"
 
         Write-Output $commandList | Out-String
         $params = @{
-            Script = $commandList
-            Hostname = $Deployment.Hostname
-            Credential = $Credential
-            ViHandle = $VIHandle
+            script = $commandList
+            hostname = $deployment.Hostname
+            credential = $credential
+            viHandle = $viHandle
         }
         Invoke-ExecuteScript @params
     }
