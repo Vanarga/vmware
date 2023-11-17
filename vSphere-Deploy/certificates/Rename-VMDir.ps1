@@ -24,11 +24,11 @@ function Rename-VMDir {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertDir
+        $certPath
     )
     # Renames SSL certificate files to those used by VCSA
-    Rename-Item -Path "$CertDir\VMDir\VMDir.cer" -NewName "vmdircert.pem"
-    Rename-Item -Path "$CertDir\VMDir\VMDir.priv" -NewName "vmdirkey.pem"
+    Rename-Item -Path "$certPath\VMDir\VMDir.cer" -NewName "vmdircert.pem"
+    Rename-Item -Path "$certPath\VMDir\VMDir.priv" -NewName "vmdirkey.pem"
     Write-Host -Object "Certificate files renamed. Upload \VMDir\vmdircert.pem and \VMDir\vmdirkey.pem" -ForegroundColor Yellow
     Write-Host -Object "to VCSA at /usr/lib/vmware-dir/share/config" -ForegroundColor Yellow
 }

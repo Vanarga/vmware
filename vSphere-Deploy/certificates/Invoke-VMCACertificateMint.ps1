@@ -30,59 +30,59 @@ function Invoke-VMCACertificateMint {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $SVCDir,
+        $servicePath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CFGFile,
+        $configFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertFile,
+        $certFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $PrivFile
+        $privateFile
     )
 
-    if (-not(Test-Path -Path "$CertDir\$SVCDir")) {
-        New-Item -Path "$CertDir\$SVCDir" -Type Directory
+    if (-not(Test-Path -Path "$certPath\$servicePath")) {
+        New-Item -Path "$certPath\$servicePath" -Type Directory
     }
     $computerName = Get-WmiObject -Class Win32_ComputerSystem
     $defFQDN = "$($computerName.name).$($computerName.domain)".ToLower()
     $machineFQDN = $(
         Write-Host -Object "Do you want to replace the SSL certificate on $defFQDN ?"
-        $InputFQDN = Read-Host -Prompt "Press ENTER to accept or input a new FQDN"
-        if ($InputFQDN) {$InputFQDN} else {$defFQDN}
+        $inputFQDN = Read-Host -Prompt "Press ENTER to accept or input a new FQDN"
+        if ($inputFQDN) {$inputFQDN} else {$defFQDN}
     )
     $pscFQDN = $(
         Write-Host "Is the PSC $defFQDN ?"
-        $InputFQDN = Read-Host -Prompt "Press ENTER to accept or input the correct PSC FQDN"
-        if ($InputFQDN) {$InputFQDN} else {$defFQDN}
+        $inputFQDN = Read-Host -Prompt "Press ENTER to accept or input the correct PSC FQDN"
+        if ($inputFQDN) {$inputFQDN} else {$defFQDN}
     )
     $machineIP = [System.Net.Dns]::GetHostAddresses("$machineFQDN").IPAddressToString -like '*.*'
     Write-Host -Object $machineIP
-    $VMWTemplate = "
+    $vmwTemplate = "
     #
     # Template file for a CSR request
     #
     # Country is needed and has to be 2 characters
-    Country = $Country
-    Name = $CompanyName
-    Organization = $OrgName
-    OrgUnit = $OrgUnit
-    State = $State
-    Locality = $Locality
-    IPAddress = $MachineIP
+    Country = $country
+    Name = $companyName
+    Organization = $orgName
+    OrgUnit = $orgUnit
+    State = $state
+    Locality = $locality
+    IPAddress = $machineIP
     Email = $email
     Hostname = $machineFQDN
     "
-    $out = $VMWTemplate | Out-File -FilePath "$CertDir\$SVCDir\$CFGFile" -Encoding default -Force
+    $out = $vmwTemplate | Out-File -FilePath "$certPath\$servicePath\$configFile" -Encoding default -Force
     # Mint certificate from VMCA and save to disk
     Set-Location -Path "C:\Program Files\VMware\vCenter Server\vmcad"
-    .\certool --genkey --privkey=$CertDir\$SVCDir\$PrivFile --pubkey=$CertDir\$SVCDir\$SVCDir.pub
-    .\certool --gencert --cert=$CertDir\$SVCDir\$CertFile --privkey=$CertDir\$SVCDir\$PrivFile --config=$CertDir\$SVCDir\$CFGFile --server=$pscFQDN
-    if (Test-Path -Path "$CertDir\$SVCDir\$CertFile") {
-        Write-Host -Object "PEM file located at $CertDir\$SVCDir\new_machine.cer" -ForegroundColor Yellow
+    .\certool --genkey --privkey=$certPath\$servicePath\$privateFile --pubkey=$certPath\$servicePath\$servicePath.pub
+    .\certool --gencert --cert=$certPath\$servicePath\$certFile --privkey=$certPath\$servicePath\$privateFile --config=$certPath\$servicePath\$configFile --server=$pscFQDN
+    if (Test-Path -Path "$certPath\$servicePath\$certFile") {
+        Write-Host -Object "PEM file located at $certPath\$servicePath\new_machine.cer" -ForegroundColor Yellow
     }
 }

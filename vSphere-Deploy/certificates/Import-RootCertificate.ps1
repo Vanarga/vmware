@@ -26,34 +26,34 @@ function Import-RootCertificate {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertDir,
+        $certDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertInfo
+        $certInfo
     )
 
     # Create credential from username and password.
-    if ($CertInfo.Username) {
-        $secPassword = ConvertTo-SecureString -String $Certinfo.Password -AsPlainText -Force
-        $credential = New-Object -TypeName System.Management.Automation.PSCredential($CertInfo.Username, $secPassword)
+    if ($certInfo.Username) {
+        $secPassword = ConvertTo-SecureString -String $certInfo.Password -AsPlainText -Force
+        $credential = New-Object -TypeName System.Management.Automation.PSCredential($certInfo.Username, $secPassword)
     }
 
     # Select the Certificate Authority furthest from Root to download the chain certificate from.
-    if ($CertInfo.SubCA2) {
-        $ca = $CertInfo.SubCA2
-    } elseif ($CertInfo.SubCA1) {
-        $ca = $CertInfo.SubCA1
+    if ($certInfo.SubCA2) {
+        $ca = $certInfo.SubCA2
+    } elseif ($certInfo.SubCA1) {
+        $ca = $certInfo.SubCA1
     } else {
-        $ca = $CertInfo.RootCA
+        $ca = $certInfo.RootCA
     }
 
     # Check to see if the CA is using TCP port 443 or 80.
     $params = @{
-        ComputerName = $ca
-        Port = 443
-        ErrorAction = "Ignore"
-        InformationLevel = "Quiet"
+        computerName = $ca
+        port = 443
+        errorAction = "Ignore"
+        informationLevel = "Quiet"
     }
     if ((Test-NetConnection @params).TCPTestSucceeded) {
         $ssl = "https"
@@ -65,17 +65,17 @@ function Import-RootCertificate {
     $url = $ssl + ':' + "//$($ca)/certsrv/certnew.p7b?ReqID=CACert&Renewal=-1&Enc=DER"
 
     # If there are Credentials, use them otherwise try to download the certificate without them.
-    if ($CertInfo.Username) {
+    if ($certInfo.Username) {
         $params = @{
-            Uri = $url
-            OutFile = "$CertDir\certnew.p7b"
-            Credential = $credential
+            uri = $url
+            outFile = "$certDir\certnew.p7b"
+            credential = $credential
         }
         Invoke-WebRequest @params
     } else {
         $params = @{
-            Uri = $url
-            OutFile = "$CertDir\certnew.p7b"
+            uri = $url
+            outFile = "$certDir\certnew.p7b"
         }
         Invoke-WebRequest @params
     }
@@ -84,7 +84,7 @@ function Import-RootCertificate {
       $caCerts = @()
 
     # Call Invoke-OpenSSL to convert the p7b certificate to PEM and split the string on '-', then remove any zero length items.
-    $p7bChain = (Invoke-OpenSSL -OpenSSLArgs "pkcs7 -inform PEM -outform PEM -in `"$CertDir\certnew.p7b`" -print_certs").Split("-") | Where-Object {$_.Length -gt 0}
+    $p7bChain = (Invoke-OpenSSL -OpenSSLArgs "pkcs7 -inform PEM -outform PEM -in `"$certDir\certnew.p7b`" -print_certs").Split("-") | Where-Object {$_.Length -gt 0}
 
     # Find the index of all the BEGIN CERTIFICATE lines.
     $index = (0..($p7bChain.count - 1)) | Where-Object {$p7bChain[$_] -match "BEGIN CERTIFICATE"}
@@ -95,17 +95,17 @@ function Import-RootCertificate {
     }
 
     # Save the PEM Chain certificate.
-    $caCerts | Set-Content -Path "$CertDir\chain.cer" -Encoding Ascii
+    $caCerts | Set-Content -Path "$certDir\chain.cer" -Encoding Ascii
 
     # Save the Root and Intermidiate Certificates.
     Switch ($caCerts.Count) {
-        1    { $caCerts[0] | Set-Content -Path "$CertDir\root64.cer" -Encoding Ascii}
+        1    { $caCerts[0] | Set-Content -Path "$certDir\root64.cer" -Encoding Ascii}
 
-        2    { $caCerts[0] | Set-Content -Path "$CertDir\interm64.cer" -Encoding Ascii
-              $caCerts[1] | Set-Content -Path "$CertDir\root64.cer" -Encoding Ascii}
+        2    { $caCerts[0] | Set-Content -Path "$certDir\interm64.cer" -Encoding Ascii
+              $caCerts[1] | Set-Content -Path "$certDir\root64.cer" -Encoding Ascii}
 
-        3    { $caCerts[0] | Set-Content -Path "$CertDir\interm264.cer" -Encoding Ascii
-              $caCerts[1] | Set-Content -Path "$CertDir\interm64.cer" -Encoding Ascii
-              $caCerts[2] | Set-Content -Path "$CertDir\root64.cer" -Encoding Ascii}
+        3    { $caCerts[0] | Set-Content -Path "$certDir\interm264.cer" -Encoding Ascii
+              $caCerts[1] | Set-Content -Path "$certDir\interm64.cer" -Encoding Ascii
+              $caCerts[2] | Set-Content -Path "$certDir\root64.cer" -Encoding Ascii}
     }
 }

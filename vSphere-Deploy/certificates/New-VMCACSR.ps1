@@ -20,8 +20,8 @@ function New-VMCACSR {
     [CmdletBinding ()]
     Param ()
     # Create RSA private key and CSR
-    $ComputerName = Get-WmiObject -Class Win32_ComputerSystem
-    $defFQDN = "$($ComputerName.Name).$($ComputerName.Domain)".ToLower()
+    $computerName = Get-WmiObject -Class Win32_ComputerSystem
+    $defFQDN = "$($computerName.Name).$($computerName.Domain)".ToLower()
     $vpscFQDN = $(
         Write-Host -Object "Is the vCenter Platform Services Controller FQDN $defFQDN ?"
         $inputFQDN = Read-Host -Prompt "Press ENTER to accept or input a new PSC FQDN"
@@ -41,20 +41,20 @@ function New-VMCACSR {
     basicConstraints = CA:TRUE
 
     [ req_distinguished_name ]
-    countryName = $Country
-    stateOrProvinceName = $State
-    localityName = $Locality
-    0.organizationName = $OrgUnit
-    commonName = $VPSCFQDN
+    countryName = $country
+    stateOrProvinceName = $state
+    localityName = $locality
+    0.organizationName = $orgUnit
+    commonName = $vspcFQDN
     "
-    Set-Location $CertDir
+    Set-Location $certPath
     if (-not(Test-Path -Path "VMCA")) {
         New-Item -Path "VMCA" -Type Directory
     }
     # Create CSR and private key
-    $out = $requestTemplate | Out-File -FilePath "$CertDir\VMCA\root_signing_cert.cfg" -Encoding default -Force
-    Invoke-OpenSSL -OpenSSLArgs "req -new -nodes -out `"$CertDir\VMCA\root_signing_cert.csr`" -keyout `"$CertDir\VMCA\vmca-org.key`" -config `"$CertDir\VMCA\root_signing_cert.cfg`""
-    Invoke-OpenSSL -OpenSSLArgs "rsa -in `"$CertDir\VMCA\vmca-org.key`" -out `"$CertDir\VMCA\root_signing_cert.key`""
+    $out = $requestTemplate | Out-File -FilePath "$certPath\VMCA\root_signing_cert.cfg" -Encoding default -Force
+    Invoke-OpenSSL -OpenSSLArgs "req -new -nodes -out `"$certPath\VMCA\root_signing_cert.csr`" -keyout `"$certPath\VMCA\vmca-org.key`" -config `"$certPath\VMCA\root_signing_cert.cfg`""
+    Invoke-OpenSSL -OpenSSLArgs "rsa -in `"$certPath\VMCA\vmca-org.key`" -out `"$certPath\VMCA\root_signing_cert.key`""
     Remove-Item -Path "VMCA\vmca-org.key"
-    Write-Host -Object "CSR is located at $CertDir\VMCA\root_signing_cert.csr" -ForegroundColor Yellow
+    Write-Host -Object "CSR is located at $certPath\VMCA\root_signing_cert.csr" -ForegroundColor Yellow
 }

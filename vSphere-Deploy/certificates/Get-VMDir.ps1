@@ -31,7 +31,7 @@ function Get-VMDir {
         }
     )
     $params = @{
-        OpenSSLArgs = "s_client -servername $vmDirHost -connect `"${VMDirHost}:636`""
+        openSSLArgs = "s_client -servername $vmDirHost -connect `"${vmDirHost}:636`""
     }
     Invoke-OpenSSL @params
 }

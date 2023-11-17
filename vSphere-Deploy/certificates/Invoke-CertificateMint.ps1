@@ -34,27 +34,27 @@ function Invoke-CertificateMint {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $SVCDir,
+        $servicePath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CSRFile,
+        $csrFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertFile,
+        $certFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Template,
+        $template,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertDir,
+        $certPath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $IssuingCA
+        $issuingCA
     )
 
     # initialize objects to use for external processes
@@ -63,16 +63,16 @@ function Invoke-CertificateMint {
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
-    $Process = New-Object -TypeName System.Diagnostics.Process
-    $Process.StartInfo = $psi
+    $process = New-Object -TypeName System.Diagnostics.Process
+    $process.StartInfo = $psi
     $script:certsWaitingForApproval = $false
         # submit the CSR to the CA
         $psi.FileName = "certreq.exe"
-        $psi.Arguments = @("-submit -attrib `"$Template`" -config `"$IssuingCA`" -f `"$CertDir\$SVCDir\$CSRFile`" `"$CertDir\$SVCDir\$CertFile`"")
+        $psi.Arguments = @("-submit -attrib `"$template`" -config `"$issuingCA`" -f `"$certPath\$servicePath\$csrFile`" `"$certPath\$servicePath\$certFile`"")
         Write-Host -Object ""
-        Write-Host -Object "Submitting certificate request for $SVCDir..." -ForegroundColor Yellow
-        [void]$Process.Start()
-        $cmdOut = $Process.StandardOutput.ReadToEnd()
+        Write-Host -Object "Submitting certificate request for $servicePath..." -ForegroundColor Yellow
+        [void]$process.Start()
+        $cmdOut = $process.StandardOutput.ReadToEnd()
         if ($cmdOut.Trim() -like "*request is pending*") {
             # Output indicates the request requires approval before we can download the signed cert.
             $script:certsWaitingForApproval = $true
@@ -85,10 +85,10 @@ function Invoke-CertificateMint {
             }
             Write-Host -Object "RequestId: $reqID is pending" -ForegroundColor Yellow
             # Save the request ID to a file that Invoke-CertificateMintResume can read back in later
-            $reqID | Out-File -FilePath "$CertDir\$SVCDir\requestid.txt"
+            $reqID | Out-File -FilePath "$certPath\$servicePath\requestid.txt"
         } else {
             # Output doesn't indicate a pending request, so check for a signed cert file
-            if (-not(Test-Path -Path "$CertDir\$SVCDir\$CertFile")) {
+            if (-not(Test-Path -Path "$certPath\$servicePath\$certFile")) {
                 Write-Error -Message "Certificate request failed or was unable to download the signed certificate."
                 Write-Error -Message "Verify that the ISSUING_CA variable is set correctly."
                 Write-Debug -Message $cmdOut

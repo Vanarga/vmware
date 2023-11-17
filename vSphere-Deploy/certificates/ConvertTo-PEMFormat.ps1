@@ -1,24 +1,29 @@
 function ConvertTo-PEMFormat {
     <#
     .SYNOPSIS
-        Create PEM file for supplied certificate
+        Convert the certificate to PEM format.
 
     .DESCRIPTION
+        Convert the certificate to PEM format.
 
-    .PARAMETER SVCDir
+    .PARAMETER servicePath
 
-    .PARAMETER CertFile
+    .PARAMETER certFile
 
-    .PARAMETER CerFile
+    .PARAMETER cerFile
 
-    .PARAMETER CertDir
+    .PARAMETER certPath
 
-    .PARAMETER InstanceCertDir
+    .PARAMETER instanceCertPath
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        ConvertTo-PEMFormat -SVCDir < > -CertFile < > -CerFile < > -CertDir < > -InstanceCertDir < >
+        ConvertTo-PEMFormat -servicePath <string>
+                            -certFile <string>
+                            -cerFile <string>
+                            -certPath <string>
+                            -instanceCertPath <string>
 
         PS C:\> ConvertTo-PEMFormat
 
@@ -32,41 +37,41 @@ function ConvertTo-PEMFormat {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $SVCDir,
+        [string]$servicePath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertFile,
+        [string]$certFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CerFile,
+        [string]$cerFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertDir,
+        [string]$certPath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $InstanceCertDir
+        [string]$instanceCertPath
     )
-    # Skip if we have pending cert requests
+    # Skip if we have pending cert requests.
     if ($script:CertsWaitingForApproval) {
         return
     }
-    if (Test-Path -Path $CertDir\chain.cer) {
-        $ChainCer = "$CertDir\chain.cer"
+    if (Test-Path -Path $certPath\chain.cer) {
+        $chainCer = "$certPath\chain.cer"
     } else {
-        $ChainCer = "$CertDir\root64.cer"
+        $chainCer = "$certPath\root64.cer"
     }
-
-    if (-not(Test-Path -Path "$InstanceCertDir\$SVCDir\$CertFile")) {
-        Write-Host -Object "$InstanceCertDir\$SVCDir\$CertFile file not found. Skipping PEM creation. Please correct and re-run." -ForegroundColor Red
+    # Check if the certificate file exists.
+    if (-not(Test-Path -Path "$instanceCertPath\$servicePath\$certFile")) {
+        Write-Host -Object "$instanceCertPath\$servicePath\$certFile file not found. Skipping PEM creation. Please correct and re-run." -ForegroundColor Red
     } else {
-        $rui = Get-Content -Path "$InstanceCertDir\$SVCDir\$CertFile"
-        $chainCont = Get-Content $ChainCer -Encoding default
-        $rui + $chainCont | Out-File -FilePath "$InstanceCertDir\$SVCDir\$CerFile" -Encoding default
-        Write-Host -Object "PEM file $InstanceCertDir\$SVCDir\$CerFile succesfully created" -ForegroundColor Yellow
+        $rui = Get-Content -Path "$instanceCertPath\$servicePath\$certFile"
+        $chainCont = Get-Content $chainCer -Encoding default
+        $rui + $chainCont | Out-File -FilePath "$instanceCertPath\$servicePath\$cerFile" -Encoding default
+        Write-Host -Object "PEM file $instanceCertPath\$servicePath\$cerFile succesfully created" -ForegroundColor Yellow
     }
-    Set-Location -Path $CertDir
+    Set-Location -Path $certPath
 }
