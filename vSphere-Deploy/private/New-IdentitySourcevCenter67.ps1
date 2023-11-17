@@ -30,7 +30,7 @@ function New-IdentitySourcevCenter67 {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $ADInfo
+            $AdInfo
     )
 
     # Add AD domain as Native Identity Source.
@@ -103,7 +103,7 @@ function New-IdentitySourcevCenter67 {
     Start-Sleep -Seconds 1
 
     $selections = ($ie.Document.DocumentElement.getElementsByTagName("clr-dg-cell") | Select-Object outertext).outertext -replace " ",""
-    $row =  0..2 | Where-Object {$selections[1,7,13][$_] -eq $ADInfo.ADDomain}
+    $row =  0..2 | Where-Object {$selections[1,7,13][$_] -eq $AdInfo.ADDomain}
 
     $ie.Document.DocumentElement.getElementsByClassName("radio")[$row].childnodes[3].click()
 

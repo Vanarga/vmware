@@ -13,12 +13,12 @@ function Invoke-ExecuteScript {
 
     .PARAMETER Password
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Invoke-ExecuteScript -Script < > -Hostname < > -Username < > -VIHandle < >
+        Invoke-ExecuteScript -Script < > -Hostname < > -Username < > -ViHandle < >
 
         PS C:\> Invoke-ExecuteScript
 
@@ -53,5 +53,5 @@ function Invoke-ExecuteScript {
 
     Write-SeparatorLine
 
-    return Invoke-VMScript -ScriptText $(if ($Script.count -gt 1) {$Script -join(";")} else {$Script}) -vm $Hostname -GuestUser $Credential.Username -GuestPassword $Credential.GetNetworkCredential().password -Server $VIHandle
+    return Invoke-VMScript -ScriptText $(if ($Script.count -gt 1) {$Script -join(";")} else {$Script}) -vm $Hostname -GuestUser $Credential.Username -GuestPassword $Credential.GetNetworkCredential().password -Server $ViHandle
 }

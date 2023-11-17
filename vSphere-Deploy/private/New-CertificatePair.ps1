@@ -9,12 +9,12 @@ function New-CertificatePair {
 
     .PARAMETER Deployment
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-CertificatePair -CertDir < > -Deployment < > -VIHandle < >
+        New-CertificatePair -CertDir < > -Deployment < > -ViHandle < >
 
         PS C:\> New-CertificatePair
 
@@ -36,17 +36,17 @@ function New-CertificatePair {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
-    $certPath = $CertDir + "\" + $Deployment.Hostname
+    $CertDir = $CertDir + "\" + $Deployment.Hostname
     $credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
 
     $params = @{
         Script = '[ ! -s /root/.ssh/authorized_keys ] && echo "File authorized keys does not exist or is empty."'
         Hostname = $Deployment.Hostname
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     $createKeyPair = $(Invoke-ExecuteScript @params).Scriptoutput
 
@@ -66,22 +66,22 @@ function New-CertificatePair {
             Script = $commandList
             Hostname = $Deployment.Hostname
             Credential = $credential
-            ViHandle = $VIHandle
+            ViHandle = $ViHandle
         }
         Invoke-ExecuteScript @params
 
         # Copy private and public keys to deployment folder for host.
-        $filePath = $null
-        $filePath = @()
-        $filePath += "/root/.ssh/" + $Deployment.Hostname
-        $filePath += $certPath+ "\" + $Deployment.Hostname + ".priv"
-        $filePath += "/root/.ssh/" + $Deployment.Hostname + ".pub"
-        $filePath += $certPath+ "\" + $Deployment.Hostname + ".pub"
+        $FilePath = $null
+        $FilePath = @()
+        $FilePath += "/root/.ssh/" + $Deployment.Hostname
+        $FilePath += $CertDir+ "\" + $Deployment.Hostname + ".priv"
+        $FilePath += "/root/.ssh/" + $Deployment.Hostname + ".pub"
+        $FilePath += $CertDir+ "\" + $Deployment.Hostname + ".pub"
         $params = @{
-            Path = $filePath
+            Path = $FilePath
             Hostname = $Deployment.Hostname
             Credential = $credential
-            VIHandle = $VIHandle
+            ViHandle = $ViHandle
             Upload = $false
         }
         Copy-FileToServer @params
@@ -98,34 +98,34 @@ function New-CertificatePair {
                 Script = $commandList
                 Hostname = $Deployment.Hostname
                 Credential = $credential
-                ViHandle = $VIHandle
+                ViHandle = $ViHandle
             }
             Invoke-ExecuteScript @params
 
-            $filePath = $null
-            $filePath = @()
-            $filePath += "/root/.ssh/" + $Deployment.SSODomainName
-            $filePath += $CertDir + "\" + $Deployment.SSODomainName + ".priv"
-            $filePath += "/root/.ssh/" + $Deployment.SSODomainName + ".pub"
-            $filePath += $CertDir + "\" + $Deployment.SSODomainName + ".pub"
+            $FilePath = $null
+            $FilePath = @()
+            $FilePath += "/root/.ssh/" + $Deployment.SSODomainName
+            $FilePath += $CertDir + "\" + $Deployment.SSODomainName + ".priv"
+            $FilePath += "/root/.ssh/" + $Deployment.SSODomainName + ".pub"
+            $FilePath += $CertDir + "\" + $Deployment.SSODomainName + ".pub"
             $params = @{
-                Path = $filePath
+                Path = $FilePath
                 Hostname = $Deployment.Hostname
                 Credential = $credential
-                VIHandle = $VIHandle
+                ViHandle = $ViHandle
                 Upload = $false
             }
             Copy-FileToServer @params
         } else {
-            $filePath = $null
-            $filePath = @()
-            $filePath += $CertDir + "\" + $Deployment.SSODomainName + ".pub"
-            $filePath += "/root/.ssh/" + $Deployment.SSODomainName + ".pub"
+            $FilePath = $null
+            $FilePath = @()
+            $FilePath += $CertDir + "\" + $Deployment.SSODomainName + ".pub"
+            $FilePath += "/root/.ssh/" + $Deployment.SSODomainName + ".pub"
             $params = @{
-                Path = $filePath
+                Path = $FilePath
                 Hostname = $Deployment.Hostname
                 Credential = $credential
-                VIHandle = $VIHandle
+                ViHandle = $ViHandle
                 Upload = $true
             }
             Copy-FileToServer @params
@@ -137,7 +137,7 @@ function New-CertificatePair {
                 Script = $commandList
                 Hostname = $Deployment.Hostname
                 Credential = $credential
-                ViHandle = $VIHandle
+                ViHandle = $ViHandle
             }
             Invoke-ExecuteScript @params
         }

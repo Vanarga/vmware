@@ -23,19 +23,19 @@ function Invoke-OpenSSL {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $openSSLArgs
+        $OpenSSLArgs
     )
 
-    $openSSLInfo = $null
+    $OpenSSLInfo = $null
     $processDiag = $null
-    $openSSLInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo
-    $openSSLInfo.FileName = $OpenSSL
-    $openSSLInfo.RedirectStandardError = $true
-    $openSSLInfo.RedirectStandardOutput = $true
-    $openSSLInfo.UseShellExecute = $false
-    $openSSLInfo.Arguments = $openSSLArgs
+    $OpenSSLInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo
+    $OpenSSLInfo.FileName = $OpenSSL
+    $OpenSSLInfo.RedirectStandardError = $true
+    $OpenSSLInfo.RedirectStandardOutput = $true
+    $OpenSSLInfo.UseShellExecute = $false
+    $OpenSSLInfo.Arguments = $OpenSSLArgs
     $processDiag = New-Object -TypeName System.Diagnostics.Process
-    $processDiag.StartInfo = $openSSLInfo
+    $processDiag.StartInfo = $OpenSSLInfo
     $processDiag.Start() | Out-Null
     $processDiag.WaitForExit()
     $stdOut = $processDiag.StandardOutput.ReadToEnd()

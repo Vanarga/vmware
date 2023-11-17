@@ -7,12 +7,12 @@ function Add-Roles {
 
     .PARAMETER Roles
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Add-Roles -Roles < > -VIHandle < >
+        Add-Roles -Roles < > -ViHandle < >
 
         PS C:\> Add-Roles
 
@@ -30,12 +30,12 @@ function Add-Roles {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-SeparatorLine
 
-    $existingRoles = Get-ViRole -Server $VIHandle | Select-Object Name
+    $existingRoles = Get-ViRole -Server $ViHandle | Select-Object Name
 
     $names = $($Roles | Select-Object Name -Unique) | Where-Object {$existingRoles.name -notcontains $_.name}
 
@@ -46,7 +46,7 @@ function Add-Roles {
 
         Write-Output -InputObject $vPrivilege | Out-String
 
-        New-VIRole -Server $VIHandle -Name $name.Name -Privilege (Get-VIPrivilege -Server $VIHandle | Where-Object {$vPrivilege.Privilege -like $_.id})
+        New-VIRole -Server $ViHandle -Name $name.Name -Privilege (Get-VIPrivilege -Server $ViHandle | Where-Object {$vPrivilege.Privilege -like $_.id})
     }
 
     Write-SeparatorLine

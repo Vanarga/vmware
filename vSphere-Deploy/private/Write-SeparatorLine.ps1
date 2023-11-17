@@ -19,6 +19,6 @@ function Write-SeparatorLine {
     #>
     [CmdletBinding ()]
     Param ()
-    $Date = Get-Date
-    Write-Output -InputObject "`n---------------------------- $Date ----------------------------`r`n" | Out-String
+    $date = Get-Date
+    Write-Output -InputObject "`n---------------------------- $date ----------------------------`r`n" | Out-String
 }

@@ -7,12 +7,12 @@ function New-Permissions {
 
     .PARAMETER VPermissions
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-Permissions -VPermissions < > -VIHandle < >
+        New-Permissions -VPermissions < > -ViHandle < >
 
         PS C:\> New-Permissions
 
@@ -30,7 +30,7 @@ function New-Permissions {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-SeparatorLine
@@ -40,14 +40,14 @@ function New-Permissions {
     ForEach ($permission in $VPermissions) {
         $entity = Get-Inventory -Name $permission.Entity | Where-Object {$_.Id -match $permission.Location}
         if ($permission.Group) {
-            $principal = Get-VIAccount -Group -Name $permission.Principal -Server $VIHandle
+            $principal = Get-VIAccount -Group -Name $permission.Principal -Server $ViHandle
         } else {
-            $principal = Get-VIAccount -Name $permission.Principal -Server $VIHandle
+            $principal = Get-VIAccount -Name $permission.Principal -Server $ViHandle
         }
 
-        Write-Output -InputObject "New-VIPermission -Server $VIHandle -Entity $entity -Principal $principal -Role $($permission.Role) -Propagate $([System.Convert]::ToBoolean($permission.Propagate))" | Out-String
+        Write-Output -InputObject "New-VIPermission -Server $ViHandle -Entity $entity -Principal $principal -Role $($permission.Role) -Propagate $([System.Convert]::ToBoolean($permission.Propagate))" | Out-String
 
-        New-VIPermission -Server $VIHandle -Entity $entity -Principal $principal -Role $permission.Role -Propagate $([System.Convert]::ToBoolean($permission.Propagate))
+        New-VIPermission -Server $ViHandle -Entity $entity -Principal $principal -Role $permission.Role -Propagate $([System.Convert]::ToBoolean($permission.Propagate))
 
     }
     Write-SeparatorLine

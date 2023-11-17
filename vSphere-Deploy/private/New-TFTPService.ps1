@@ -11,12 +11,12 @@ function New-TFTPService {
 
     .PARAMETER Password
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-TFTPService -Hostname < > -Username < > -Password < > -VIHandle < >
+        New-TFTPService -Hostname < > -Username < > -Password < > -ViHandle < >
 
         PS C:\> New-TFTPService
 
@@ -38,7 +38,7 @@ function New-TFTPService {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     $commandList = $null
@@ -92,7 +92,7 @@ function New-TFTPService {
         Script = $commandList
         Hostname = $Hostname
         Credential = $Credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
 }

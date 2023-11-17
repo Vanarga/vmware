@@ -42,11 +42,11 @@ function New-VCSADeploy {
     $pscs = @("tiny","small","medium","large","infrastructure")
 
     $argumentList = @()
-    $OvfTool = $OvfToolPath + "\ovftool.exe"
+    $ovfTool = $OvfToolPath + "\ovftool.exe"
 
     # Get Esxi Host Certificate Thumbrpint.
     $url = "https://" + $ParameterList.esxiHost
-    $webRequest = [Net.WebRequest]::Create($url)
+    $webRequest = [Net.WebRequest]::Create($Url)
     Try {
         $webRequest.GetResponse()
     }
@@ -102,7 +102,7 @@ function New-VCSADeploy {
 
     Write-Output -InputObject $argumentList | Out-String
 
-    & $OvfTool $argumentList
+    & $ovfTool $argumentList
 
     return
 }

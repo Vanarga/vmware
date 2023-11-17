@@ -72,7 +72,7 @@ function CopyFiletoServer {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle,
+        $ViHandle,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -92,7 +92,7 @@ function CopyFiletoServer {
 				Destination = $Locations[($i*2)+1]
 				GuestUser = $Credential.Username
 				GuestPassword = $Credential.GetNetworkCredential().password
-				Server = $VIHandle
+				Server = $ViHandle
 				Force = $true
 			}
 			Copy-VMGuestFile @params
@@ -104,7 +104,7 @@ function CopyFiletoServer {
 				Destination = $Locations[($i*2)+1]
 				GuestUser = $Credential.Username
 				GuestPassword = $Credential.GetNetworkCredential().password
-				Server = $VIHandle
+				Server = $ViHandle
 				Force = $true
 			}
             Copy-VMGuestFile @params
@@ -129,7 +129,7 @@ function ExecuteScript {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle
+        $ViHandle
     )
 
 	$Script | ForEach-Object {Write-Output $_} | Out-String
@@ -138,7 +138,7 @@ function ExecuteScript {
 		VM = $Hostname
 		GuestUser = $Credential.Username
 		GuestPassword = $Credential.GetNetworkCredential().password
-		Server = $VIHandle
+		Server = $ViHandle
 	}
     return Invoke-VMScript @params
 }
@@ -263,7 +263,7 @@ Function Set-VMKeystrokes {
         ViewType = "VirtualMachine"
         Filter = @{"Name" = $VMName}
     }
-    $vm = Get-View @params
+    $VM = Get-View @params
 
     # Verify we have a VM or fail
     if (-not $vm) {
@@ -325,7 +325,7 @@ $params = @{
     Server = $vCenter
     Credential = $Credential
 }
-$viHandle = Connect-VIServer @params
+$ViHandle = Connect-VIServer @params
 
 # Log in as root and change the password.
 $params = @{
@@ -380,12 +380,12 @@ $params = @{
     $Locations = $FileLocations
     $Hostname = $Deployment
     $Credential = $RootCredential
-    $VIHandle = $viHandle
+    $ViHandle = $ViHandle
     $Upload = $true
 }
 CopyFiletoServer @params
 
-#$script = Get-Content $((Get-Location).Path + "\config.sh")
+#$Script = Get-Content $((Get-Location).Path + "\config.sh")
 
 # Set the config.sh file to be executable on the server and run with arguments below.
 $CommandList = $null
@@ -398,7 +398,7 @@ $params = @{
     Script = $CommandList
     Hostname = $Deployment
     Credential = $RootCredential
-    VIHandle = $viHandle
+    ViHandle = $ViHandle
 }
 ExecuteScript @params
 
@@ -424,4 +424,4 @@ Add-ProxyServer -Address $ServerAddress
 Get-ProxyServer
 
 # Disconnect from vCenter.
-Disconnect-VIServer $viHandle -Confirm:$false
+Disconnect-VIServer $ViHandle -Confirm:$false

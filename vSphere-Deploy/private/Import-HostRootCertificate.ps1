@@ -5,16 +5,16 @@ function Import-HostRootCertificate {
 
     .DESCRIPTION
 
-    .PARAMETER CertPath
+    .PARAMETER CertDir
 
     .PARAMETER Deployment
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Import-HostRootCertificate -CertPath < > -Deployment < > -VIHandle < >
+        Import-HostRootCertificate -CertDir < > -Deployment < > -ViHandle < >
 
         PS C:\> Import-HostRootCertificate
 
@@ -28,7 +28,7 @@ function Import-HostRootCertificate {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $CertPath,
+            $CertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -36,14 +36,14 @@ function Import-HostRootCertificate {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-SeparatorLine
 
-    $rootCertPath = $CertPath+ "\" + $Deployment.Hostname.Split(".")[0] + "_self_signed_root_cert.crt"
+    $rootCertDir = $CertDir+ "\" + $Deployment.Hostname.Split(".")[0] + "_self_signed_root_cert.crt"
 
-    $credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
+    $Credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
 
     $commandList = $null
     $commandList = @()
@@ -52,7 +52,7 @@ function Import-HostRootCertificate {
         Script = $commandList
         Hostname = $Deployment.Hostname
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     $Certid = $(Invoke-ExecuteScript @params).Scriptoutput.Split("")[2]
 
@@ -63,24 +63,24 @@ function Import-HostRootCertificate {
         Script = $commandList
         Hostname = $Deployment.Hostname
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
 
-    $filePath = $null
-    $filePath = @()
-    $filePath += "/root/vcrootcert.crt"
-    $filePath += $rootCertPath
+    $FilePath = $null
+    $FilePath = @()
+    $FilePath += "/root/vcrootcert.crt"
+    $FilePath += $rootCertDir
     $params = @{
-        Path = $filePath
+        Path = $FilePath
         Hostname = $Deployment.Hostname
         Credential = $credential
-        VIHandle = $VIHandle
+        ViHandle = $ViHandle
         Upload = $false
     }
     Copy-FileToServer @params
 
-    Import-Certificate -FilePath $rootCertPath -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
+    Import-Certificate -FilePath $RootCertDir -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
 
     Write-SeparatorLine
 }

@@ -33,7 +33,7 @@ function ConvertTo-Excel {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $WorkSheet,
+            $Worksheet,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -41,7 +41,7 @@ function ConvertTo-Excel {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Excelpath
+            $ExcelPath
     )
 
     $myStack = New-Object -TypeName system.collections.stack
@@ -67,12 +67,12 @@ function ConvertTo-Excel {
         }
     }
 
-    $WorkSheet.name = $SheetName
+    $Worksheet.name = $SheetName
     if ($columns -le 26) {
         $ascii = [char]($columns + 96) + $rows
     } else {
         $ascii = "aa" + $rows
     }
-    $range = $WorkSheet.Range("a1",$ascii)
+    $range = $Worksheet.Range("a1",$ascii)
     $range.Value2 = $array
 }

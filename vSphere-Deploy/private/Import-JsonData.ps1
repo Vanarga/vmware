@@ -10,7 +10,7 @@ function Import-JsonData {
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Import-HostRootCertificate -CertPath < > -Deployment < > -VIHandle < >
+        Import-HostRootCertificate -CertDir < > -Deployment < > -ViHandle < >
 
         PS C:\> Import-HostRootCertificate
 
@@ -28,15 +28,15 @@ function Import-JsonData {
     )
 
     # Declare an ordered hashtable.
-    $ReturnSet = [Ordered]@{}
+    $returnSet = [Ordered]@{}
 
     $jsonFiles = (Get-ChildItem -Path $path).fullname
 
     ForEach ($file in $jsonFiles) {
         $data = Get-Content -Raw -Path $file | ConvertFrom-Json
-        $ReturnSet[$data."vData.Type"] = $data.Properties
+        $returnSet[$data."vData.Type"] = $data.Properties
     }
 
     # Return the hashtable of custom objects.
-    Return $ReturnSet
+    Return $returnSet
 }

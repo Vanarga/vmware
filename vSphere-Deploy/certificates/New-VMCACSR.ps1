@@ -47,14 +47,14 @@ function New-VMCACSR {
     0.organizationName = $orgUnit
     commonName = $vspcFQDN
     "
-    Set-Location $certPath
+    Set-Location $CertDir
     if (-not(Test-Path -Path "VMCA")) {
         New-Item -Path "VMCA" -Type Directory
     }
     # Create CSR and private key
-    $out = $requestTemplate | Out-File -FilePath "$certPath\VMCA\root_signing_cert.cfg" -Encoding default -Force
-    Invoke-OpenSSL -OpenSSLArgs "req -new -nodes -out `"$certPath\VMCA\root_signing_cert.csr`" -keyout `"$certPath\VMCA\vmca-org.key`" -config `"$certPath\VMCA\root_signing_cert.cfg`""
-    Invoke-OpenSSL -OpenSSLArgs "rsa -in `"$certPath\VMCA\vmca-org.key`" -out `"$certPath\VMCA\root_signing_cert.key`""
+    $out = $requestTemplate | Out-File -FilePath "$CertDir\VMCA\root_signing_cert.cfg" -Encoding default -Force
+    Invoke-OpenSSL -OpenSSLArgs "req -new -nodes -out `"$CertDir\VMCA\root_signing_cert.csr`" -keyout `"$CertDir\VMCA\vmca-org.key`" -config `"$CertDir\VMCA\root_signing_cert.cfg`""
+    Invoke-OpenSSL -OpenSSLArgs "rsa -in `"$CertDir\VMCA\vmca-org.key`" -out `"$CertDir\VMCA\root_signing_cert.key`""
     Remove-Item -Path "VMCA\vmca-org.key"
-    Write-Host -Object "CSR is located at $certPath\VMCA\root_signing_cert.csr" -ForegroundColor Yellow
+    Write-Host -Object "CSR is located at $CertDir\VMCA\root_signing_cert.csr" -ForegroundColor Yellow
 }

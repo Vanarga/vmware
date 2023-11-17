@@ -579,14 +579,14 @@ Copy the id_vsphere.pub file to the node.
 	  **Note:** In the command below, thumbprint is the bold text part of what you save in /root/ssl/thumbprint.txt above (the VC thumbprint).    
           If the output is: SHA1 Fingerprint=86:72:05:D6:4D:15:C5:31:3A:83:3A:02:A4:79:0C:5F:FB:AF:EE:7A    
           Then the thumbprint is: **86:72:05:D6:4D:15:C5:31:3A:83:3A:02:A4:79:0C:5F:FB:AF:EE:7A**  
-    * `python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://<hostname>/lookupservice/sdk --fingerprint <thumbprint> --certfile /root/ssl/new_machine.crt --user administrator@<SSODomainName> --password <SSOAdminPassword>`
+    * `python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://<hostname>/lookupservice/sdk --fingerprint <thumbprint> --CertFile /root/ssl/new_machine.crt --user administrator@<SSODomainName> --password <SSOAdminPassword>`
 	
 	- If the VCSA vCenter does not have an embedded PSC Register its Machine Certificate with the External PSC.
 	  * SCP the new vCenter machine certificate to the external PSC and register it with the VMWare Lookup Service via SSH.
 	  * Make a copy of the VC new_machine.crt and name it new_<VC_Hostname>_machine.crt.
 	  * Copy new_<VC_Hostname>_machine.crt to the external PSC and place it in **/root/ssl/** folder.
 	  * Update the lookup service certificate for the Virtual Center  
-	    + `python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://<Psc_Hostname>/lookupservice/sdk --fingerprint <vc_thumbprint> --certfile /root/ssl/new_<vc_hostname>_machine.crt --user administrator@<SSODomainName> --password <SSOAdminPass>`
+	    + `python /usr/lib/vmidentity/tools/scripts/ls_update_certs.py --url https://<Psc_Hostname>/lookupservice/sdk --fingerprint <vc_thumbprint> --CertFile /root/ssl/new_<vc_hostname>_machine.crt --user administrator@<SSODomainName> --password <SSOAdminPass>`
 	  
 5. Configure Autodeploy and replace the solution user certificates, and update the thumbprint to the new machine ssl thumbprint  
     https://kb.vmware.com/selfservice/microsites/search.do?language=en_US&cmd=displayKC&externalId=2000988  

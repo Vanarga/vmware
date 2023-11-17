@@ -25,20 +25,20 @@ function Skip-SSLTrustIssues {
     Param ()
 
     # https://blogs.technet.microsoft.com/bshukla/2010/04/12/ignoring-ssl-trust-in-powershell-system-net-webclient/
-    $NetAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
+    $netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
 
-    if ($NetAssembly) {
-        $BindingFlags = [Reflection.BindingFlags] "Static,GetProperty,NonPublic"
-        $SettingsType = $NetAssembly.GetType("System.Net.Configuration.SettingsSectionInternal")
+    if ($netAssembly) {
+        $bindingFlags = [Reflection.BindingFlags] "Static,GetProperty,NonPublic"
+        $settingsType = $netAssembly.GetType("System.Net.Configuration.SettingsSectionInternal")
 
-        $Instance = $SettingsType.InvokeMember("Section", $BindingFlags, $null, $null, @())
+        $instance = $settingsType.InvokeMember("Section", $bindingFlags, $null, $null, @())
 
-        if ($Instance) {
-            $BindingFlags = "NonPublic","Instance"
-            $UseUnsafeHeaderParsingField = $SettingsType.GetField("useUnsafeHeaderParsing", $BindingFlags)
+        if ($instance) {
+            $bindingFlags = "NonPublic","Instance"
+            $useUnsafeHeaderParsingField = $settingsType.GetField("useUnsafeHeaderParsing", $bindingFlags)
 
-            if ($UseUnsafeHeaderParsingField) {
-              $UseUnsafeHeaderParsingField.SetValue($Instance, $true)
+            if ($useUnsafeHeaderParsingField) {
+              $useUnsafeHeaderParsingField.SetValue($instance, $true)
             }
         }
     }

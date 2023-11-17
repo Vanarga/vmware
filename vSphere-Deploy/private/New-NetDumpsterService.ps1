@@ -11,12 +11,12 @@ function New-NetDumpsterService {
 
     .PARAMETER Password
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-NetDumpsterService -Hostname < > -Username < > -Password < > -VIHandle < >
+        New-NetDumpsterService -Hostname < > -Username < > -Password < > -ViHandle < >
 
         PS C:\> New-NetDumpsterService
 
@@ -38,7 +38,7 @@ function New-NetDumpsterService {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     $commandList = $null
@@ -56,7 +56,7 @@ function New-NetDumpsterService {
         Script = $commandList
         Hostname = $Hostname
         Credential = $Credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
 }

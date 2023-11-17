@@ -24,12 +24,12 @@ function Get-URLStatus {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $URL
+            $Url
     )
 
     # Test url for TCP Port 80 Listening.
-    While (-not(Test-NetConnection -ComputerName $($URL.Split("//")[2]) -Port 80).TCPTestSucceeded) {
-        Write-Host -Object "`r`n $URL not ready, sleeping for 30 sec.`r`n" -Foregroundcolor Cyan
+    While (-not(Test-NetConnection -ComputerName $($Url.Split("//")[2]) -Port 80).TCPTestSucceeded) {
+        Write-Host -Object "`r`n $Url not ready, sleeping for 30 sec.`r`n" -Foregroundcolor Cyan
         Start-Sleep -Seconds 30
     }
 
@@ -40,11 +40,11 @@ function Get-URLStatus {
     Do {
         $failed = $false
         Try {
-            (Invoke-WebRequest -uri $URL -UseBasicParsing -TimeoutSec 20 -ErrorAction Ignore).StatusCode -ne 200
+            (Invoke-WebRequest -uri $Url -UseBasicParsing -TimeoutSec 20 -ErrorAction Ignore).StatusCode -ne 200
         }
         Catch {
             $failed = $true
-            Write-Host -Object "`r`n $URL not ready, sleeping for 30 sec.`r`n" -Foregroundcolor Cyan
+            Write-Host -Object "`r`n $Url not ready, sleeping for 30 sec.`r`n" -Foregroundcolor Cyan
             Start-Sleep -Seconds 30
         }
     } While ($failed)

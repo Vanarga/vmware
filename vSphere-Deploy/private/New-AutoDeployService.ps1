@@ -7,12 +7,12 @@ function New-AutoDeployService {
 
     .PARAMETER Deployment
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-AutoDeployService -Deployment < > -VIHandle < >
+        New-AutoDeployService -Deployment < > -ViHandle < >
 
         PS C:\> New-AutoDeployService
 
@@ -30,7 +30,7 @@ function New-AutoDeployService {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     $commandList = $null
@@ -49,7 +49,7 @@ function New-AutoDeployService {
             Script = $commandList
             Hostname = $Deployment.Hostname
             Credential = $credential
-            ViHandle = $VIHandle
+            ViHandle = $ViHandle
         }
         Invoke-ExecuteScript @params
     }
@@ -73,7 +73,7 @@ function New-AutoDeployService {
         Script = $commandList
         Hostname = $Deployment.Hostname
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
 }

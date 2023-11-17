@@ -7,12 +7,12 @@ function New-Folders {
 
     .PARAMETER Folders
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-Folders -Folders < > -VIHandle < >
+        New-Folders -Folders < > -ViHandle < >
 
         PS C:\> New-Folders
 
@@ -30,18 +30,18 @@ function New-Folders {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-SeparatorLine
 
     ForEach ($folder in $Folders) {
         Write-Output -InputObject $folder.Name | Out-String
-        ForEach ($dataCenter in get-datacenter -Server $VIHandle) {
+        ForEach ($dataCenter in get-datacenter -Server $ViHandle) {
             if ($folder.datacenter.Split(",") -match "all|$($dataCenter.name)") {
                 $folderPath = $dataCenter | Get-Folder -name $folder.Location | Where-Object {$_.Parentid -notlike "*ha*"}
                 Write-Output -InputObject $folderPath | Out-String
-                New-Folder -Server $VIHandle -Name $folder.Name -Location $folderPath -Confirm:$false
+                New-Folder -Server $ViHandle -Name $folder.Name -Location $folderPath -Confirm:$false
             }
         }
     }

@@ -13,14 +13,14 @@ function Copy-FileToServer {
 
     .PARAMETER Password
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .PARAMETER Upload
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Copy-FileToServer -Path < > -Hostname < > -Username < > -Password < > -VIHandle < > -Upload < >
+        Copy-FileToServer -Path < > -Hostname < > -Username < > -Password < > -ViHandle < > -Upload < >
 
         PS C:\> Copy-FileToServer
 
@@ -46,7 +46,7 @@ function Copy-FileToServer {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $VIHandle,
+            $ViHandle,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -68,7 +68,7 @@ function Copy-FileToServer {
                 Destination = $Path[($i*2)+1]
                 GuestUser = $Credential.Username
                 GuestPassword = $Credential.GetNetworkCredential().password
-                Server = $VIHandle
+                Server = $ViHandle
                 Force = $true
             }
             Copy-VMGuestFile @params
@@ -80,7 +80,7 @@ function Copy-FileToServer {
                 Destination = $Path[($i*2)+1]
                 GuestUser = $Credential.Username
                 GuestPassword = $Credential.GetNetworkCredential().password
-                Server = $VIHandle
+                Server = $ViHandle
                 Force = $true
             }
             Copy-VMGuestFile @params

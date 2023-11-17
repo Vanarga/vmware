@@ -30,23 +30,23 @@ function Invoke-VMCACertificateMint {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $servicePath,
+        $SvcDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $configFile,
+        $CfgFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $certFile,
+        $CertFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $privateFile
+        $PrivateFile
     )
 
-    if (-not(Test-Path -Path "$certPath\$servicePath")) {
-        New-Item -Path "$certPath\$servicePath" -Type Directory
+    if (-not(Test-Path -Path "$CertDir\$SvcDir")) {
+        New-Item -Path "$CertDir\$SvcDir" -Type Directory
     }
     $computerName = Get-WmiObject -Class Win32_ComputerSystem
     $defFQDN = "$($computerName.name).$($computerName.domain)".ToLower()
@@ -77,12 +77,12 @@ function Invoke-VMCACertificateMint {
     Email = $email
     Hostname = $machineFQDN
     "
-    $out = $vmwTemplate | Out-File -FilePath "$certPath\$servicePath\$configFile" -Encoding default -Force
+    $out = $vmwTemplate | Out-File -FilePath "$CertDir\$SvcDir\$CfgFile" -Encoding default -Force
     # Mint certificate from VMCA and save to disk
     Set-Location -Path "C:\Program Files\VMware\vCenter Server\vmcad"
-    .\certool --genkey --privkey=$certPath\$servicePath\$privateFile --pubkey=$certPath\$servicePath\$servicePath.pub
-    .\certool --gencert --cert=$certPath\$servicePath\$certFile --privkey=$certPath\$servicePath\$privateFile --config=$certPath\$servicePath\$configFile --server=$pscFQDN
-    if (Test-Path -Path "$certPath\$servicePath\$certFile") {
-        Write-Host -Object "PEM file located at $certPath\$servicePath\new_machine.cer" -ForegroundColor Yellow
+    .\certool --genkey --privkey=$CertDir\$SvcDir\$PrivateFile --pubkey=$CertDir\$SvcDir\$SvcDir.pub
+    .\certool --gencert --cert=$CertDir\$SvcDir\$CertFile --privkey=$CertDir\$SvcDir\$PrivateFile --config=$CertDir\$SvcDir\$CfgFile --server=$pscFQDN
+    if (Test-Path -Path "$CertDir\$SvcDir\$CertFile") {
+        Write-Host -Object "PEM file located at $CertDir\$SvcDir\new_machine.cer" -ForegroundColor Yellow
     }
 }

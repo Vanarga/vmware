@@ -19,15 +19,15 @@ function Move-UserCerts {
     [CmdletBinding ()]
     Param ()
 
-    Get-ChildItem -Path $certPath -Filter "*.crt" | ForEach-Object {
+    Get-ChildItem -Path $CertDir -Filter "*.crt" | ForEach-Object {
         $dir = $_.Basename
-        if (-not(Test-Path -Path "$certPath\$dir")) {
-            New-Item -Path "$certPath\$dir" -Type Directory
+        if (-not(Test-Path -Path "$CertDir\$dir")) {
+            New-Item -Path "$CertDir\$dir" -Type Directory
         }
-        Move-Item -Path $_.FullName -Destination "$certPath\$dir" -Force
+        Move-Item -Path $_.FullName -Destination "$CertDir\$dir" -Force
     }
-    Get-ChildItem -Path $certPath -Filter "*.key" | ForEach-Object {
+    Get-ChildItem -Path $CertDir -Filter "*.key" | ForEach-Object {
         $dir = $_.Basename
-        Move-Item -Path $_.FullName -Destination "$certPath\$dir" -Force
+        Move-Item -Path $_.FullName -Destination "$CertDir\$dir" -Force
     }
 }

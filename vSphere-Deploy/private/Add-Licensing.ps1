@@ -6,12 +6,12 @@ function Add-Licensing {
 
     .PARAMETER Licenses
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Add-Licensing -Licenses < > -VIHandle < >
+        Add-Licensing -Licenses < > -ViHandle < >
 
         PS C:\> Add-Licensing
 
@@ -31,7 +31,7 @@ function Add-Licensing {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-Output -InputObject $Licenses | Out-String
@@ -41,8 +41,8 @@ function Add-Licensing {
         $addLicense = $null
         $licenseType = $null
         # Add License Key
-        $licenseManager  = Get-View -Server $VIHandle ServiceInstance
-        $addLicense  = Get-View -Server $VIHandle $licenseManager.Content.LicenseManager
+        $licenseManager  = Get-View -Server $ViHandle ServiceInstance
+        $addLicense  = Get-View -Server $ViHandle $licenseManager.Content.LicenseManager
         Write-Output -InputObject "Current Licenses in vCenter $($addLicense.Licenses.LicenseKey)" | Out-String
         if (-not($addLicense.Licenses.LicenseKey | Where-Object {$_ -eq $license.LicKey.trim()})) {
             Write-Output -InputObject "Adding $($license.LicKey) to vCenter" | Out-String
@@ -53,22 +53,22 @@ function Add-Licensing {
             # Assign vCenter License
             $vcUUID = $licenseManager.Content.About.InstanceUuid
             $vcDisplayName = $licenseManager.Content.About.Name
-            $licenseAssignManager = Get-View -Server $VIHandle $addLicense.licenseAssignmentManager
+            $licenseAssignManager = Get-View -Server $ViHandle $addLicense.licenseAssignmentManager
             if ($licenseAssignManager) {
                 $licenseAssignManager.UpdateAssignedLicense($vcUUID, $license.LicKey, $vcDisplayName)
             }
         } else {
             # Assign Esxi License
-            $licenseDataManager = Get-LicenseDataManager -Server $VIHandle
+            $licenseDataManager = Get-LicenseDataManager -Server $ViHandle
             for ($i=0;$i -lt $license.ApplyType.Split(",").count;$i++) {
                switch ($license.ApplyType.Split(",")[$i]) {
-                 CL { $viContainer = Get-Cluster -Server $VIHandle -Name $license.ApplyTo.Split(",")[$i]; break}
+                 CL { $viContainer = Get-Cluster -Server $ViHandle -Name $license.ApplyTo.Split(",")[$i]; break}
                  DC { if ($license.ApplyTo.Split(",")[$i] -eq "Datacenters") {
-                                    $viContainer = Get-Folder -Server $VIHandle -Name $license.ApplyTo.Split(",")[$i] -Type "Datacenter"
+                                    $viContainer = Get-Folder -Server $ViHandle -Name $license.ApplyTo.Split(",")[$i] -Type "Datacenter"
                                 } else {
-                                    $viContainer = Get-Datacenter -Server $VIHandle -Name $license.ApplyTo.Split(",")[$i]}; break
+                                    $viContainer = Get-Datacenter -Server $ViHandle -Name $license.ApplyTo.Split(",")[$i]}; break
                                 }
-                 FO { $viContainer = Get-Folder -Server $VIHandle -Name $license.ApplyTo.Split(",")[$i] -Type "HostAndCluster"; break}
+                 FO { $viContainer = Get-Folder -Server $ViHandle -Name $license.ApplyTo.Split(",")[$i] -Type "HostAndCluster"; break}
                  default { $viContainer = $null; break}
                }
                Write-Output -InputObject $viContainer | Out-String

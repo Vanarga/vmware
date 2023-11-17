@@ -36,46 +36,46 @@ function New-CSR {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $servicePath,
+        $SvcDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $csrName,
+        $CsrName,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $configName,
+        $CfgName,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $privateFile,
+        $PrivateFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $flag,
+        $Flag,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $certPath,
+        $CertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $certInfo
+        $CertInfo
     )
 
-    if (-not(Test-Path -Path "$certPath\$servicePath")) {
-        New-Item -Path "$certPath\$servicePath" -Type Directory
+    if (-not(Test-Path -Path "$CertDir\$SvcDir")) {
+        New-Item -Path "$CertDir\$SvcDir" -Type Directory
     }
     # vSphere 5 and 6 CSR Options are different. Set according to flag type
     # VUM 6.0 needs vSphere 5 template type
-    if ($flag -eq 5) {
+    if ($Flag -eq 5) {
         $csrOption1 = "dataEncipherment"
     }
-    if ($flag -eq 6) {
+    if ($Flag -eq 6) {
         $csrOption1 = "nonRepudiation"
     }
-    $defFQDN = $certInfo.CompanyName
-    $commonName = $csrName.Split(".")[0] + " " + $certInfo.CompanyName
+    $defFQDN = $CertInfo.CompanyName
+    $commonName = $CsrName.Split(".")[0] + " " + $CertInfo.CompanyName
     $machineShort = $defFQDN.Split(".")[0]
     $machineIP = [System.Net.Dns]::GetHostAddresses("$defFQDN").IPAddressToString
     $requestTemplate = "[ req ]
@@ -94,21 +94,21 @@ function New-CSR {
     subjectAltName = IP:$machineIP,DNS:$defFQDN,DNS:$machineShort
 
     [ req_distinguished_name ]
-    countryName = $($certInfo.Country)
-    stateOrProvinceName = $($certInfo.State)
-    localityName = $($certInfo.Locality)
-    0.organizationName = $($certInfo.OrgName)
-    organizationalUnitName = $($certInfo.OrgUnit)
+    countryName = $($CertInfo.Country)
+    stateOrProvinceName = $($CertInfo.State)
+    localityName = $($CertInfo.Locality)
+    0.organizationName = $($CertInfo.OrgName)
+    organizationalUnitName = $($CertInfo.OrgUnit)
     commonName = $commonName
     "
-    Set-Location $certPath
-    if (-not(Test-Path -Path $servicePath)) {
+    Set-Location $CertDir
+    if (-not(Test-Path -Path $SvcDir)) {
         New-Item -Path "Machine" -Type Directory
     }
     # Create CSR and private key
-    $out = $requestTemplate | Out-File -FilePath "$certPath\$servicePath\$configName" -Encoding default -Force
-    Invoke-OpenSSL -OpenSSLArgs "req -new -nodes -out `"$certPath\$servicePath\$csrName`" -keyout `"$certPath\$servicePath\$csrName.key`" -config `"$certPath\$servicePath\$configName`""
-    Invoke-OpenSSL -OpenSSLArgs "rsa -in `"$certPath\$servicePath\$csrName.key`" -out `"$certPath\$servicePath\$privateFile`""
-    Remove-Item -Path "$servicePath\$csrName.key"
-    Write-Host -Object "CSR is located at $certPath\$servicePath\$csrName" -ForegroundColor Yellow
+    $out = $requestTemplate | Out-File -FilePath "$CertDir\$SvcDir\$CfgName" -Encoding default -Force
+    Invoke-OpenSSL -OpenSSLArgs "req -new -nodes -out `"$CertDir\$SvcDir\$CsrName`" -keyout `"$CertDir\$SvcDir\$CsrName.key`" -config `"$CertDir\$SvcDir\$CfgName`""
+    Invoke-OpenSSL -OpenSSLArgs "rsa -in `"$CertDir\$SvcDir\$CsrName.key`" -out `"$CertDir\$SvcDir\$PrivateFile`""
+    Remove-Item -Path "$SvcDir\$CsrName.key"
+    Write-Host -Object "CSR is located at $CertDir\$SvcDir\$CsrName" -ForegroundColor Yellow
 }
