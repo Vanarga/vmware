@@ -4,15 +4,19 @@ function Save-Yaml {
         Save Object to yaml file.
 
     .DESCRIPTION
+        Save Object to yaml file.
 
     .PARAMETER InputObject
+        The mandatory PSObject array contains objects to be saved to the yaml file.
 
     .PARAMETER FilePath
+        The mandatory string parameter FilePath is the path to the yaml file target.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Save-Yaml -InputObject < > -FilePath < >
+        Save-Yaml -InputObject <PSObject Array>
+                  -FilePath <String>
 
         PS C:\> Save-Yaml
 
@@ -30,7 +34,7 @@ function Save-Yaml {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $FilePath
+            [string]$FilePath
     )
 
     Remove-Null -InputObject $InputObject

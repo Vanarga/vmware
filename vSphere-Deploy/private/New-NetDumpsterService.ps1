@@ -4,19 +4,23 @@ function New-NetDumpsterService {
         Configure Network Dumpster to Auto Start and start service.
 
     .DESCRIPTION
+        Configure Network Dumpster to Auto Start and start service.
 
     .PARAMETER Hostname
+        The mandatory string parameter Hostname is the name of host of the NetDumpsterService.
 
-    .PARAMETER Username
+    .PARAMETER Credential
+        The mandatory secure string parameter Credential is the credentials needed to connect to the host.
 
-    .PARAMETER Password
-
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-NetDumpsterService -Hostname < > -Username < > -Password < > -VIHandle < >
+        New-NetDumpsterService -Hostname <String>
+                               -Credential <Secure String>
+                               -ViHandle <VI Session>
 
         PS C:\> New-NetDumpsterService
 
@@ -30,7 +34,7 @@ function New-NetDumpsterService {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Hostname,
+            [string]$Hostname,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -38,7 +42,7 @@ function New-NetDumpsterService {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     $commandList = $null
@@ -56,7 +60,7 @@ function New-NetDumpsterService {
         Script = $commandList
         Hostname = $Hostname
         Credential = $Credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
 }

@@ -4,6 +4,7 @@ function Write-SeparatorLine {
         Print a dated line to standard output.
 
     .DESCRIPTION
+        Print a dated line to standard output.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
@@ -19,6 +20,6 @@ function Write-SeparatorLine {
     #>
     [CmdletBinding ()]
     Param ()
-    $Date = Get-Date
-    Write-Output -InputObject "`n---------------------------- $Date ----------------------------`r`n" | Out-String
+    $date = Get-Date
+    Write-Output -InputObject "`n---------------------------- $date ----------------------------`r`n" | Out-String
 }

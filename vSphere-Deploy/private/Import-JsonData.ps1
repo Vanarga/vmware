@@ -4,15 +4,17 @@ function Import-JsonData {
         Import the JSON data and return the values as a Hashtable.
 
     .DESCRIPTION
+        Import the JSON data and return the values as a Hashtable.
 
-    .PARAMETER
+    .PARAMETER Path
+        The mandatory string parameter Path is the location of the json files.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Import-HostRootCertificate -CertPath < > -Deployment < > -VIHandle < >
+        Import-JsonData -Path <String>
 
-        PS C:\> Import-HostRootCertificate
+        PS C:\> Import-JsonData
 
     .NOTES
         Author: Michael van Blijdesteijn
@@ -24,19 +26,19 @@ function Import-JsonData {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Path
+            [string]$Path
     )
 
     # Declare an ordered hashtable.
-    $ReturnSet = [Ordered]@{}
+    $returnSet = [Ordered]@{}
 
     $jsonFiles = (Get-ChildItem -Path $path).fullname
 
     ForEach ($file in $jsonFiles) {
         $data = Get-Content -Raw -Path $file | ConvertFrom-Json
-        $ReturnSet[$data."vData.Type"] = $data.Properties
+        $returnSet[$data."vData.Type"] = $data.Properties
     }
 
     # Return the hashtable of custom objects.
-    Return $ReturnSet
+    Return $returnSet
 }

@@ -1,18 +1,22 @@
 function Add-Roles {
     <#
     .SYNOPSIS
-        Create Roles
+        Create vSphere Roles.
 
     .DESCRIPTION
+        Create vSphere Roles.
 
     .PARAMETER Roles
+        The mandatory string array Roles, holds all the vSphere custom roles that will be added to the vCenter.
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Add-Roles -Roles < > -VIHandle < >
+        Add-Roles -Roles <String[]>
+                  -ViHandle <VI Session>
 
         PS C:\> Add-Roles
 
@@ -26,16 +30,16 @@ function Add-Roles {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Roles,
+            [string[]]$Roles,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-SeparatorLine
 
-    $existingRoles = Get-ViRole -Server $VIHandle | Select-Object Name
+    $existingRoles = Get-ViRole -Server $ViHandle | Select-Object Name
 
     $names = $($Roles | Select-Object Name -Unique) | Where-Object {$existingRoles.name -notcontains $_.name}
 
@@ -46,7 +50,7 @@ function Add-Roles {
 
         Write-Output -InputObject $vPrivilege | Out-String
 
-        New-VIRole -Server $VIHandle -Name $name.Name -Privilege (Get-VIPrivilege -Server $VIHandle | Where-Object {$vPrivilege.Privilege -like $_.id})
+        New-VIRole -Server $ViHandle -Name $name.Name -Privilege (Get-VIPrivilege -Server $ViHandle | Where-Object {$vPrivilege.Privilege -like $_.id})
     }
 
     Write-SeparatorLine

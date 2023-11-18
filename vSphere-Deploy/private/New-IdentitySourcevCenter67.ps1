@@ -4,15 +4,19 @@ function New-IdentitySourcevCenter67 {
         Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
 
     .DESCRIPTION
+        Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
-    .PARAMETER ADInfo
+    .PARAMETER AdInfo
+        The manadatory string array AdInfo contains all the information about the Active Directory domain.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-IdentitySourcevCenter67 -Deployment < > -ADInfo < >
+        New-IdentitySourcevCenter67 -Deployment <string[]>
+                                    -ADInfo <string[]>
 
         PS C:\> New-IdentitySourcevCenter67
 
@@ -26,11 +30,11 @@ function New-IdentitySourcevCenter67 {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment,
+            [string[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $ADInfo
+            [string[]]$AdInfo
     )
 
     # Add AD domain as Native Identity Source.
@@ -103,7 +107,7 @@ function New-IdentitySourcevCenter67 {
     Start-Sleep -Seconds 1
 
     $selections = ($ie.Document.DocumentElement.getElementsByTagName("clr-dg-cell") | Select-Object outertext).outertext -replace " ",""
-    $row =  0..2 | Where-Object {$selections[1,7,13][$_] -eq $ADInfo.ADDomain}
+    $row =  0..2 | Where-Object {$selections[1,7,13][$_] -eq $AdInfo.ADDomain}
 
     $ie.Document.DocumentElement.getElementsByClassName("radio")[$row].childnodes[3].click()
 

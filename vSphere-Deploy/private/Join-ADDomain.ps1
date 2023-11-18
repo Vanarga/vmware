@@ -1,42 +1,48 @@
-function Join-ADDomain {
+function Join-AdDomain {
     <#
     .SYNOPSIS
         Join the VCSA to the Windows AD Domain.
 
     .DESCRIPTION
+        Join the VCSA to the Windows AD Domain.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
-    .PARAMETER ADInfo
+    .PARAMETER AdInfo
+        The manadatory string array AdInfo contains all the information about the Active Directory domain.
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Join-ADDomain -Deployment < > -ADInfo < > -VIHandle < >
+        Join-AdDomain -Deployment <String[]>
+                      -AdInfo <String[]>
+                      -ViHandle <Vi Session>
 
         PS C:\> Join-ADDomain
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Join-ADDomain
+        Version 1.0 - Join-AdDomain
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment,
+            [string[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $ADInfo,
+            [string[]]$AdInfo,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     $pscDeployments = @("tiny","small","medium","large","infrastructure")
@@ -53,7 +59,7 @@ function Join-ADDomain {
     $commandList += 'export VMWARE_DATA_DIR=/storage'
     $commandList += 'export VMWARE_CFG_DIR=/etc/vmware'
     $commandList += '/usr/bin/service-control --start --all --ignore'
-    $commandList += "/opt/likewise/bin/domainjoin-cli join " + $ADInfo.ADDomain + " " + $ADInfo.ADJoinUser + " `'" + $ADInfo.ADJoinPass + "`'"
+    $commandList += "/opt/likewise/bin/domainjoin-cli join " + $AdInfo.ADDomain + " " + $AdInfo.ADJoinUser + " `'" + $AdInfo.ADJoinPass + "`'"
     $commandList += "/opt/likewise/bin/domainjoin-cli query"
 
     # Excute the commands in $commandList on the vcsa.
@@ -61,12 +67,12 @@ function Join-ADDomain {
         Script = $commandList
         Hostname = $Deployment.vmName
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
     $params = @{
         VM = $Deployment.vmName
-        Server = $VIHandle
+        Server = $ViHandle
         Confirm = $false
     }
     Restart-VMGuest @params
@@ -98,7 +104,7 @@ function Join-ADDomain {
         Script = $commandList
         Hostname = $Deployment.vmName
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @parmas
 
@@ -110,7 +116,7 @@ function Join-ADDomain {
         Script = $commandList
         Hostname = $Deployment.Hostname
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     $DefaultIdentitySource = $(Invoke-ExecuteScript @params).Scriptoutput
 
@@ -120,22 +126,22 @@ function Join-ADDomain {
         Script = "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
         Hostname = $Deployment.Hostname
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Write-Output -InputObject $params.Script | Out-String
     $viVersion = $(Invoke-ExecuteScript @params).Scriptoutput.Split("") | Select-String -pattern $versionRegex
 
     Write-Output -InputObject $viVersion
 
-    if ($viVersion -match "6.7." -and $Deployment.DeployType -ne "infrastructure" -and $DefaultIdentitySource -ne $ADInfo.ADDomain) {
+    if ($viVersion -match "6.7." -and $Deployment.DeployType -ne "infrastructure" -and $DefaultIdentitySource -ne $AdInfo.ADDomain) {
         # Write separator line to transcript.
         Write-SeparatorLine
 
-        New-IdentitySourcevCenter67 -Deployment $Deployment -ADInfo $ADInfo
+        New-IdentitySourcevCenter67 -Deployment $Deployment -ADInfo $AdInfo
 
         Write-SeparatorLine
 
-        Add-SSOAdminGroups -Deployment $Deployment -ADInfo $ADInfo -VIHandle $VIHandle
+        Add-SsoAdminGroups -Deployment $Deployment -ADInfo $AdInfo -ViHandle $ViHandle
     } elseif ($viVersion -match "6.5." -and $pscDeployments -contains $Deployment.DeployType) {
         Write-SeparatorLine
 
@@ -143,7 +149,7 @@ function Join-ADDomain {
 
         Write-SeparatorLine
 
-        Add-SSOAdminGroups -Deployment $Deployment -ADInfo $ADInfo -VIHandle $VIHandle
+        Add-SsoAdminGroups -Deployment $Deployment -ADInfo $AdInfo -ViHandle $ViHandle
     }
 
     Write-SeparatorLine

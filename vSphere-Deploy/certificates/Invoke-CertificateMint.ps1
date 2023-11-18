@@ -4,23 +4,35 @@ function Invoke-CertificateMint {
         Mint certificates from online Microsoft CA.
 
     .DESCRIPTION
+        Mint certificates from online Microsoft CA.
 
-    .PARAMETER SVCDir
+    .PARAMETER SvcDir
+        The mandatory string parameter SvcDir is the path to the vSphere node service directory for certificates.
 
-    .PARAMETER CSRFile
+    .PARAMETER CsrFile
+        The mandatory string parameter CsrFile is the CSR filename.
 
     .PARAMETER CertFile
+        The mandatory string parameter CertFile is the name of the certificate file.
 
     .PARAMETER Template
+        The mandatory string parameter Template is the name of the template to use for the certificates.
 
     .PARAMETER CertDir
+        The mandatory string parameter CertDir is the local path to the location of the replacement certificates.
 
-    .PARAMETER IssuingCA
+    .PARAMETER IssuingCa
+        The mandatory sting parameter IssuingCa is the name of issuing Certificate Authority.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Invoke-CertificateMint -SVCDir < > -CSRFile < > -CertFile < > -Template < > -CertDir < > -IssuingCA < >
+        Invoke-CertificateMint -SVCDir <String>
+                               -CSRFile <String>
+                               -CertFile <String>
+                               -Template <String>
+                               -CertDir <String>
+                               -IssuingCa <String>
 
         PS C:\> Invoke-CertificateMint
 
@@ -34,27 +46,27 @@ function Invoke-CertificateMint {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $servicePath,
+            [string]$SvcDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $csrFile,
+            [string]$CsrFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $certFile,
+            [string]$CertFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $template,
+            [string]$Template,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $certPath,
+            [string]$CertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $issuingCA
+            [string]$IssuingCa
     )
 
     # initialize objects to use for external processes
@@ -68,9 +80,9 @@ function Invoke-CertificateMint {
     $script:certsWaitingForApproval = $false
         # submit the CSR to the CA
         $psi.FileName = "certreq.exe"
-        $psi.Arguments = @("-submit -attrib `"$template`" -config `"$issuingCA`" -f `"$certPath\$servicePath\$csrFile`" `"$certPath\$servicePath\$certFile`"")
+        $psi.Arguments = @("-submit -attrib `"$Template`" -config `"$IssuingCa`" -f `"$CertDir\$SvcDir\$CsrFile`" `"$CertDir\$SvcDir\$CertFile`"")
         Write-Host -Object ""
-        Write-Host -Object "Submitting certificate request for $servicePath..." -ForegroundColor Yellow
+        Write-Host -Object "Submitting certificate request for $SvcDir..." -ForegroundColor Yellow
         [void]$process.Start()
         $cmdOut = $process.StandardOutput.ReadToEnd()
         if ($cmdOut.Trim() -like "*request is pending*") {
@@ -78,17 +90,17 @@ function Invoke-CertificateMint {
             $script:certsWaitingForApproval = $true
             # So we need to save the request ID to use later once they're approved.
             $reqID = ([regex]"RequestId: (\d+)").Match($cmdOut).Groups[1].Value
-            if ($reqID.Trim() -eq [String]::Empty) {
+            if ($reqID.Trim() -eq [string]::Empty) {
                 Write-Error -Message "Unable to parse RequestId from output."
                 Write-Debug -Message $cmdOut
                 exit
             }
             Write-Host -Object "RequestId: $reqID is pending" -ForegroundColor Yellow
             # Save the request ID to a file that Invoke-CertificateMintResume can read back in later
-            $reqID | Out-File -FilePath "$certPath\$servicePath\requestid.txt"
+            $reqID | Out-File -FilePath "$CertDir\$SvcDir\requestid.txt"
         } else {
             # Output doesn't indicate a pending request, so check for a signed cert file
-            if (-not(Test-Path -Path "$certPath\$servicePath\$certFile")) {
+            if (-not(Test-Path -Path "$CertDir\$SvcDir\$CertFile")) {
                 Write-Error -Message "Certificate request failed or was unable to download the signed certificate."
                 Write-Error -Message "Verify that the ISSUING_CA variable is set correctly."
                 Write-Debug -Message $cmdOut

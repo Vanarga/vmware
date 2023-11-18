@@ -4,17 +4,23 @@ function New-AutoDeployRule {
         Configure the Autodeploy Service - set auto start, register vCenter, and start service.
 
     .DESCRIPTION
+        Configure the Autodeploy Service - set auto start, register vCenter, and start service.
 
     .PARAMETER Rules
+        The mandatory array of PSObjects parameter Rules are all the autodeploy rules that will be applied.
 
     .PARAMETER Path
+        The mandatory string parameter Path is the location of the host profile file to import.
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-AutoDeployRule -Rules < > -Path < > -VIHandle < >
+        New-AutoDeployRule -Rules <PSObject Array>
+                           -Path <String>
+                           -ViHandle <VI Session>
 
         PS C:\> New-AutoDeployRule
 
@@ -28,15 +34,15 @@ function New-AutoDeployRule {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Rules,
+            [string[]]$Rules,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Path,
+            [string]$Path,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-Output $Rules | Out-String
@@ -47,8 +53,8 @@ function New-AutoDeployRule {
     ForEach ($rule in $Rules) {
         $hostProfExport = $Path + "\" + $rule.ProfileImport
 
-        $si = Get-View -Server $VIHandle ServiceInstance
-        $hostProfMgr = Get-View -Server $VIHandle -Id $si.Content.HostProfileManager
+        $si = Get-View -Server $ViHandle ServiceInstance
+        $hostProfMgr = Get-View -Server $ViHandle -Id $si.Content.HostProfileManager
 
         $spec = New-Object -TypeName VMware.Vim.HostProfileSerializedHostProfileSpec
         $spec.Name = $rule.ProfileName
@@ -72,14 +78,14 @@ function New-AutoDeployRule {
         }
         Write-Output -InputObject $img | Out-String
 
-        $Pro = Get-VMHostProfile -Server $VIHandle | Where-Object {$_.Name -eq $rule.ProfileName}
+        $pro = Get-VMHostProfile -Server $ViHandle | Where-Object {$_.Name -eq $rule.ProfileName}
         Write-Output -InputObject $pro | Out-String
 
-        $clu = Get-Datacenter -Server $VIHandle -Name $rule.Datacenter | Get-Cluster -Name $rule.Cluster
+        $clu = Get-Datacenter -Server $ViHandle -Name $rule.Datacenter | Get-Cluster -Name $rule.Cluster
         Write-Output $clu | Out-String
 
         Write-Output -InputObject "New-DeployRule -Name $($rule.RuleName) -Item $img, $pro, $clu -Pattern $($rule.Pattern)" | Out-String
-        New-DeployRule -Name $rule.RuleName -Item $img, $Pro, $clu -Pattern $rule.Pattern -ErrorAction SilentlyContinue
+        New-DeployRule -Name $rule.RuleName -Item $img, $pro, $clu -Pattern $rule.Pattern -ErrorAction SilentlyContinue
 
         # Activate the deploy rule.
         Add-DeployRule -DeployRule $rule.RuleName -ErrorAction SilentlyContinue

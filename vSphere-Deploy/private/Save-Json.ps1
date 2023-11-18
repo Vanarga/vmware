@@ -4,15 +4,19 @@ function Save-Json {
         Save Object to json file.
 
     .DESCRIPTION
+        Save Object to json file.
 
     .PARAMETER InputObject
+        The mandatory PSObject array contains objects to be saved to the json file.
 
     .PARAMETER FilePath
+        The mandatory string parameter FilePath is the path to the json file target.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Save-ToJson -InputObject < > -FilePath < >
+        Save-ToJson -InputObject <PSObject Array>
+                    -FilePath <String>
 
         PS C:\> Save-Json
 
@@ -30,7 +34,7 @@ function Save-Json {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $FilePath
+            [string]$FilePath
     )
 
     Remove-Null -InputObject $InputObject

@@ -1,52 +1,60 @@
-function Invoke-VMCACertificateMint {
+function Invoke-VmcaCertificateMint {
     <#
     .SYNOPSIS
         This function issues a new SSL certificate from the VMCA.
 
     .DESCRIPTION
+        This function issues a new SSL certificate from the VMCA.
 
-    .PARAMETER SVCDir
+    .PARAMETER SvcDir
+        The mandatory string parameter SvcDir is the vmware service directory name and is used for the subfolder to place the certficates in.
 
-    .PARAMETER CFGFile
+    .PARAMETER CfgFile
+        The mandatory string parameter CfgFile is the name of the configuration file.
 
     .PARAMETER CertFile
+        The mandatory string parameter CertFile is the name of the certificate file.
 
-    .PARAMETER PrivFile
+    .PARAMETER PrivateFile
+        The mandatory string parameter CertFile is the name of the certificate file.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Invoke-VMCACertificateMint -SVCDir < > -CFGFile < > -CertFile < > -PrivFile < >
+        Invoke-VmcaCertificateMint -SvcDir <String>
+                                   -CfgFile <String>
+                                   -CertFile <String>
+                                   -PrivateFile <String>
 
-        PS C:\> Invoke-VMCACertificateMint
+        PS C:\> Invoke-VmcaCertificateMint
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Invoke-VMCACertificateMint
+        Version 1.0 - Invoke-VmcaCertificateMint
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $servicePath,
+            [string]$SvcDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $configFile,
+            [string]$CfgFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $certFile,
+            [string]$CertFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $privateFile
+            [string]$PrivateFile
     )
 
-    if (-not(Test-Path -Path "$certPath\$servicePath")) {
-        New-Item -Path "$certPath\$servicePath" -Type Directory
+    if (-not(Test-Path -Path "$CertDir\$SvcDir")) {
+        New-Item -Path "$CertDir\$SvcDir" -Type Directory
     }
     $computerName = Get-WmiObject -Class Win32_ComputerSystem
     $defFQDN = "$($computerName.name).$($computerName.domain)".ToLower()
@@ -77,12 +85,12 @@ function Invoke-VMCACertificateMint {
     Email = $email
     Hostname = $machineFQDN
     "
-    $out = $vmwTemplate | Out-File -FilePath "$certPath\$servicePath\$configFile" -Encoding default -Force
+    $out = $vmwTemplate | Out-File -FilePath "$CertDir\$SvcDir\$CfgFile" -Encoding default -Force
     # Mint certificate from VMCA and save to disk
     Set-Location -Path "C:\Program Files\VMware\vCenter Server\vmcad"
-    .\certool --genkey --privkey=$certPath\$servicePath\$privateFile --pubkey=$certPath\$servicePath\$servicePath.pub
-    .\certool --gencert --cert=$certPath\$servicePath\$certFile --privkey=$certPath\$servicePath\$privateFile --config=$certPath\$servicePath\$configFile --server=$pscFQDN
-    if (Test-Path -Path "$certPath\$servicePath\$certFile") {
-        Write-Host -Object "PEM file located at $certPath\$servicePath\new_machine.cer" -ForegroundColor Yellow
+    .\certool --genkey --privkey=$CertDir\$SvcDir\$PrivateFile --pubkey=$CertDir\$SvcDir\$SvcDir.pub
+    .\certool --gencert --cert=$CertDir\$SvcDir\$CertFile --privkey=$CertDir\$SvcDir\$PrivateFile --config=$CertDir\$SvcDir\$CfgFile --server=$pscFQDN
+    if (Test-Path -Path "$CertDir\$SvcDir\$CertFile") {
+        Write-Host -Object "PEM file located at $CertDir\$SvcDir\new_machine.cer" -ForegroundColor Yellow
     }
 }

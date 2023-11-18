@@ -1,18 +1,22 @@
 function New-Permissions {
     <#
     .SYNOPSIS
-        Set Permissions
+        Set Permissions in vCenter.
 
     .DESCRIPTION
+        Set Permissions in vCenter.
 
     .PARAMETER VPermissions
+        The mandatory string array parameter VPermissions contains all the permissions to be applied to the vCenter.
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-Permissions -VPermissions < > -VIHandle < >
+        New-Permissions -VPermissions <String[]>
+                        -ViHandle <VI Session>
 
         PS C:\> New-Permissions
 
@@ -26,11 +30,11 @@ function New-Permissions {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VPermissions,
+            [string[]]$VPermissions,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-SeparatorLine
@@ -40,14 +44,14 @@ function New-Permissions {
     ForEach ($permission in $VPermissions) {
         $entity = Get-Inventory -Name $permission.Entity | Where-Object {$_.Id -match $permission.Location}
         if ($permission.Group) {
-            $principal = Get-VIAccount -Group -Name $permission.Principal -Server $VIHandle
+            $principal = Get-VIAccount -Group -Name $permission.Principal -Server $ViHandle
         } else {
-            $principal = Get-VIAccount -Name $permission.Principal -Server $VIHandle
+            $principal = Get-VIAccount -Name $permission.Principal -Server $ViHandle
         }
 
-        Write-Output -InputObject "New-VIPermission -Server $VIHandle -Entity $entity -Principal $principal -Role $($permission.Role) -Propagate $([System.Convert]::ToBoolean($permission.Propagate))" | Out-String
+        Write-Output -InputObject "New-VIPermission -Server $ViHandle -Entity $entity -Principal $principal -Role $($permission.Role) -Propagate $([System.Convert]::ToBoolean($permission.Propagate))" | Out-String
 
-        New-VIPermission -Server $VIHandle -Entity $entity -Principal $principal -Role $permission.Role -Propagate $([System.Convert]::ToBoolean($permission.Propagate))
+        New-VIPermission -Server $ViHandle -Entity $entity -Principal $principal -Role $permission.Role -Propagate $([System.Convert]::ToBoolean($permission.Propagate))
 
     }
     Write-SeparatorLine

@@ -1,32 +1,32 @@
 function Load-Module {
     <#
     .SYNOPSIS
-        Check is module is installed.
+        Check is module is installed, load it if it is, and install and load it, if it is not.
 
     .DESCRIPTION
+        Check is module is installed, load it if it is, and install and load it, if it is not.
 
-    .PARAMETER InputObject
-
-    .PARAMETER FilePath
+    .PARAMETER ModuleName
+        The mandatory string parameter ModuleName is the name of the module to load/install.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Save-ToJson -InputObject < > -FilePath < >
+        Load-Module -ModuleName <String>
 
-        PS C:\> Save-Json
+        PS C:\> Load-Module
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-25
-        Version 1.0 - Verify-Module
+        Version 1.0 - Load-Module
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $ModuleName
+            [string]$ModuleName
     )
     if (Get-Module -ListAvailable | Where-Object {$_.Name -match $ModuleName}) {
         Import-Module -Name $ModuleName -ErrorAction SilentlyContinue

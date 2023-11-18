@@ -1,15 +1,15 @@
-function Invoke-OpenSSL {
+function Invoke-OpenSsl {
     <#
     .SYNOPSIS
 
     .DESCRIPTION
 
-    .PARAMETER OpenSSLArgs
+    .PARAMETER OpenSslArgs
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Invoke-OpenSSL -OpenSSLArgs < >
+        Invoke-OpenSSL -OpenSslArgs <String[]>
 
         PS C:\> Invoke-OpenSSL
 
@@ -23,19 +23,19 @@ function Invoke-OpenSSL {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $openSSLArgs
+            [string[]]$OpenSslArgs
     )
 
-    $openSSLInfo = $null
+    $OpenSslInfo = $null
     $processDiag = $null
-    $openSSLInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo
-    $openSSLInfo.FileName = $OpenSSL
-    $openSSLInfo.RedirectStandardError = $true
-    $openSSLInfo.RedirectStandardOutput = $true
-    $openSSLInfo.UseShellExecute = $false
-    $openSSLInfo.Arguments = $openSSLArgs
+    $OpenSslInfo = New-Object -TypeName System.Diagnostics.ProcessStartInfo
+    $OpenSslInfo.FileName = $OpenSSL
+    $OpenSslInfo.RedirectStandardError = $true
+    $OpenSslInfo.RedirectStandardOutput = $true
+    $OpenSslInfo.UseShellExecute = $false
+    $OpenSslInfo.Arguments = $OpenSslArgs
     $processDiag = New-Object -TypeName System.Diagnostics.Process
-    $processDiag.StartInfo = $openSSLInfo
+    $processDiag.StartInfo = $OpenSslInfo
     $processDiag.Start() | Out-Null
     $processDiag.WaitForExit()
     $stdOut = $processDiag.StandardOutput.ReadToEnd()

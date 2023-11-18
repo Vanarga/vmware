@@ -4,17 +4,23 @@ function Import-HostRootCertificate {
         Download the Node self signed certificate and install it in the local trusted root certificate store.
 
     .DESCRIPTION
+        Download the Node self signed certificate and install it in the local trusted root certificate store.
 
-    .PARAMETER CertPath
+    .PARAMETER CertDir
+        The mandatory string parameter CertDir is the local path to the location of the replacement certificates.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
+       The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Import-HostRootCertificate -CertPath < > -Deployment < > -VIHandle < >
+        Import-HostRootCertificate -CertDir <String>
+                                   -Deployment <String[]>
+                                   -ViHandle <VI Session>
 
         PS C:\> Import-HostRootCertificate
 
@@ -28,22 +34,22 @@ function Import-HostRootCertificate {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $CertPath,
+            [string]$CertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment,
+            [String[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-SeparatorLine
 
-    $rootCertPath = $CertPath+ "\" + $Deployment.Hostname.Split(".")[0] + "_self_signed_root_cert.crt"
+    $rootCertDir = $CertDir+ "\" + $Deployment.Hostname.Split(".")[0] + "_self_signed_root_cert.crt"
 
-    $credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
+    $Credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
 
     $commandList = $null
     $commandList = @()
@@ -52,7 +58,7 @@ function Import-HostRootCertificate {
         Script = $commandList
         Hostname = $Deployment.Hostname
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     $Certid = $(Invoke-ExecuteScript @params).Scriptoutput.Split("")[2]
 
@@ -63,24 +69,24 @@ function Import-HostRootCertificate {
         Script = $commandList
         Hostname = $Deployment.Hostname
         Credential = $credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
 
-    $filePath = $null
-    $filePath = @()
-    $filePath += "/root/vcrootcert.crt"
-    $filePath += $rootCertPath
+    $FilePath = $null
+    $FilePath = @()
+    $FilePath += "/root/vcrootcert.crt"
+    $FilePath += $rootCertDir
     $params = @{
-        Path = $filePath
+        Path = $FilePath
         Hostname = $Deployment.Hostname
         Credential = $credential
-        VIHandle = $VIHandle
+        ViHandle = $ViHandle
         Upload = $false
     }
     Copy-FileToServer @params
 
-    Import-Certificate -FilePath $rootCertPath -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
+    Import-Certificate -FilePath $rootCertDir -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
 
     Write-SeparatorLine
 }

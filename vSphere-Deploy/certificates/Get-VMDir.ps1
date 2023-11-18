@@ -4,18 +4,19 @@ function Get-VMDir {
         Displays the currently used VMDir certificate via OpenSSL.
 
     .DESCRIPTION
+        Displays the currently used VMDir certificate via OpenSSL.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Get-VMDir
+        Get-VmDir
 
-        PS C:\> Get-VMDir
+        PS C:\> Get-VmDir
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Get-VMDir
+        Version 1.0 - Get-VmDir
     #>
     [CmdletBinding ()]
     Param ()

@@ -1,44 +1,41 @@
-function Skip-SSLTrustIssues {
+function Skip-SslTrustIssues {
     <#
     .SYNOPSIS
-        Save Object to json file.
+        Ignoring SSL trust in PowerShell System.Net.WebClient.
 
     .DESCRIPTION
-
-    .PARAMETER InputObject
-
-    .PARAMETER FilePath
+        Ignoring SSL trust in PowerShell System.Net.WebClient
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Save-ToJson -InputObject < > -FilePath < >
+        Skip-SslTrustIssues
 
-        PS C:\> Save-Json
+        PS C:\> Skip-SslTrustIssues
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Skip-SSLTrustIssues
+        Version 1.0 - Skip-SslTrustIssues
     #>
     [CmdletBinding ()]
     Param ()
 
     # https://blogs.technet.microsoft.com/bshukla/2010/04/12/ignoring-ssl-trust-in-powershell-system-net-webclient/
-    $NetAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
+    $netAssembly = [Reflection.Assembly]::GetAssembly([System.Net.Configuration.SettingsSection])
 
-    if ($NetAssembly) {
-        $BindingFlags = [Reflection.BindingFlags] "Static,GetProperty,NonPublic"
-        $SettingsType = $NetAssembly.GetType("System.Net.Configuration.SettingsSectionInternal")
+    if ($netAssembly) {
+        $bindingFlags = [Reflection.BindingFlags] "Static,GetProperty,NonPublic"
+        $settingsType = $netAssembly.GetType("System.Net.Configuration.SettingsSectionInternal")
 
-        $Instance = $SettingsType.InvokeMember("Section", $BindingFlags, $null, $null, @())
+        $instance = $settingsType.InvokeMember("Section", $bindingFlags, $null, $null, @())
 
-        if ($Instance) {
-            $BindingFlags = "NonPublic","Instance"
-            $UseUnsafeHeaderParsingField = $SettingsType.GetField("useUnsafeHeaderParsing", $BindingFlags)
+        if ($instance) {
+            $bindingFlags = "NonPublic","Instance"
+            $useUnsafeHeaderParsingField = $settingsType.GetField("useUnsafeHeaderParsing", $bindingFlags)
 
-            if ($UseUnsafeHeaderParsingField) {
-              $UseUnsafeHeaderParsingField.SetValue($Instance, $true)
+            if ($useUnsafeHeaderParsingField) {
+              $useUnsafeHeaderParsingField.SetValue($instance, $true)
             }
         }
     }

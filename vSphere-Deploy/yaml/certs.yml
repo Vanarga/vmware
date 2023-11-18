@@ -14,7 +14,7 @@ Properties:
   Country: US
   Email: vcadmins@acme.com
   CADownload: https
-  IssuingCA: ca3\ca3.acme
+  IssuingCa: ca3\ca3.acme
   V6Template: CertificateTemplate:vSphere6.0
   SubTemplate: CertificateTemplate:vSphere6.0VMCA
   RootRenewal: Renewal=0

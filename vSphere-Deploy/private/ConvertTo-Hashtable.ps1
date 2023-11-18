@@ -4,13 +4,15 @@ function ConvertTo-Hashtable {
         Convert PS Object to Hashtable.
 
     .DESCRIPTION
+        Convert PS Object to Hashtable.
 
     .PARAMETER InputObject
+        The mandatory PSObject array contains objects representing a row of data to convert to a Hashtable.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        ConvertTo-Hashtable -InputObject < >
+        ConvertTo-Hashtable -InputObject <PSObject>
 
         PS C:\> ConvertTo-Hashtable
 

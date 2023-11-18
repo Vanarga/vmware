@@ -1,18 +1,22 @@
 function Invoke-CertificateMintResume {
     <#
     .SYNOPSIS
-        Resume the minting process for certificates from online Microsoft CA that required approval
+        Resume the minting process for certificates from online Microsoft CA that required approval.
 
     .DESCRIPTION
+        Resume the minting process for certificates from online Microsoft CA that required approval.
 
-    .PARAMETER SVCDir
+    .PARAMETER SvcDir
+        The mandatory string parameter SvcDir is the vmware service directory name and is used for the subfolder to place the certficates in.
 
     .PARAMETER CertFile
+        The mandatory string parameter CertFile is the certificate filename.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Invoke-CertificateMintResume -SVCDir < > -CertFile < >
+        Invoke-CertificateMintResume -SvcDir <String>
+                                     -CertFile <String>
 
         PS C:\> Invoke-CertificateMintResume
 
@@ -26,11 +30,11 @@ function Invoke-CertificateMintResume {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $servicePath,
+            [string]$SvcDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $certFile
+            [string]$CertFile
     )
 
     # initialize objects to use for external processes
@@ -43,16 +47,16 @@ function Invoke-CertificateMintResume {
     $process.StartInfo = $psi
     $script:certsWaitingForApproval = $false
     # skip if there's no requestid.txt file
-    if (-not(Test-Path -Path "$certPath\$servicePath\requestid.txt")) {continue}
-    $reqID = Get-Content -Path "$certPath\$servicePath\requestid.txt"
-    Write-Verbose -Message "Found RequestId: $reqID for $servicePath"
+    if (-not(Test-Path -Path "$CertDir\$SvcDir\requestid.txt")) {continue}
+    $reqID = Get-Content -Path "$CertDir\$SvcDir\requestid.txt"
+    Write-Verbose -Message "Found RequestId: $reqID for $SvcDir"
     # retrieve the signed certificate
     $psi.FileName = "certreq.exe"
-    $psi.Arguments = @("-retrieve -f -config `"$issuingCA`" $reqID `"$certPath\$servicePath\$certFile`"")
-    Write-Host -Object "Downloading the signed $servicePath certificate..." -ForegroundColor Yellow
-    [void]$Process.Start()
+    $psi.Arguments = @("-retrieve -f -config `"$IssuingCa`" $reqID `"$CertDir\$SvcDir\$CertFile`"")
+    Write-Host -Object "Downloading the signed $SvcDir certificate..." -ForegroundColor Yellow
+    [void]$process.Start()
     $cmdOut = $process.StandardOutput.ReadToEnd()
-    if (-not(Test-Path -Path "$certPath\$servicePath\$certFile")) {
+    if (-not(Test-Path -Path "$CertDir\$SvcDir\$CertFile")) {
         # it's not there, so check if the request is still pending
         if ($cmdOut.Trim() -like "*request is pending*") {
             $script:certsWaitingForApproval = $true

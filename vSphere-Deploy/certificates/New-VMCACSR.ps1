@@ -1,21 +1,22 @@
-function New-VMCACSR {
+function New-VmcaCsr {
     <#
     .SYNOPSIS
         Create RSA private key and CSR.
 
     .DESCRIPTION
+        Create RSA private key and CSR.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-VMCACSR
+        New-VmcaCsr
 
-        PS C:\> New-VMCACSR
+        PS C:\> New-VmcaCsr
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - New-VMCACSR
+        Version 1.0 - New-VmcaCsr
     #>
     [CmdletBinding ()]
     Param ()
@@ -47,14 +48,14 @@ function New-VMCACSR {
     0.organizationName = $orgUnit
     commonName = $vspcFQDN
     "
-    Set-Location $certPath
+    Set-Location $CertDir
     if (-not(Test-Path -Path "VMCA")) {
         New-Item -Path "VMCA" -Type Directory
     }
     # Create CSR and private key
-    $out = $requestTemplate | Out-File -FilePath "$certPath\VMCA\root_signing_cert.cfg" -Encoding default -Force
-    Invoke-OpenSSL -OpenSSLArgs "req -new -nodes -out `"$certPath\VMCA\root_signing_cert.csr`" -keyout `"$certPath\VMCA\vmca-org.key`" -config `"$certPath\VMCA\root_signing_cert.cfg`""
-    Invoke-OpenSSL -OpenSSLArgs "rsa -in `"$certPath\VMCA\vmca-org.key`" -out `"$certPath\VMCA\root_signing_cert.key`""
+    $out = $requestTemplate | Out-File -FilePath "$CertDir\VMCA\root_signing_cert.cfg" -Encoding default -Force
+    Invoke-OpenSSL -OpenSSLArgs "req -new -nodes -out `"$CertDir\VMCA\root_signing_cert.csr`" -keyout `"$CertDir\VMCA\vmca-org.key`" -config `"$CertDir\VMCA\root_signing_cert.cfg`""
+    Invoke-OpenSSL -OpenSSLArgs "rsa -in `"$CertDir\VMCA\vmca-org.key`" -out `"$CertDir\VMCA\root_signing_cert.key`""
     Remove-Item -Path "VMCA\vmca-org.key"
-    Write-Host -Object "CSR is located at $certPath\VMCA\root_signing_cert.csr" -ForegroundColor Yellow
+    Write-Host -Object "CSR is located at $CertDir\VMCA\root_signing_cert.csr" -ForegroundColor Yellow
 }

@@ -1,41 +1,48 @@
-function Add-SSOAdminGroups {
+function Add-SsoAdminGroups {
     <#
     .SYNOPSIS
+        Add the domain group to the vCenter for single sign-on as Admins.
 
     .DESCRIPTION
+        Add the domain group to the vCenter for single sign-on as Admins.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
-    .PARAMETER ADInfo
+    .PARAMETER AdInfo
+        The manadatory string array AdInfo contains all the information about the Active Directory domain.
 
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Add-SSOAdminGroups -Deployment < > -ADInfo < > -VIHandle < >
+        Add-SsoAdminGroups -Deployment <String[]>
+                           -AdInfo <String[]>
+                           -ViHandle <VI Session>
 
-        PS C:\> Add-SSOAdminGroups
+        PS C:\> Add-SsoAdminGroups
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Add-SSOAdminGroups
+        Version 1.0 - Add-SsoAdminGroups
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment,
+            [string[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $ADInfo,
+            [string[]]$AdInfo,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     Write-Output -InputObject "============ Add AD Groups to SSO Admin Groups ============" | Out-String
@@ -44,7 +51,7 @@ function Add-SSOAdminGroups {
     $domainExtension = $Deployment.SSODomainName.Split(".")[1]
 
     # Active Directory variables
-    $adAdminsGroupSID = (Get-ADgroup -Identity $ADInfo.ADvCenterAdmins).sid.value
+    $adAdminsGroupSID = (Get-ADgroup -Identity $AdInfo.ADvCenterAdmins).sid.value
 
     $versionRegex = '\b\d{1}\.\d{1}\.\d{1,3}\.\d{1,5}\b'
 
@@ -52,7 +59,7 @@ function Add-SSOAdminGroups {
         Script = "echo `'" + $Deployment.VCSARootPass + "`' | appliancesh 'com.vmware.appliance.version1.system.version.get'"
         Hostname = $Deployment.Hostname
         Credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Write-Output -InputObject $params.Script | Out-String
     $viVersion = $(Invoke-ExecuteScript @params).Scriptoutput.Split("") | Select-String -pattern $versionRegex
@@ -73,7 +80,7 @@ function Add-SSOAdminGroups {
         $commandList += "echo -e `"dn: cn=$($Deployment.SSODomainName),cn=Tenants,cn=IdentityManager,cn=Services,dc=$subDomain,dc=$domainExtension`" >> defaultdomain.ldif"
         $commandList += "echo -e `"changetype: modify`" >> defaultdomain.ldif"
         $commandList += "echo -e `"replace: vmwSTSDefaultIdentityProvider`" >> defaultdomain.ldif"
-        $commandList += "echo -e `"vmwSTSDefaultIdentityProvider: $($ADInfo.ADDomain)`" >> defaultdomain.ldif"
+        $commandList += "echo -e `"vmwSTSDefaultIdentityProvider: $($AdInfo.ADDomain)`" >> defaultdomain.ldif"
         $commandList += "echo -e `"-`" >> defaultdomain.ldif"
         $commandList += "/opt/likewise/bin/ldapmodify -f /root/defaultdomain.ldif -h $LDAPServer -D `"cn=Administrator,cn=Users,dc=$subDomain,dc=$domainExtension`" -w `'$($Deployment.VCSARootPass)`'"
     }
@@ -142,7 +149,7 @@ function Add-SSOAdminGroups {
         Script = $commandList
         Hostname = $Deployment.Hostname
         Credential = New-Object -TypeName System.Management.Automation.PSCredential("root", [securestring](ConvertTo-SecureString -String $Deployment.VCSARootPass -AsPlainText -Force))
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
 }

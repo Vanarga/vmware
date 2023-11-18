@@ -1,36 +1,40 @@
-function New-TFTPService {
+function New-TftpService {
     <#
     .SYNOPSIS
         Configure TFTP, set firewall exemption, set service to auto start, start service.
 
     .DESCRIPTION
+        Configure TFTP, set firewall exemption, set service to auto start, start service.
 
     .PARAMETER Hostname
+        The mandatory string parameter Hostname is the name of the host on which the TFTP service is to be configured.
 
-    .PARAMETER Username
+    .PARAMETER Credential
+        The mandatory secure string parameter Credential is the credentials needed to connect to the host.
 
-    .PARAMETER Password
-
-    .PARAMETER VIHandle
+    .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-TFTPService -Hostname < > -Username < > -Password < > -VIHandle < >
+        New-TftpService -Hostname <String>
+                        -Credential <Secure String>
+                        -ViHandle <VI Session>
 
-        PS C:\> New-TFTPService
+        PS C:\> New-TftpService
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - New-TFTPService
+        Version 1.0 - New-TftpService
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Hostname,
+            [string]$Hostname,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -38,7 +42,7 @@ function New-TFTPService {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VIHandle
+            $ViHandle
     )
 
     $commandList = $null
@@ -92,7 +96,7 @@ function New-TFTPService {
         Script = $commandList
         Hostname = $Hostname
         Credential = $Credential
-        ViHandle = $VIHandle
+        ViHandle = $ViHandle
     }
     Invoke-ExecuteScript @params
 }

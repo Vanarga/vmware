@@ -170,7 +170,7 @@ curl -k -u "${USERNAME}":${USERPASS} --ntlm $CERTLINK \
 URL="https://${MSCA}/certsrv/certnew.p7b?ReqID=CACert&Renewal=-1&Enc=DER"
 
 # Download the chain certificate.
-curl -k -u "${USERNAME}":$USERPASS --ntlm $URL > /root/docker/nginx/ssl/chain.p7b
+curl -k -u "${USERNAME}":$USERPASS --ntlm $Url > /root/docker/nginx/ssl/chain.p7b
 # Covert the PKCS#7 (pb7) Certificate to PEM.
 openssl pkcs7 -inform PEM -outform PEM -in /root/docker/nginx/ssl/chain.p7b -print_certs > /root/docker/nginx/ssl/chain.crt
 

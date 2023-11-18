@@ -1,32 +1,32 @@
 function Root-Path {
     <#
     .SYNOPSIS
-        Save Object to json file.
+        Return the rooted (absolute) path of a relative path string.
 
     .DESCRIPTION
+        Return the rooted (absolute) path of a relative path string.
 
-    .PARAMETER InputObject
-
-    .PARAMETER FilePath
+    .PARAMETER Path
+        The mandatory string parameter Path is the path to be rooted.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Save-ToJson -InputObject < > -FilePath < >
+        Root-Path -Path <String>
 
-        PS C:\> Save-Json
+        PS C:\> Root-Path
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Save-Json
+        Version 1.0 - Root-Path
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Path
+            [string]$Path
     )
 
     if (-not [System.IO.Path]::IsPathRooted($FilePath)) {
