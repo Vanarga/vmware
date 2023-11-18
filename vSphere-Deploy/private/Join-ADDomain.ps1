@@ -1,38 +1,44 @@
-function Join-ADDomain {
+function Join-AdDomain {
     <#
     .SYNOPSIS
         Join the VCSA to the Windows AD Domain.
 
     .DESCRIPTION
+        Join the VCSA to the Windows AD Domain.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
-    .PARAMETER ADInfo
+    .PARAMETER AdInfo
+        The manadatory string array AdInfo contains all the information about the Active Directory domain.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Join-ADDomain -Deployment < > -ADInfo < > -ViHandle < >
+        Join-AdDomain -Deployment <String[]>
+                      -AdInfo <String[]>
+                      -ViHandle <Vi Session>
 
         PS C:\> Join-ADDomain
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Join-ADDomain
+        Version 1.0 - Join-AdDomain
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment,
+            [string[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $AdInfo,
+            [string[]]$AdInfo,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -135,7 +141,7 @@ function Join-ADDomain {
 
         Write-SeparatorLine
 
-        Add-SSOAdminGroups -Deployment $Deployment -ADInfo $AdInfo -ViHandle $ViHandle
+        Add-SsoAdminGroups -Deployment $Deployment -ADInfo $AdInfo -ViHandle $ViHandle
     } elseif ($viVersion -match "6.5." -and $pscDeployments -contains $Deployment.DeployType) {
         Write-SeparatorLine
 
@@ -143,7 +149,7 @@ function Join-ADDomain {
 
         Write-SeparatorLine
 
-        Add-SSOAdminGroups -Deployment $Deployment -ADInfo $AdInfo -ViHandle $ViHandle
+        Add-SsoAdminGroups -Deployment $Deployment -ADInfo $AdInfo -ViHandle $ViHandle
     }
 
     Write-SeparatorLine

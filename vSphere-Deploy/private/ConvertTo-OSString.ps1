@@ -1,18 +1,20 @@
-function ConvertTo-OSString {
+function ConvertTo-OsString {
     <#
     .SYNOPSIS
-        Convert OS Customization Object to Stirng needed to run the command.
+        Convert OS Customization Object to String needed to run the command.
 
     .DESCRIPTION
+        Convert OS Customization Object to String needed to run the command.
 
     .PARAMETER InputObject
+        The mandatory PSObject parameter InputObject holds the values that need to be formatted.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        ConvertTo-OSString -InputObject < >
+        ConvertTo-OsString -InputObject <PSObject>
 
-        PS C:\> ConvertTo-OSString
+        PS C:\> ConvertTo-OsString
 
     .NOTES
         Author: Michael van Blijdesteijn

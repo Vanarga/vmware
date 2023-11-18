@@ -1,29 +1,32 @@
-function Test-OpenSSL {
+function Test-OpenSsl {
     <#
     .SYNOPSIS
+        Check to see if OpenSSL is installed.
 
     .DESCRIPTION
+        Check to see if OpenSSL is installed.
 
     .PARAMETER OpenSSL
+        The mandatory string parameter OpenSsl is the path to the OpenSSL install folder.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Test-OpenSSL -OpenSSL < >
+        Test-OpenSsl -OpenSSL <String>
 
-        PS C:\> Test-OpenSSL
+        PS C:\> Test-OpenSsl
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Test-OpenSSL
+        Version 1.0 - Test-OpenSsl
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $OpenSSL
+            [string]$OpenSSL
     )
 
     if (-not(Test-Path -Path $OpenSSL)) {

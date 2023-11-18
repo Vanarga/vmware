@@ -1,17 +1,22 @@
 function Add-Licensing {
     <#
     .SYNOPSIS
+        This function adds all licenses and assigns the esxi licensing in bulk mode to the root.
 
     .DESCRIPTION
+        This function adds all licenses and assigns the esxi licensing in bulk mode to the root.
 
     .PARAMETER Licenses
+        The manadatory string array parameter Licenses holds all the lincense keys as strings.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Add-Licensing -Licenses < > -ViHandle < >
+        Add-Licensing -Licenses <String[]>
+                      -ViHandle <VI Session>
 
         PS C:\> Add-Licensing
 
@@ -27,7 +32,7 @@ function Add-Licensing {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Licenses,
+            [String[]]$Licenses,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

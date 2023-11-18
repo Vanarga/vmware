@@ -1,37 +1,44 @@
-function Add-SSOAdminGroups {
+function Add-SsoAdminGroups {
     <#
     .SYNOPSIS
+        Add the domain group to the vCenter for single sign-on as Admins.
 
     .DESCRIPTION
+        Add the domain group to the vCenter for single sign-on as Admins.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
-    .PARAMETER ADInfo
+    .PARAMETER AdInfo
+        The manadatory string array AdInfo contains all the information about the Active Directory domain.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Add-SSOAdminGroups -Deployment < > -ADInfo < > -ViHandle < >
+        Add-SsoAdminGroups -Deployment <String[]>
+                           -AdInfo <String[]>
+                           -ViHandle <VI Session>
 
-        PS C:\> Add-SSOAdminGroups
+        PS C:\> Add-SsoAdminGroups
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Add-SSOAdminGroups
+        Version 1.0 - Add-SsoAdminGroups
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment,
+            [string[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $AdInfo,
+            [string[]]$AdInfo,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

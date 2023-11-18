@@ -4,13 +4,15 @@ function New-IdentitySourcevCenter65 {
         Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
 
     .DESCRIPTION
+        Configure Identity Source - Add AD domain as Native for SSO, Add AD group to Administrator permissions on SSO.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-IdentitySourcevCenter65 -Deployment < >
+        New-IdentitySourcevCenter65 -Deployment <String[]>
 
         PS C:\> New-IdentitySourcevCenter65
 
@@ -24,7 +26,7 @@ function New-IdentitySourcevCenter65 {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment
+            [string[]]$Deployment
     )
 
     # Add AD domain as Native Identity Source.

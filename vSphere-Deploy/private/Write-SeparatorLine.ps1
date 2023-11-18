@@ -4,6 +4,7 @@ function Write-SeparatorLine {
         Print a dated line to standard output.
 
     .DESCRIPTION
+        Print a dated line to standard output.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.

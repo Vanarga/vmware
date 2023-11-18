@@ -1,21 +1,26 @@
 function ConvertTo-Excel {
     <#
     .SYNOPSIS
+        Converts array of objects to range in Microsoft Excel worksheet.
 
     .DESCRIPTION
+        Converts object to range in Microsoft Excel worksheet.
 
     .PARAMETER InputObject
+        The mandatory PSObject array contains objects representing a row of data in Excel.
 
-    .PARAMETER WorkSheet
+    .PARAMETER Worksheet
+        The mandatory parameter Worksheet contains the Excel worksheet to add the data to.
 
     .PARAMETER SheetName
-
-    .PARAMETER Excelpath
+        The mandatory string parameter SheetName contains the name of the Excel worksheet.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        ConvertTo-Excel -InputObject < > -WorkSheet < > -SheetName < > -Excelpath < >
+        ConvertTo-Excel -InputObject <PSObject>
+                        -Worksheet <String>
+                        -SheetName <String>
 
         PS C:\> ConvertTo-Excel
 
@@ -33,15 +38,11 @@ function ConvertTo-Excel {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Worksheet,
+            [string]$Worksheet,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $SheetName,
-        [Parameter(Mandatory = $true,
-            ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true)]
-            $ExcelPath
+            [string]$SheetName
     )
 
     $myStack = New-Object -TypeName system.collections.stack

@@ -4,17 +4,23 @@ function Import-HostRootCertificate {
         Download the Node self signed certificate and install it in the local trusted root certificate store.
 
     .DESCRIPTION
+        Download the Node self signed certificate and install it in the local trusted root certificate store.
 
     .PARAMETER CertDir
+        The mandatory string parameter CertDir is the local path to the location of the replacement certificates.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
     .PARAMETER ViHandle
+       The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Import-HostRootCertificate -CertDir < > -Deployment < > -ViHandle < >
+        Import-HostRootCertificate -CertDir <String>
+                                   -Deployment <String[]>
+                                   -ViHandle <VI Session>
 
         PS C:\> Import-HostRootCertificate
 
@@ -28,11 +34,11 @@ function Import-HostRootCertificate {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $CertDir,
+            [string]$CertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment,
+            [String[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -80,7 +86,7 @@ function Import-HostRootCertificate {
     }
     Copy-FileToServer @params
 
-    Import-Certificate -FilePath $RootCertDir -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
+    Import-Certificate -FilePath $rootCertDir -CertStoreLocation 'Cert:\LocalMachine\Root' -Verbose
 
     Write-SeparatorLine
 }

@@ -1,18 +1,22 @@
 function New-Permissions {
     <#
     .SYNOPSIS
-        Set Permissions
+        Set Permissions in vCenter.
 
     .DESCRIPTION
+        Set Permissions in vCenter.
 
     .PARAMETER VPermissions
+        The mandatory string array parameter VPermissions contains all the permissions to be applied to the vCenter.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-Permissions -VPermissions < > -ViHandle < >
+        New-Permissions -VPermissions <String[]>
+                        -ViHandle <VI Session>
 
         PS C:\> New-Permissions
 
@@ -26,7 +30,7 @@ function New-Permissions {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $VPermissions,
+            [string[]]$VPermissions,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

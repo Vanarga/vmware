@@ -1,18 +1,22 @@
 function Import-RootCertificate {
     <#
     .SYNOPSIS
-        Create PEM file for supplied certificate
+        Downloads the CA root certificates and saves them to the root cert folders.
 
     .DESCRIPTION
+        Downloads the CA root certificates and saves them to the root cert folders.
 
     .PARAMETER CertDir
+        The mandatory string parameter CertDir is the local path to the location of the replacement certificates.
 
     .PARAMETER CertInfo
+        The mandatory string array parameter CertInfo holds all the information to connect to the Certificate Authority.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Import-RootCertificate -CertDir < > -CertInfo < >
+        Import-RootCertificate -CertDir <String>
+                               -CertInfo <String[]>
 
         PS C:\> Import-RootCertificate
 
@@ -26,11 +30,11 @@ function Import-RootCertificate {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertDir,
+            [string]$CertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertInfo
+            [string[]]$CertInfo
     )
 
     # Create credential from username and password.
@@ -83,8 +87,8 @@ function Import-RootCertificate {
     # Define empty array.
       $caCerts = @()
 
-    # Call Invoke-OpenSSL to convert the p7b certificate to PEM and split the string on '-', then remove any zero length items.
-    $p7bChain = (Invoke-OpenSSL -OpenSSLArgs "pkcs7 -inform PEM -outform PEM -in `"$CertDir\certnew.p7b`" -print_certs").Split("-") | Where-Object {$_.Length -gt 0}
+    # Call Invoke-OpenSsl to convert the p7b certificate to PEM and split the string on '-', then remove any zero length items.
+    $p7bChain = (Invoke-OpenSsl -OpenSslArgs "pkcs7 -inform PEM -outform PEM -in `"$CertDir\certnew.p7b`" -print_certs").Split("-") | Where-Object {$_.Length -gt 0}
 
     # Find the index of all the BEGIN CERTIFICATE lines.
     $index = (0..($p7bChain.count - 1)) | Where-Object {$p7bChain[$_] -match "BEGIN CERTIFICATE"}

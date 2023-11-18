@@ -4,15 +4,19 @@ function New-AutoDeployService {
         Configure the Autodeploy Service - set auto start, register vCenter, and start service.
 
     .DESCRIPTION
+        Configure the Autodeploy Service - set auto start, register vCenter, and start service.
 
     .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-AutoDeployService -Deployment < > -ViHandle < >
+        New-AutoDeployService -Deployment <String[]>
+                              -ViHandle <VI Session>
 
         PS C:\> New-AutoDeployService
 
@@ -26,7 +30,7 @@ function New-AutoDeployService {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Deployment,
+            [string[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

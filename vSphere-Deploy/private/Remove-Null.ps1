@@ -4,13 +4,15 @@ function Remove-Null {
         Replace $null values with "<null>" string in objects.
 
     .DESCRIPTION
+        Replace $null values with "<null>" string in objects.
 
     .PARAMETER InputObject
+        The mandatory PSObject array contains objects to have $null replaced with <null>.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Remove-Null -InputObject < >
+        Remove-Null -InputObject <PSObject Array>
 
         PS C:\> Remove-Null
 

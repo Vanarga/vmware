@@ -1,18 +1,22 @@
 function New-Folders {
     <#
     .SYNOPSIS
-        Create Folders
+        Create Folders on the vCenter.
 
     .DESCRIPTION
+        Create Folders on the vCenter.
 
     .PARAMETER Folders
+        The mandatory string array parameter Folders contains all the folders that need to be created and informaiton about their heirarchy.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-Folders -Folders < > -ViHandle < >
+        New-Folders -Folders <String[]>
+                    -ViHandle <VI Session>
 
         PS C:\> New-Folders
 
@@ -26,7 +30,7 @@ function New-Folders {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Folders,
+            [string[]]$Folders,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -37,7 +41,7 @@ function New-Folders {
 
     ForEach ($folder in $Folders) {
         Write-Output -InputObject $folder.Name | Out-String
-        ForEach ($dataCenter in get-datacenter -Server $ViHandle) {
+        ForEach ($dataCenter in Get-Datacenter -Server $ViHandle) {
             if ($folder.datacenter.Split(",") -match "all|$($dataCenter.name)") {
                 $folderPath = $dataCenter | Get-Folder -name $folder.Location | Where-Object {$_.Parentid -notlike "*ha*"}
                 Write-Output -InputObject $folderPath | Out-String

@@ -1,25 +1,22 @@
-function Skip-SSLTrustIssues {
+function Skip-SslTrustIssues {
     <#
     .SYNOPSIS
-        Save Object to json file.
+        Ignoring SSL trust in PowerShell System.Net.WebClient.
 
     .DESCRIPTION
-
-    .PARAMETER InputObject
-
-    .PARAMETER FilePath
+        Ignoring SSL trust in PowerShell System.Net.WebClient
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Save-ToJson -InputObject < > -FilePath < >
+        Skip-SslTrustIssues
 
-        PS C:\> Save-Json
+        PS C:\> Skip-SslTrustIssues
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Skip-SSLTrustIssues
+        Version 1.0 - Skip-SslTrustIssues
     #>
     [CmdletBinding ()]
     Param ()

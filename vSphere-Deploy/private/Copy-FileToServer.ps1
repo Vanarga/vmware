@@ -4,23 +4,35 @@ function Copy-FileToServer {
         Copy a file to a VM.
 
     .DESCRIPTION
+        Copy a file to a VM.
 
     .PARAMETER Path
+        The mandatory string array parameter Path holds the source and destination paths for the file copy.
 
     .PARAMETER Hostname
+        The mandatory string parameter Hostname is the name of the destination host to copy the file to.
 
     .PARAMETER Username
+        The mandatory string parameter Username is the username needed to authenticate with the destination host.
 
     .PARAMETER Password
+        The mandatory secure string parameter Password is the password needed to authenticate with the destination host.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .PARAMETER Upload
+        The mandatory Boolean parameter Upload will cause the file to be sent to the destination if True and downloaded if False.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Copy-FileToServer -Path < > -Hostname < > -Username < > -Password < > -ViHandle < > -Upload < >
+        Copy-FileToServer -Path <String>
+                          -Hostname <String>
+                          -Username <String>
+                          -Password <String>
+                          -ViHandle <VI Session>
+                          -Upload <Bool>
 
         PS C:\> Copy-FileToServer
 
@@ -34,11 +46,11 @@ function Copy-FileToServer {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Path,
+            [string]$Path,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Hostname,
+            [string]$Hostname,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
@@ -50,7 +62,7 @@ function Copy-FileToServer {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Upload
+            [bool]$Upload
     )
 
     Write-SeparatorLine

@@ -1,21 +1,22 @@
-function New-VMCACSR {
+function New-VmcaCsr {
     <#
     .SYNOPSIS
         Create RSA private key and CSR.
 
     .DESCRIPTION
+        Create RSA private key and CSR.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-VMCACSR
+        New-VmcaCsr
 
-        PS C:\> New-VMCACSR
+        PS C:\> New-VmcaCsr
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - New-VMCACSR
+        Version 1.0 - New-VmcaCsr
     #>
     [CmdletBinding ()]
     Param ()

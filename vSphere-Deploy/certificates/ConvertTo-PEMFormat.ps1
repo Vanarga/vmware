@@ -6,15 +6,20 @@ function ConvertTo-PEMFormat {
     .DESCRIPTION
         Convert the certificate to PEM format.
 
-    .PARAMETER ServicePath
+    .PARAMETER SvcDir
+        The mandatory string parameter SvcDir is the vmware service directory name and is used for the subfolder to place the certficates in.
 
     .PARAMETER CertFile
+        The mandatory string parameter CertFile is the certificate filename.
 
     .PARAMETER CerFile
+        The mandatory string parameter CerFile is the CER certificate filename.
 
     .PARAMETER CertDir
+        The mandatory string parameter CertDir is the certificate for a specific directory service.
 
     .PARAMETER InstanceCertDir
+        The mandatory string parameter InstanceCertDir is the local certificate folder for the node instance being deployed.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
@@ -37,23 +42,23 @@ function ConvertTo-PEMFormat {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string]$SvcDir,
+            [string]$SvcDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string]$CertFile,
+            [string]$CertFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string]$CerFile,
+            [string]$CerFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string]$CertDir,
+            [string]$CertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        [string]$InstanceCertDir
+            [string]$InstanceCertDir
     )
     # Skip if we have pending cert requests.
     if ($script:CertsWaitingForApproval) {

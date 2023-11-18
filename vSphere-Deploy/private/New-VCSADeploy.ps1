@@ -1,42 +1,48 @@
-function New-VCSADeploy {
+function New-VcsaDeploy {
     <#
     .SYNOPSIS
         Deploy a VCSA.
 
     .DESCRIPTION
+        Deploy a VCSA.
 
     .PARAMETER ParameterList
+        The mandatory psobject parameter ParameterList is the object that contains the parameters used by Ovftool to deploy the vm.
 
     .PARAMETER OvfToolPath
+        The mandatory string parameter OvfToolPath is the path to the location of the OvfTool executable.
 
     .PARAMETER LogPath
+        The mandatory string parameter LogPath is the path to where the logs should be written.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-VCSADeploy -ParameterList < > -OvfToolPath < > -LogPath < >
+        New-VcsaDeploy -ParameterList <String[]>
+                       -OvfToolPath <String>
+                       -LogPath <String>
 
-        PS C:\> New-VCSADeploy
+        PS C:\> New-VcsaDeploy
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - New-VCSADeploy
+        Version 1.0 - New-VcsaDeploy
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $ParameterList,
+            [strinp[]]$ParameterList,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $OvfToolPath,
+            [string]$OvfToolPath,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $LogPath
+            [string]$LogPath
     )
 
     $pscs = @("tiny","small","medium","large","infrastructure")

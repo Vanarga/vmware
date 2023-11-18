@@ -6,11 +6,12 @@ function Rename-VMDir {
     .DESCRIPTION
 
     .PARAMETER CertDir
+        The mandatory string parameter CertDir is the local path to the location of the replacement certificates.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Rename-VMDir -CertDir < >
+        Rename-VMDir -CertDir <String>
 
         PS C:\> Rename-VMDir
 
@@ -24,7 +25,7 @@ function Rename-VMDir {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertDir
+            [string]$CertDir
     )
     # Renames SSL certificate files to those used by VCSA
     Rename-Item -Path "$CertDir\VMDir\VMDir.cer" -NewName "vmdircert.pem"

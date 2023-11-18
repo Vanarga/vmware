@@ -4,21 +4,27 @@ function Invoke-ExecuteScript {
         Execute a script via Invoke-VMScript.
 
     .DESCRIPTION
+        Execute a script via Invoke-VMScript.
 
     .PARAMETER Script
+        The mandatory string array Script is the array if strings containing the commands to be executed.
 
     .PARAMETER Hostname
+        The mandatory string parameter Hostname is the name of the host on which the script should be executed.
 
-    .PARAMETER Username
-
-    .PARAMETER Password
+    .PARAMETER Credential
+        The mandatory secure string parameter Credential is the credentials needed to connect to the host.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Invoke-ExecuteScript -Script < > -Hostname < > -Username < > -ViHandle < >
+        Invoke-ExecuteScript -Script <String[]>
+                             -Hostname <String>
+                             -Credential <Secure String>
+                             -ViHandle <VI Session>
 
         PS C:\> Invoke-ExecuteScript
 
@@ -32,11 +38,11 @@ function Invoke-ExecuteScript {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Script,
+            [string[]]$Script,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Hostname,
+            [string]$Hostname,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

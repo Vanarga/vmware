@@ -1,28 +1,34 @@
 function Copy-CertificateToHost {
     <#
     .SYNOPSIS
-        Copy the certificate to the host.
+        Copy the certificate files to the host and replace the existing certificates with the new ones.
 
     .DESCRIPTION
+        Copy the certificate files to the host and replace the existing certificates with the new ones.
 
-    .PARAMETER rootCertDir
+    .PARAMETER RootCertDir
+        The mandatory string parameter rootCertDir is the local path to the location of the root certs.
 
     .PARAMETER CertDir
+        The mandatory string parameter CertDir is the local path to the location of the replacement certificates.
 
-    .PARAMETER deployment
+    .PARAMETER Deployment
+        The mandatory parameter Deployment contains all the settings for a specific vSphere node deployement.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
-    .PARAMETER deploymentParent
+    .PARAMETER DeploymentParent
+        The mandatory parameter DeploymentParent is the name of the node parent.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Copy-CertificateToHost -rootCertDir < >
-                               -CertDir < >
-                               -deployment < >
-                               -ViHandle < >
-                               -deploymentParent < >
+        Copy-CertificateToHost -rootCertDir <String>
+                               -CertDir <String>
+                               -Deployment <String[]>
+                               -ViHandle <String>
+                               -DeploymentParent <String>
 
         PS C:\> Copy-CertificateToHost
 
@@ -36,23 +42,23 @@ function Copy-CertificateToHost {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $RootCertDir,
+            [string]$RootCertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertDir,
+            [string]$CertDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $Deployment,
+            [string[]]$Deployment,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $ViHandle,
+            $ViHandle,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $DeploymentParent
+            [string]$DeploymentParent
     )
 
     # http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vsphere.security.doc/GUID-BD70615E-BCAA-4906-8E13-67D0DBF715E4.html
@@ -192,7 +198,7 @@ function Copy-CertificateToHost {
     $commandList = @()
     $commandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vsphere-webclient --alias vsphere-webclient"
     $commandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vsphere-webclient --alias vsphere-webclient --cert $solutionPath/vsphere-webclient.cer --key $solutionPath/vsphere-webclient.priv"
-    # Skip If server is an External PSC. - vpxd and vpxd-extension do not need to be replaced on an external PSC.
+    # Skip if server is an External PSC. - vpxd and vpxd-extension do not need to be replaced on an external PSC.
     if ($Deployment.DeployType -ne "Infrastructure") {
         $commandList += "echo Y | /usr/lib/vmware-vmafd/bin/vecs-cli entry delete --store vpxd --alias vpxd"
         $commandList += "/usr/lib/vmware-vmafd/bin/vecs-cli entry create --store vpxd --alias vpxd --cert $solutionPath/vpxd.cer --key $solutionPath/vpxd.priv"
@@ -312,7 +318,7 @@ function Copy-CertificateToHost {
     }
     Invoke-ExecuteScript @params
 
-    # Refresh Update Manager CertIficates.
+    # Refresh Update Manager Certificates.
     if ($viVersion -match "6.5." -and $Deployment.DeployType -ne "Infrastructure") {
         $commandList = $null
         $commandList = @()
@@ -335,7 +341,7 @@ function Copy-CertificateToHost {
         Invoke-ExecuteScript @params
     }
 
-    # Refresh Update Manager CertIficates.
+    # Refresh Update Manager Certificates.
     if ($viVersion -match "6.7." -and $Deployment.DeployType -ne "Infrastructure") {
 
         # Service update
@@ -348,7 +354,7 @@ function Copy-CertificateToHost {
         Invoke-ExecuteScript @params
     }
 
-    # Assign the original machine certIficate thumbprint to $thumbprint and remove the carriage return.
+    # Assign the original machine certificate thumbprint to $thumbprint and remove the carriage return.
     # Change the shell to Bash to enable scp and retrieve the original machine certIficate thumbprint.
     $commandList = $null
     $commandList = @()
@@ -386,9 +392,9 @@ function Copy-CertificateToHost {
         }
         Invoke-ExecuteScript @params
     } else {
-        # If the VCSA vCenter does not have an embedded PSC Register its Machine CertIficate with the External PSC.
+        # If the VCSA vCenter does not have an embedded PSC Register its Machine Certificate with the External PSC.
         Write-Output $DeploymentParent | Out-String
-        # SCP the new vCenter machine certIficate to the external PSC and register it with the VMWare Lookup Service via SSH.
+        # SCP the new vCenter machine certificate to the external PSC and register it with the VMWare Lookup Service via SSH.
         $commandList = $null
         $commandList = @()
         $commandList += "sshpass -p `'" + $DeploymentParent.VCSARootPass + "`' ssh -oStrictHostKeyChecking=no root@" + $DeploymentParent.Hostname + " mkdir /root/ssl"

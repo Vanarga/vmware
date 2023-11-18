@@ -1,25 +1,22 @@
-function Install-OpenSSL {
+function Install-OpenSsl {
     <#
     .SYNOPSIS
-        Check is module is installed.
+        Check if OpenSSL is installed and install it, if it is not.
 
     .DESCRIPTION
-
-    .PARAMETER InputObject
-
-    .PARAMETER FilePath
+        Check if OpenSSL is installed and install it, if it is not.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Save-ToJson -InputObject < > -FilePath < >
+        Install-OpenSsl
 
-        PS C:\> Save-Json
+        PS C:\> Install-OpenSsl
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-25
-        Version 1.0 - Install-OpenSSL
+        Version 1.0 - Install-OpenSsl
     #>
     [CmdletBinding ()]
     Param ()
@@ -39,7 +36,7 @@ function Install-OpenSSL {
         $wc.UseDefaultCredentials = $true
         $wc.DownloadFile($sslUrl,$sslExe)
         $env:path = $env:path + ";$($configData.CertInfo[0].openssldir)"
-        if (-not(test-Path($SSLExe))) {
+        if (-not(test-Path($sslExe))) {
             Write-Host -ForegroundColor "red" -BackgroundColor "white" -Object "Could not download or find OpenSSL. Please install the latest $downloadRef manually or update download name."
             exit
         }
@@ -54,5 +51,5 @@ function Install-OpenSSL {
     $openSSL = ($installedApps | Where-Object {$_.DisplayName -like "*openssl*"}).InstallLocation + "bin\openssl.exe"
 
     # Check for openssl
-    Test-OpenSSL -OpenSSL $openSSL
+    Test-OpenSsl -OpenSSL $openSSL
 }

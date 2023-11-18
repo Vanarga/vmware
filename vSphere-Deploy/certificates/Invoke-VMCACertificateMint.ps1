@@ -1,48 +1,56 @@
-function Invoke-VMCACertificateMint {
+function Invoke-VmcaCertificateMint {
     <#
     .SYNOPSIS
         This function issues a new SSL certificate from the VMCA.
 
     .DESCRIPTION
+        This function issues a new SSL certificate from the VMCA.
 
-    .PARAMETER SVCDir
+    .PARAMETER SvcDir
+        The mandatory string parameter SvcDir is the vmware service directory name and is used for the subfolder to place the certficates in.
 
-    .PARAMETER CFGFile
+    .PARAMETER CfgFile
+        The mandatory string parameter CfgFile is the name of the configuration file.
 
     .PARAMETER CertFile
+        The mandatory string parameter CertFile is the name of the certificate file.
 
-    .PARAMETER PrivFile
+    .PARAMETER PrivateFile
+        The mandatory string parameter CertFile is the name of the certificate file.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Invoke-VMCACertificateMint -SVCDir < > -CFGFile < > -CertFile < > -PrivFile < >
+        Invoke-VmcaCertificateMint -SvcDir <String>
+                                   -CfgFile <String>
+                                   -CertFile <String>
+                                   -PrivateFile <String>
 
-        PS C:\> Invoke-VMCACertificateMint
+        PS C:\> Invoke-VmcaCertificateMint
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - Invoke-VMCACertificateMint
+        Version 1.0 - Invoke-VmcaCertificateMint
     #>
     [CmdletBinding ()]
     Param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $SvcDir,
+            [string]$SvcDir,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CfgFile,
+            [string]$CfgFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $CertFile,
+            [string]$CertFile,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-        $PrivateFile
+            [string]$PrivateFile
     )
 
     if (-not(Test-Path -Path "$CertDir\$SvcDir")) {

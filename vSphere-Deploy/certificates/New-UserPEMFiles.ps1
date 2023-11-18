@@ -1,4 +1,4 @@
-function New-UserPEMFiles {
+function New-UserPemFiles {
     <#
     .SYNOPSIS
 
@@ -7,14 +7,14 @@ function New-UserPEMFiles {
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-UserPEMFiles
+        New-UserPemFiles
 
-        PS C:\> New-UserPEMFiles
+        PS C:\> New-UserPemFiles
 
     .NOTES
         Author: Michael van Blijdesteijn
         Last Edit: 2019-10-24
-        Version 1.0 - New-UserPEMFiles
+        Version 1.0 - New-UserPemFiles
     #>
     [CmdletBinding ()]
     Param ()

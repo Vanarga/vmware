@@ -4,17 +4,23 @@ function New-AutoDeployRule {
         Configure the Autodeploy Service - set auto start, register vCenter, and start service.
 
     .DESCRIPTION
+        Configure the Autodeploy Service - set auto start, register vCenter, and start service.
 
     .PARAMETER Rules
+        The mandatory array of PSObjects parameter Rules are all the autodeploy rules that will be applied.
 
     .PARAMETER Path
+        The mandatory string parameter Path is the location of the host profile file to import.
 
     .PARAMETER ViHandle
+        The mandatory parameter ViHandle is the session connection information for the vSphere node.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        New-AutoDeployRule -Rules < > -Path < > -ViHandle < >
+        New-AutoDeployRule -Rules <PSObject Array>
+                           -Path <String>
+                           -ViHandle <VI Session>
 
         PS C:\> New-AutoDeployRule
 
@@ -28,11 +34,11 @@ function New-AutoDeployRule {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Rules,
+            [string[]]$Rules,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Path,
+            [string]$Path,
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

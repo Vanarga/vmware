@@ -4,13 +4,15 @@ function Add-Null {
         Replace "<null>" string values with $null in objects.
 
     .DESCRIPTION
+        Replace "<null>" string values with $null in objects.
 
     .PARAMETER InputObject
+        The manadatory psbject array parameter InputObject contains the values from the input data that the "<null>" qualifier needs to be added to.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Add-Null -InputObject < >
+        Add-Null -InputObject <PSObject Array>
 
         PS C:\> Add-Null
 

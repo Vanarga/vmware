@@ -1,18 +1,20 @@
 function Import-YamlData {
     <#
     .SYNOPSIS
-        Import the JSON data and return the values as a Hashtable.
+        Import the YAML data and return the values as a Hashtable.
 
     .DESCRIPTION
+        Import the YAML data and return the values as a Hashtable.
 
-    .PARAMETER
+    .PARAMETER Path
+        The mandatory string parameter Path is the location of the YAML files.
 
     .EXAMPLE
         The example below shows the command line use with Parameters.
 
-        Import-HostRootCertificate -CertDir < > -Deployment < > -ViHandle < >
+        Import-YamlData -Path <String>
 
-        PS C:\> Import-HostRootCertificate
+        PS C:\> Import-YamlData
 
     .NOTES
         Author: Michael van Blijdesteijn
@@ -24,7 +26,7 @@ function Import-YamlData {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
-            $Path
+            [string]$Path
     )
 
     # Declare an ordered hashtable.
